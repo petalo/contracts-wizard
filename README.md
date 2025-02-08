@@ -652,34 +652,31 @@ contracts-wizard/
 
 The application uses environment variables for configuration. Create a `.env` file based on `.env.example`.
 
-| Variable                 | Description                      | Default Value           |
-| ------------------------ | -------------------------------- | ----------------------- |
-| NODE_ENV                 | Application environment          | development             |
-| DEBUG                    | Enable debug mode                | false                   |
-| LOG_ENABLED              | Enable/disable logging           | true                    |
-| LOG_LEVEL                | Logging verbosity level          | info                    |
-| LOG_FILE                 | Main log file name               | logging.log             |
-| LATEST_LOG_PATH          | Path to most recent log file     | logs/logging-latest.log |
-| FULL_LOG_PATH            | Path to complete log history     | logs/history-%DATE%.log |
-| LOG_MAX_SIZE             | Maximum size before log rotation | 10MB                    |
-| LOG_MAX_FILES            | Number of log files to keep      | 7                       |
-| TIMEZONE                 | Default timezone                 | UTC                     |
-| LANGUAGE                 | Default language                 | en-US                   |
-| DIR_OUTPUT               | Output directory for files       | output_files            |
-| DIR_TEMPLATES            | Templates directory              | templates/markdown      |
-| DIR_CSS                  | CSS styles directory             | templates/css           |
-| DIR_IMAGES               | Images directory                 | templates/images        |
-| DIR_CSV                  | CSV data directory               | data-csv                |
-| DIR_REPORTS              | Reports directory                | reports                 |
-| DIR_COVERAGE             | Test coverage directory          | coverage                |
-| DIR_TEST_LOGS            | Test logs directory              | tests-logs              |
-| DIR_TEST_OUTPUT          | Test output directory            | tests-output            |
-| CACHE_ENABLED            | Enable/disable caching           | true                    |
-| CACHE_TTL                | Cache time-to-live (seconds)     | 1800                    |
-| MAX_CONCURRENT_PROCESSES | Max concurrent processes         | 2                       |
-| RATE_LIMIT_WINDOW        | Rate limiting window (minutes)   | 15                      |
-| RATE_LIMIT_MAX_REQUESTS  | Max requests per window          | 50                      |
-| SESSION_TIMEOUT          | Session timeout (minutes)        | 15                      |
+| Variable                 | Description                      | Default Value      | Options                     |
+| ------------------------ | -------------------------------- | ------------------ | --------------------------- |
+| NODE_ENV                 | Application environment          | development        | development/production/test |
+| DEBUG                    | Enable console output            | false              | true/false                  |
+| LOG_LEVEL                | File logging verbosity level     | info               | error/warn/info/debug       |
+| LOG_DIR                  | Directory for log files          | logs               |                             |
+| LOG_MAX_SIZE             | Maximum size before log rotation | 10MB               |                             |
+| LOG_MAX_FILES            | Number of log files to keep      | 7                  |                             |
+| TIMEZONE                 | Default timezone                 | UTC                |                             |
+| LANGUAGE                 | Default language                 | en-US              |                             |
+| DIR_OUTPUT               | Output directory for files       | output_files       |                             |
+| DIR_TEMPLATES            | Templates directory              | templates/markdown |                             |
+| DIR_CSS                  | CSS styles directory             | templates/css      |                             |
+| DIR_IMAGES               | Images directory                 | templates/images   |                             |
+| DIR_CSV                  | CSV data directory               | data-csv           |                             |
+| DIR_REPORTS              | Reports directory                | reports            |                             |
+| DIR_COVERAGE             | Test coverage directory          | coverage           |                             |
+| DIR_TEST_LOGS            | Test logs directory              | tests-logs         |                             |
+| DIR_TEST_OUTPUT          | Test output directory            | tests-output       |                             |
+| CACHE_ENABLED            | Enable/disable caching           | true               |                             |
+| CACHE_TTL                | Cache time-to-live (seconds)     | 1800               |                             |
+| MAX_CONCURRENT_PROCESSES | Max concurrent processes         | 2                  |                             |
+| RATE_LIMIT_WINDOW        | Rate limiting window (minutes)   | 15                 |                             |
+| RATE_LIMIT_MAX_REQUESTS  | Max requests per window          | 50                 |                             |
+| SESSION_TIMEOUT          | Session timeout (minutes)        | 15                 |                             |
 
 ### Configuration Files
 

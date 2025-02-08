@@ -77,6 +77,22 @@
 
 const path = require('path');
 
+// Configure aliases before any imports
+require('module-alias').addAliases({
+  '@': path.join(__dirname, '../src'),
+  '@src': path.join(__dirname, '../src'),
+  '@utils': path.join(__dirname, '../src/utils'),
+  '@core': path.join(__dirname, '../src/core'),
+  '@cli': path.join(__dirname, '../src/cli'),
+  '@config': path.join(__dirname, '../src/config'),
+});
+
+const { program } = require('commander');
+const { logger } = require('@/utils/common/logger');
+
+// Log inicio de ejecución
+logger.logExecutionStart();
+
 // Parse command line arguments to get the output directory early
 const args = process.argv.slice(2);
 const outputIndex =
@@ -92,22 +108,11 @@ if (outputIndex !== -1 && outputIndex + 1 < args.length) {
   process.env.DIR_OUTPUT = outputDir;
 }
 
-require('module-alias').addAliases({
-  '@': path.join(__dirname, '../src'),
-  '@src': path.join(__dirname, '../src'),
-  '@utils': path.join(__dirname, '../src/utils'),
-  '@core': path.join(__dirname, '../src/core'),
-  '@cli': path.join(__dirname, '../src/cli'),
-  '@config': path.join(__dirname, '../src/config'),
-});
-
 require('dotenv').config();
 
-const { program } = require('commander');
 const fs = require('fs').promises;
 const { startWorkflow } = require('@/core/workflow');
 const { AppError } = require('@/utils/common/errors');
-const { logger } = require('@/utils/common/logger');
 const { display } = require('@/cli/display');
 const { PATHS } = require('@/config/paths');
 const { validateDirectory } = require('@/config/paths');
@@ -557,7 +562,7 @@ async function generateContract({ template, data, css, output }) {
     });
 
     // Validate files exist and are accessible
-    await validateInputs(templatePath, dataPath, cssPath);
+    await validateFiles(templatePath, dataPath, cssPath);
 
     // Ensure output directory exists and is writable
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {

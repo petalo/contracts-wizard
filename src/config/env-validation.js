@@ -1,49 +1,39 @@
 /**
  * @fileoverview Environment Variable Validation System
  *
- * Manages environment configuration validation:
- * - Required variable enforcement
- * - Type checking and constraints
- * - Value validation rules
- * - Error collection and reporting
+ * Provides comprehensive validation for environment variables:
+ * - Required vs optional variables
+ * - Type checking and coercion
+ * - Value constraints and formats
+ * - Path validation and permissions
  *
  * Functions:
- * - validateEnv: Validates all environment variables
- * - validatePath: Validates directory paths
- * - validateLogLevel: Validates logging configuration
- * - validateFileSize: Validates file size constraints
- * - validateLogPath: Validates log file paths
+ * - validateEnv: Main validation entry point
+ * - validatePath: Directory path validation
+ * - validateLogLevel: Log level validation
+ * - validateFileSize: File size format validation
  *
  * Constants:
- * - ENV_CONFIG: Environment validation rules
- * - PATH_PERMISSIONS: Required path permissions
- * - NUMERIC_CONSTRAINTS: Numeric value constraints
- *
- * Error Classes:
- * - ConfigError: Base configuration error
- * - MissingEnvError: Required variable missing
- * - InvalidValueError: Invalid variable value
- * - PathError: Invalid path or permissions
+ * - PATH_PERMISSIONS: Directory access requirements
+ * - NUMERIC_CONSTRAINTS: Size and count limits
+ * - ENV_CONFIG: Variable validation rules
  *
  * Flow:
- * 1. Define validation rules and constraints
- * 2. Load environment variables
- * 3. Check required variables
- * 4. Validate types and values
- * 5. Validate paths and permissions
- * 6. Report validation results
+ * 1. Load environment configuration
+ * 2. Validate required variables
+ * 3. Check types and formats
+ * 4. Validate paths and permissions
+ * 5. Apply custom validations
  *
  * Error Handling:
- * - Multiple error collection
- * - Detailed error context
- * - Path permission validation
- * - Type conversion errors
- * - Format validation errors
- * - Size constraint violations
+ * - MissingEnvError: Required variable missing
+ * - InvalidValueError: Invalid value format/type
+ * - PathError: Invalid path or permissions
  *
- * @module @/config/envValidation
- * @requires @/utils/common/logger
- * @requires @/utils/common/errors
+ * @module @/config/env-validation
+ * @requires fs/promises
+ * @requires path
+ * @requires @/config/env
  *
  * @example
  * // Import validation
@@ -84,6 +74,7 @@ const { logger } = require('@/utils/common/logger');
 const { AppError } = require('@/utils/common/errors');
 const fs = require('fs').promises;
 const path = require('path');
+const { ENV, LOG_LEVELS, NODE_ENVS } = require('./env');
 
 // Custom error classes
 class ConfigError extends AppError {
@@ -127,7 +118,10 @@ class PathError extends ConfigError {
   }
 }
 
-// Constants
+/**
+ * Directory permission requirements
+ * @constant {Object}
+ */
 const PATH_PERMISSIONS = {
   DIR_OUTPUT: {
     write: true,
@@ -139,6 +133,10 @@ const PATH_PERMISSIONS = {
   DIR_CSV: { read: true },
 };
 
+/**
+ * Numeric value constraints
+ * @constant {Object}
+ */
 const NUMERIC_CONSTRAINTS = {
   LOG_MAX_SIZE: {
     min: '1MB',
@@ -205,20 +203,16 @@ const ENV_CONFIG = {
   // Application environment
   NODE_ENV: {
     type: 'string',
-    values: ['development', 'production', 'test'],
+    values: NODE_ENVS,
     required: true,
   },
 
   // Logging configuration
   LOG_LEVEL: {
     type: 'string',
-    values: ['error', 'warn', 'info', 'debug', 'trace'],
+    values: LOG_LEVELS,
     required: true,
     validate: validateLogLevel,
-  },
-  LOG_ENABLED: {
-    type: 'boolean',
-    required: true,
   },
   LOG_MAX_SIZE: {
     type: 'string',
@@ -232,15 +226,10 @@ const ENV_CONFIG = {
     min: 1,
     max: 100,
   },
-  FULL_LOG_PATH: {
+  LOG_DIR: {
     type: 'string',
     required: true,
-    validate: validateLogPath,
-  },
-  LATEST_LOG_PATH: {
-    type: 'string',
-    required: true,
-    validate: validateLogPath,
+    validate: validatePath,
   },
 
   // Debug mode
@@ -316,9 +305,8 @@ async function validatePath(value, key) {
  * @throws {InvalidValueError} If log level is invalid
  */
 function validateLogLevel(value, key) {
-  const validLevels = ['error', 'warn', 'info', 'debug', 'trace'];
-  if (!validLevels.includes(value.toLowerCase())) {
-    throw new InvalidValueError(key, value, validLevels);
+  if (!LOG_LEVELS.includes(value.toLowerCase())) {
+    throw new InvalidValueError(key, value, LOG_LEVELS);
   }
 }
 
@@ -364,28 +352,6 @@ function validateFileSize(value, key) {
 }
 
 /**
- * Validates log file path and parent directory
- *
- * @param {string} value - Path to validate
- * @param {string} key - Environment variable name
- * @throws {PathError} If path is invalid
- */
-async function validateLogPath(value, key) {
-  const absolutePath = path.isAbsolute(value) ? value : path.resolve(value);
-  const directory = path.dirname(absolutePath);
-
-  try {
-    await fs.access(directory, fs.constants.R_OK | fs.constants.W_OK);
-  } catch (error) {
-    throw new PathError(
-      key,
-      value,
-      `Parent directory not accessible: ${error.message}`
-    );
-  }
-}
-
-/**
  * Validates all environment variables
  *
  * Performs comprehensive validation:
@@ -402,7 +368,7 @@ async function validateEnv() {
   const errors = [];
 
   for (const [key, config] of Object.entries(ENV_CONFIG)) {
-    const value = process.env[key];
+    const value = ENV[key] || process.env[key];
 
     try {
       // Check required variables
