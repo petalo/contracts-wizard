@@ -314,17 +314,41 @@ async function copyExampleFiles() {
   log.info('\nCopying example files...');
   const examples = [
     // Markdown templates
+
     [
-      'examples/markdown/office_lease_EN.example.md',
-      'templates/markdown/office_lease_EN.md',
+      'tests/__common__/fixtures/markdown/office_lease_EN.example.md',
+      'templates/markdown/office_lease_EN.example.md',
+    ],
+    [
+      'tests/__common__/fixtures/markdown/ticket.example.md',
+      'templates/markdown/ticket.example.md',
     ],
     // CSS templates
-    ['examples/css/contract.example.css', 'templates/css/contract-styles.css'],
 
+    [
+      'tests/__common__/fixtures/css/contract.example.css',
+      'templates/css/contract.example.css',
+    ],
+    [
+      'tests/__common__/fixtures/css/ticket.example.css',
+      'templates/css/ticket.example.css',
+    ],
     // CSV examples
     [
-      'examples/csv/office_lease_EN.example.csv',
-      'data-csv/office_lease_EN-TechstartSolutions.csv',
+      'tests/__common__/fixtures/csv/office_lease_EN.example.csv',
+      'data-csv/office_lease_EN.example.TechstartSolutions.csv',
+    ],
+    [
+      'tests/__common__/fixtures/csv/office_lease_EN.example.some.empty.fields.csv',
+      'data-csv/office_lease_EN.example.some.empty.fields.csv',
+    ],
+    [
+      'tests/__common__/fixtures/csv/ticket.example.csv',
+      'data-csv/ticket.example.csv',
+    ],
+    [
+      'tests/__common__/fixtures/csv/ticket.example.some.empty.fields.csv',
+      'data-csv/ticket.example.some.empty.fields.csv',
     ],
   ];
 

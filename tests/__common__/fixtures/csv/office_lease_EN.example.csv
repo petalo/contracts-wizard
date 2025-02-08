@@ -73,6 +73,9 @@ property.floor,15
 property.unit,1501
 property.size.sqft,2500
 property.size.sqm,232.26
+property.area_sqm,450,Total area in square meters
+property.floor_number,3,Number of floors in the property
+property.parking_spots,12,Number of included parking spaces
 services.additional.0,Electricity consumption,Additional expense
 services.additional.1,Internet and telecommunications,Additional expense
 services.additional.2,Additional cleaning services,Additional expense

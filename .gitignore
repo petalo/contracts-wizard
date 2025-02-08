@@ -44,7 +44,6 @@ tmp/
 
 # Data Files
 data-csv/*.csv
-!data-csv/*.example.csv
 
 # IDE and Editor
 .idea/
