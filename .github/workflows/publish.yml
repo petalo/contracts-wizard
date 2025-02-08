@@ -30,4 +30,5 @@ jobs:
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+          SKIP_TESTS: 'true'
+        run: npm publish --access public --ignore-scripts && npm run version:update

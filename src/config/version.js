@@ -3,7 +3,7 @@
  *
  * Centralizes version information and compatibility checks.
  * This file is auto-generated during the build process.
- * Last updated: 2025-02-08T14:49:55.953Z
+ * Last updated: 2025-02-08T15:01:54.362Z
  *
  * Constants:
  * - VERSION: Main version configuration object

@@ -97,6 +97,7 @@ templates/*
 .env*
 !.env.example
 !.env.test.example
+!.env.test
 
 # Release previews
 CHANGELOG.preview.md
