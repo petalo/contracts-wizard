@@ -6,7 +6,7 @@ const {
   templateUtils,
 } = require('@/utils/templateProcessor/core/templateUtils');
 
-describe.skip('Template Utilities', () => {
+describe.skip('Template Utils', () => {
   test('should validate template path', () => {
     const validPath = 'template.md';
     expect(() => templateUtils.validateTemplatePath(validPath)).not.toThrow();

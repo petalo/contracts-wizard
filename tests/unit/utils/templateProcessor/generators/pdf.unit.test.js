@@ -14,7 +14,7 @@ jest.mock('fs', () => ({
   },
 }));
 
-describe.skip('PDF Generation', () => {
+describe.skip('PDF Generator', () => {
   let mockBrowser;
   let mockPage;
 

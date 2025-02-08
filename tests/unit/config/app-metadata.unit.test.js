@@ -4,7 +4,7 @@
 
 const { APP_METADATA } = require('@/config/appMetadata');
 
-describe.skip('Application Metadata', () => {
+describe.skip('App Metadata', () => {
   test('should have valid application name', () => {
     expect(APP_METADATA.name).toBeDefined();
     expect(typeof APP_METADATA.name).toBe('string');

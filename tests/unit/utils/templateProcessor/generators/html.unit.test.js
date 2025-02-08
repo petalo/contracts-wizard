@@ -14,7 +14,7 @@ jest.mock('fs', () => ({
   },
 }));
 
-describe.skip('HTML Generation', () => {
+describe.skip('HTML Generator', () => {
   const mockTemplate = '# Title\n\nContent';
   const mockCss = 'body { color: black; }';
   const mockData = { title: 'Test' };

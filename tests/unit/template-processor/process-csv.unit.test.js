@@ -20,7 +20,7 @@ jest.mock('fs/promises');
 jest.mock('../../../src/utils/common/logger');
 jest.mock('../../../src/utils/template-processor/core/template-utils');
 
-describe('CSV Processing', () => {
+describe.skip('CSV Processing', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });

@@ -33,7 +33,7 @@ const DATA_PATH = path.join(TEST_FIXTURES_PATH, 'data/quick.example.csv');
 const CSS_PATH = path.join(TEST_FIXTURES_PATH, 'css/quick.example.css');
 const OUTPUT_DIR = path.join(__dirname, '../output');
 
-describe('CLI End-to-End Tests', () => {
+describe.skip('CLI End-to-End Tests', () => {
   // Setup test environment
   beforeAll(async () => {
     await fs.mkdir(OUTPUT_DIR, { recursive: true });

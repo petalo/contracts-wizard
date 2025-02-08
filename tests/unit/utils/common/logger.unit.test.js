@@ -4,7 +4,7 @@
 
 const { logger } = require('@/utils/common/logger');
 
-describe.skip('Logger', () => {
+describe.skip('Logger Utility', () => {
   let consoleSpy;
 
   beforeEach(() => {

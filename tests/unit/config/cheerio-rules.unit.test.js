@@ -4,7 +4,7 @@
 
 const { CHEERIO_CONFIG } = require('@/config/cheerioRules');
 
-describe.skip('Cheerio Rules Configuration', () => {
+describe.skip('Cheerio Rules', () => {
   test('should have valid XML mode configuration', () => {
     expect(CHEERIO_CONFIG.xmlMode).toBeDefined();
     expect(typeof CHEERIO_CONFIG.xmlMode).toBe('boolean');

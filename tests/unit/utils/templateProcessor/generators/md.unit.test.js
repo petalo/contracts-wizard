@@ -2,7 +2,7 @@
  * @fileoverview Unit tests for markdown generation
  */
 
-describe.skip('Markdown Generation', () => {
+describe.skip('Markdown Generator', () => {
   test.skip('placeholder test', () => {
     expect(true).toBe(true);
   });

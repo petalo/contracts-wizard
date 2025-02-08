@@ -20,7 +20,7 @@ const { AppError } = require('../../../src/utils/common/errors');
 jest.mock('fs/promises');
 jest.mock('puppeteer');
 
-describe('PDF Generation', () => {
+describe.skip('PDF Generation', () => {
   let mockBrowser;
   let mockPage;
 

@@ -4,7 +4,7 @@
 
 const { initializeDebugger } = require('@/utils/common/logDebugStarter');
 
-describe.skip('Debug Logger Initialization', () => {
+describe.skip('Log Debug Starter', () => {
   let originalEnv;
   let mockDebug;
 
