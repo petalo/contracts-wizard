@@ -350,6 +350,11 @@ async function copyExampleFiles() {
       'tests/__common__/fixtures/csv/ticket.example.some.empty.fields.csv',
       'data-csv/ticket.example.some.empty.fields.csv',
     ],
+    // Images
+    [
+      'tests/__common__/fixtures/images/160x40.png',
+      'templates/images/160x40.png',
+    ],
   ];
 
   for (const [src, dest] of examples) {

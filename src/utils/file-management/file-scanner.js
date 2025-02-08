@@ -136,11 +136,14 @@ async function listFilesInPath(dirPath, extensions = [], recursive = true) {
       recursive,
     });
 
+    // Make sure the path is absolute
+    const absoluteDirPath = path.resolve(dirPath);
+
     // Use scanFiles for recursive search if enabled
     if (recursive) {
-      const results = await scanFiles(dirPath, extensions, true);
+      const results = await scanFiles(absoluteDirPath, extensions, true);
       logger.debug('Recursive scan complete', {
-        dirPath,
+        dirPath: absoluteDirPath,
         matchCount: results.length,
         paths: results,
       });
@@ -148,20 +151,16 @@ async function listFilesInPath(dirPath, extensions = [], recursive = true) {
     }
 
     // Non-recursive search for backward compatibility
-    const files = await fs.readdir(dirPath);
+    const files = await fs.readdir(absoluteDirPath);
     const matchingFiles = files
       .filter((file) => {
         if (extensions.length === 0) return true;
         return extensions.some((ext) => file.endsWith(ext));
       })
-      .map((file) => {
-        // Include the current directory name in non-recursive results too
-        const fullPath = path.join(dirPath, file);
-        return path.relative(path.dirname(dirPath), fullPath);
-      });
+      .map((file) => path.join(absoluteDirPath, file));
 
     logger.debug('Directory scan complete', {
-      dirPath,
+      dirPath: absoluteDirPath,
       matchCount: matchingFiles.length,
       extensions,
       recursive,
@@ -309,21 +308,24 @@ async function listFiles(type, recursive = true) {
  */
 async function scanFiles(dirPath, pattern, recursive = true) {
   try {
+    // Make sure the path is absolute
+    const absoluteDirPath = path.resolve(dirPath);
+
     // Validate directory exists
-    const stats = await fs.stat(dirPath);
+    const stats = await fs.stat(absoluteDirPath);
     if (!stats.isDirectory()) {
       throw new AppError('Path is not a directory', 'INVALID_PATH', {
-        dirPath,
+        dirPath: absoluteDirPath,
       });
     }
 
     // Read directory contents
-    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    const entries = await fs.readdir(absoluteDirPath, { withFileTypes: true });
     let results = [];
 
     // Process each entry
     for (const entry of entries) {
-      const fullPath = path.join(dirPath, entry.name);
+      const fullPath = path.join(absoluteDirPath, entry.name);
 
       if (entry.isDirectory() && recursive) {
         // Recursively scan subdirectories
@@ -340,13 +342,13 @@ async function scanFiles(dirPath, pattern, recursive = true) {
             return p.test(entry.name);
           })
         ) {
-          results.push(path.relative(path.dirname(dirPath), fullPath));
+          results.push(fullPath);
         }
       }
     }
 
     logger.debug('Directory scan complete', {
-      dirPath,
+      dirPath: absoluteDirPath,
       matchCount: results.length,
       recursive,
       paths: results,

@@ -67,15 +67,15 @@ const fs = require('fs/promises');
 const dotenv = require('dotenv');
 const { FILE_EXTENSIONS } = require('@/config/file-extensions');
 
+// Base directory is current working directory
+const BASE_DIR = process.cwd();
+
 // Load environment configuration based on NODE_ENV
 if (process.env.NODE_ENV === 'test') {
   dotenv.config({ path: '.env.test' });
 } else {
   dotenv.config();
 }
-
-// Base directory is current working directory
-const BASE_DIR = process.cwd();
 
 /**
  * Default paths configuration object
@@ -116,6 +116,22 @@ const DEFAULT_PATHS = {
 };
 
 /**
+ * Helper function to handle paths that might be absolute or relative
+ * @param {string} basePath - Base directory path
+ * @param {string} targetPath - Target path that might be absolute or relative
+ * @param {string} defaultPath - Default relative path
+ * @returns {string} - Resolved path
+ */
+function resolvePath(basePath, targetPath, defaultPath) {
+  if (!targetPath) {
+    return path.join(basePath, defaultPath);
+  }
+  return path.isAbsolute(targetPath)
+    ? targetPath
+    : path.join(basePath, targetPath);
+}
+
+/**
  * Environment-aware application path configuration
  *
  * Combines default paths with environment-specific overrides
@@ -133,24 +149,29 @@ const DEFAULT_PATHS = {
 const PATHS = {
   // Base application paths
   base: BASE_DIR,
-  output: path.join(BASE_DIR, process.env.DIR_OUTPUT || DEFAULT_PATHS.output),
-  templates: path.join(
+  output: resolvePath(BASE_DIR, process.env.DIR_OUTPUT, DEFAULT_PATHS.output),
+  templates: resolvePath(
     BASE_DIR,
-    process.env.DIR_TEMPLATES || DEFAULT_PATHS.templates
+    process.env.DIR_TEMPLATES,
+    DEFAULT_PATHS.templates
   ),
-  css: path.join(BASE_DIR, process.env.DIR_CSS || DEFAULT_PATHS.css),
-  csv: path.join(BASE_DIR, process.env.DIR_CSV || DEFAULT_PATHS.csv),
-  images: path.join(BASE_DIR, process.env.DIR_IMAGES || DEFAULT_PATHS.images),
+  css: resolvePath(BASE_DIR, process.env.DIR_CSS, DEFAULT_PATHS.css),
+  csv: resolvePath(BASE_DIR, process.env.DIR_CSV, DEFAULT_PATHS.csv),
+  images: resolvePath(BASE_DIR, process.env.DIR_IMAGES, DEFAULT_PATHS.images),
 
   // Logging paths
   logs: {
     dir: path.join(BASE_DIR, DEFAULT_PATHS.logs.dir),
-    latest:
-      process.env.LATEST_LOG_PATH ||
-      path.join(BASE_DIR, DEFAULT_PATHS.logs.latest),
-    history:
-      process.env.FULL_LOG_PATH ||
-      path.join(BASE_DIR, DEFAULT_PATHS.logs.history),
+    latest: resolvePath(
+      BASE_DIR,
+      process.env.LATEST_LOG_PATH,
+      DEFAULT_PATHS.logs.latest
+    ),
+    history: resolvePath(
+      BASE_DIR,
+      process.env.FULL_LOG_PATH,
+      DEFAULT_PATHS.logs.history
+    ),
   },
 };
 
@@ -206,22 +227,24 @@ async function validateDirectory(dirPath, createIfMissing = false) {
 }
 
 // Initialize required application directories
-(async () => {
-  try {
-    // Create all required directories in parallel
-    await Promise.all([
-      validateDirectory(PATHS.output, true),
-      validateDirectory(PATHS.templates, true),
-      validateDirectory(PATHS.css, true),
-      validateDirectory(PATHS.csv, true),
-      validateDirectory(PATHS.images, true),
-      validateDirectory(PATHS.logs.dir, true),
-    ]);
-  } catch (error) {
-    console.error('Failed to initialize directories:', error);
-    process.exit(1);
-  }
-})();
+if (process.env.NODE_ENV !== 'test') {
+  (async () => {
+    try {
+      // Create all required directories in parallel
+      await Promise.all([
+        validateDirectory(PATHS.output, true),
+        validateDirectory(PATHS.templates, true),
+        validateDirectory(PATHS.css, true),
+        validateDirectory(PATHS.csv, true),
+        validateDirectory(PATHS.images, true),
+        validateDirectory(PATHS.logs.dir, true),
+      ]);
+    } catch (error) {
+      console.error('Failed to initialize directories:', error);
+      process.exit(1);
+    }
+  })();
+}
 
 // Prevent runtime modifications to configurations
 Object.freeze(DEFAULT_PATHS);
