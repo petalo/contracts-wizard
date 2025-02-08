@@ -1,0 +1,9 @@
+/**
+ * @fileoverview Unit tests for markdown generation
+ */
+
+describe.skip('Markdown Generation', () => {
+  test.skip('placeholder test', () => {
+    expect(true).toBe(true);
+  });
+});

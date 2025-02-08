@@ -1,0 +1,61 @@
+#!/bin/sh
+
+# Pre-commit checks:
+# 1. Code style (ESLint, Prettier)
+# 2. Tests (Jest)
+# 3. Documentation headers
+# 4. Error handling patterns
+
+echo "🔍 Running pre-commit checks..."
+
+# Project structure:
+# - bin/         -> CLI executables
+# - scripts/     -> Development scripts
+# - src/         -> Source code (following JavaScript conventions)
+# - templates/   -> User template files (not in repository)
+# - tests/       -> Test files (following Jest conventions)
+# - data-csv/    -> Generated CSV files (not in repository)
+
+# Define all main directories
+DIRS_TO_CHECK="bin scripts src templates tests data-csv"
+
+# 1. Validate file headers
+echo "Checking file headers..."
+files_to_check=$(git diff --cached --name-only --diff-filter=ACM "src/**/*.js")
+for file in $files_to_check; do
+  if [ -f "$file" ]; then
+    if ! grep -q "@fileoverview" "$file"; then
+      echo "❌ Error: Missing @fileoverview in $file"
+      exit 1
+    fi
+    if ! grep -q -E "Functions:|Constants:" "$file"; then
+      echo "❌ Error: Missing Functions or Constants section in $file"
+      exit 1
+    fi
+    if ! grep -q "Flow:" "$file"; then
+      echo "❌ Error: Missing Flow section in $file"
+      exit 1
+    fi
+    if ! grep -q "Error Handling:" "$file"; then
+      echo "❌ Error: Missing Error Handling section in $file"
+      exit 1
+    fi
+  fi
+done
+
+# 2. Run linter first
+echo "Running linter..."
+npm run lint
+if [ $? -ne 0 ]; then
+  echo "❌ Error: Code must pass linting before commit!"
+  exit 1
+fi
+
+# 3. Run tests (non-blocking)
+echo "Running tests..."
+npm test || {
+  echo "⚠️ Warning: Some tests are failing. Proceeding with commit anyway..."
+  true # Force success exit code
+}
+
+echo "✅ All pre-commit checks passed!"

@@ -1,0 +1,95 @@
+# Source and Development files
+.github/
+.githooks/
+.husky/
+scripts/
+tests/
+docs/
+coverage/
+.nyc_output/
+reports/
+logs/
+examples/
+*petalo*
+
+# Configuration files
+.cursorrules
+.editorconfig
+.eslintignore
+.eslintrc*
+.prettierrc*
+.prettierignore
+.babelrc*
+.commitlintrc*
+jest.config.*
+jsdoc.json
+tsconfig.*
+.puppeteerrc*
+.markdownlint*
+
+# Environment and local files
+.env*
+!.env.example
+*.local
+**/*.txt
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-*
+.project
+.settings/
+.classpath
+*.code-workspace
+
+# Git and version control
+.git/
+.gitattributes
+.gitignore
+
+# Temporary and cache
+.cache/
+.eslintcache
+.tsbuildinfo
+temp/
+tmp/
+*.temp.*
+*.temp/
+
+# Debug and logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+debug.log
+lerna-debug.log*
+
+# Test and development data
+data-csv/*.csv
+!data-csv/*.example.csv
+templates/**/*.example.*
+templates/**/*copy*.*
+
+# Build artifacts
+dist/
+build/
+output/
+output_files/
+
+# Misc
+*.private.*
+*.key
+*.pem
+*.bak
+*.backup
+*~
+.DS_Store
+Thumbs.db
+
+# Keep essential files
+!LICENSE
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md

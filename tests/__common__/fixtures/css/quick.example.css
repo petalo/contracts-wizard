@@ -1,0 +1,352 @@
+/* Basic styles */
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.4;
+  color: #333;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+/* Explanatory comments */
+.explanation {
+  font-size: 0.8em;
+  color: #666;
+  font-style: italic;
+  margin: 0.1em 0 0.3em;
+  padding: 0.2em 0.6em;
+  line-height: 1.2;
+  background-color: #f8f9fa;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+/* Error state for explanations */
+.explanation.error {
+  background-color: #ffebee;
+  color: #c62828;
+  border-left: 3px solid #c62828;
+  padding-left: 0.8em;
+}
+
+@media print {
+  .explanation {
+    font-size: 7pt;
+    color: #555;
+    margin: 0.1em 0 0.2em;
+    background-color: #f5f5f5;
+    padding: 0.15em 0.5em;
+  }
+
+  .explanation.error {
+    background-color: #fff0f0;
+    color: #a52424;
+    border-left: 2px solid #a52424;
+  }
+}
+
+/* Headers - Better spacing */
+h1 {
+  color: #2c3e50;
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
+  font-size: 1.2em;
+  text-align: center;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.2em;
+  column-span: all; /* Title spans all columns */
+}
+
+h2 {
+  color: #2c3e50;
+  margin-top: 0.6em;
+  margin-bottom: 0.3em;
+  font-size: 1.1em;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.2em;
+}
+
+h3,
+h4 {
+  color: #2c3e50;
+  margin-top: 0.4em;
+  margin-bottom: 0.2em;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+/* Lists - Better spacing */
+ul,
+ol {
+  padding-left: 1.2em;
+  margin: 0.3em 0;
+}
+
+li {
+  margin: 0.15em 0;
+}
+
+/* Code blocks */
+pre {
+  background: #f8f9fa;
+  padding: 4px;
+  border-radius: 3px;
+  overflow-x: auto;
+  margin: 0.3em 0;
+  font-size: 0.85em;
+}
+
+code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85em;
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.3em 0;
+  font-size: 0.85em;
+}
+
+th,
+td {
+  border: 1px solid #ddd;
+  padding: 3px 4px;
+  text-align: left;
+}
+
+th {
+  background-color: #f8f9fa;
+}
+
+/* Blockquotes */
+blockquote {
+  border-left: 2px solid #e9ecef;
+  margin: 0.3em 0;
+  padding-left: 0.6em;
+  color: #6c757d;
+  font-size: 0.9em;
+}
+
+/* Missing values highlight */
+.missing-value {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 1px 3px;
+  border-radius: 2px;
+  border: 1px dashed #ffeeba;
+  font-size: 0.85em;
+}
+
+/* Imported values highlight */
+.imported-value {
+  border: 1px solid #cce5ff;
+  border-radius: 2px;
+  padding: 1px 3px;
+  background-color: #f8f9fc;
+  color: #004085;
+  font-size: 0.85em;
+  display: inline-block;
+}
+
+@media print {
+  .imported-value {
+    border-color: #b8daff;
+    background-color: #f5f9ff;
+    color: #003166;
+  }
+}
+
+/* Links */
+a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+/* Images */
+img {
+  margin: 0.3em 0;
+  display: block;
+}
+
+/* Responsive images (only if no width/height specified) */
+img:not([width]):not([height]) {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Horizontal rule */
+hr {
+  border: 0;
+  border-top: 1px solid #e9ecef;
+  margin: 0.5em 0;
+}
+
+/* Print styles */
+@media print {
+  @page {
+    size: landscape;
+    margin: 8mm 6mm;
+  }
+
+  body {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 4px;
+    column-count: 3;
+    column-gap: 12px;
+    column-rule: 1px solid #eee;
+    font-size: 8.5pt;
+  }
+
+  /* Column 1: Basic Values and Helpers Demo */
+  .col-1 {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: column;
+    page-break-after: column;
+  }
+
+  /* Column 2: Built-in Helpers and Custom Helpers */
+  .col-2 {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: column;
+    page-break-after: column;
+  }
+
+  /* Column 3: Everything else */
+  .col-3 {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Keep headers with their content */
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid;
+    break-inside: avoid;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Keep sections together */
+  section,
+  article,
+  .section-content {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Keep lists with their headers */
+  h2 + ul,
+  h2 + ol,
+  h3 + ul,
+  h3 + ol {
+    break-before: avoid;
+    page-break-before: avoid;
+  }
+
+  /* Ensure good readability */
+  p {
+    font-size: 8.5pt;
+    line-height: 1.2;
+    margin: 0.3em 0;
+    break-inside: avoid;
+  }
+
+  li {
+    font-size: 8.5pt;
+    line-height: 1.2;
+    margin: 0.15em 0;
+  }
+
+  /* Tables */
+  table {
+    page-break-inside: avoid;
+    font-size: 8pt;
+    margin: 0.3em 0;
+  }
+
+  /* Prevent orphans and widows */
+  p,
+  h2,
+  h3 {
+    orphans: 2;
+    widows: 2;
+  }
+
+  /* Code blocks */
+  pre,
+  code {
+    font-size: 7.5pt;
+    padding: 3px;
+    margin: 0.2em 0;
+    line-height: 1.1;
+  }
+
+  /* Lists */
+  ul,
+  ol {
+    margin: 0.2em 0;
+    padding-left: 1em;
+  }
+
+  /* Blockquotes */
+  blockquote {
+    font-size: 8pt;
+    margin: 0.2em 0;
+    padding-left: 0.4em;
+    line-height: 1.2;
+  }
+
+  /* Headers */
+  h1 {
+    font-size: 11pt;
+    margin: 0.4em 0 0.3em;
+    padding-bottom: 0.2em;
+  }
+
+  h2 {
+    font-size: 9.5pt;
+    margin: 0.3em 0 0.2em;
+    padding-bottom: 0.15em;
+  }
+
+  h3,
+  h4 {
+    font-size: 8.5pt;
+    margin: 0.2em 0 0.15em;
+  }
+
+  /* Table cells */
+  th,
+  td {
+    padding: 2px 3px;
+  }
+
+  /* Section spacing */
+  h2 + * {
+    margin-top: 0.2em;
+  }
+
+  /* List spacing */
+  ul + *,
+  ol + * {
+    margin-top: 0.3em;
+  }
+
+  /* Utility classes */
+  .keep-together {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .no-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

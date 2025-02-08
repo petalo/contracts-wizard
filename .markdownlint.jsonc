@@ -1,0 +1,20 @@
+{
+    "default": true,
+    "no-hard-tabs": false,
+    "MD013": false, // Allow lines longer than 80 characters
+    "MD025": false, // Allow to add info at the top of the file
+    "MD033": false, // Allow HTML tags (needed to set classes so CSS can be applied)
+    "MD041": false, // Allow content before first heading
+    "MD045": false, // Allow images without alt text
+    "MD046": false, // Allow mixed code block styles
+    "MD048": false, // Allow code fence style backticks
+    "MD049": false, // Allow emphasis style
+    "MD050": false, // Allow strong style
+    "MD051": false, // Allow link fragments that are not lowercase
+    "MD052": false, // Allow reference links with missing references
+    "MD053": false, // Allow link and image reference definitions with missing links
+    "MD054": false, // Allow missing link style
+    "MD055": false, // Allow table pipe style
+    "MD056": false, // Allow table cell padding
+    "MD057": false // Allow missing table header row separator
+}

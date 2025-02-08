@@ -1,0 +1,115 @@
+key,value,comment
+contract.title,Office Lease Agreement
+contract.date,2024-01-28
+contract.number,OL-2024-001
+contract.type,Office Lease
+contract.version,1.0
+contract.status,Draft
+contract.language,EN
+contract.cure_period_days,30,Days allowed to remedy defaults
+contract.end_date,January 31st 2027,Lease end date
+contract.governing_law,England and Wales,Governing law of the contract
+contract.initial_term_years,3,Initial lease term in years
+contract.jurisdiction,London,Courts with jurisdiction over disputes
+contract.renewal_notice_months,6,Notice period required for renewal
+contract.renewal_term_years,2,Length of each renewal period
+contract.signing_city,London,City where the contract is signed
+contract.signing_date,January 16th 2024,Date of contract signing
+contract.start_date,February 1st 2024,Lease start date
+default.events.0,Failure to pay rent within 5 days of due date,Event of default
+default.events.2,Filing for bankruptcy or insolvency,<<<<<<<<< Lacks default.events.1
+default.events.3,Abandonment of the premises,Event of default
+default.remedies.0,Right to terminate the lease,Available remedy
+default.remedies.1,Right to recover all unpaid rent,Available remedy
+default.remedies.2,Right to recover damages,Available remedy
+default.remedies.3,Right to re-enter and take possession,Available remedy 
+insurance.lessee_requirements.3,Workers' compensation insurance,"<<<<<<<<< Lacks insurance.lessee_requirements 0,1 and 2 "
+insurance.lessor_requirements.0,Building insurance,Required insurance
+insurance.lessor_requirements.1,Public liability insurance,Required insurance
+insurance.lessor_requirements.2,Property damage insurance,Required insurance
+lessee.company_name,TechStart Solutions Ltd,Lessee's registered company name
+lessee.notice_address,"Legal Department, TechStart Solutions Ltd, 100 Liverpool Street, London EC2M 2RH",Address for official notices
+lessee.registered_address,"100 Liverpool Street, London EC2M 2RH",Lessee's current official address
+lessee.representative.full_name,"",<<<<<<<<< Empty value
+lessee.representative.id_number,PB654321C,ID number of lessee's representative
+lessee.tax_id,,<<<<<<<<< Empty value
+lessor.company_name,Canary Office Spaces Ltd,Lessor's registered company name
+lessor.notice_address,"Legal Department, Canary Office Spaces Ltd, 25 Canada Square, Canary Wharf, London E14 5LQ",Address for official notices
+lessor.registered_address,"25 Canada Square, Canary Wharf, London E14 5LQ",Lessor's official address
+lessor.representative.full_name,James William Smith,Name of lessor's representative
+lessor.representative.id_number,PA123456B,ID number of lessor's representative
+lessor.tax_id,GB123456789,Lessor's tax identification number
+maintenance.lessee_obligations.0,Interior walls and finishes,Lessee's maintenance responsibility
+maintenance.lessee_obligations.1,Floor coverings,Lessee's maintenance responsibility
+maintenance.lessee_obligations.2,Light fixtures,Lessee's maintenance responsibility
+maintenance.lessee_obligations.3,Internal electrical systems,Lessee's maintenance responsibility
+maintenance.lessee_obligations.4,Office furniture and equipment,Lessee's maintenance responsibility
+maintenance.lessor_obligations.0,Structural elements,Lessor's maintenance responsibility
+maintenance.lessor_obligations.1,Building envelope,Lessor's maintenance responsibility
+maintenance.lessor_obligations.2,Common areas,Lessor's maintenance responsibility
+maintenance.lessor_obligations.3,HVAC systems,Lessor's maintenance responsibility
+maintenance.lessor_obligations.4,Elevators,Lessor's maintenance responsibility
+payment.annual_rent.number,270000,Annual rent in numbers
+payment.annual_rent.text,two hundred and seventy thousand,Annual rent in words
+payment.due_day,5,Day of month when rent is due
+payment.maximum_increase_percentage,5,Maximum annual rent increase
+payment.minimum_increase_percentage,2,Minimum annual rent increase
+payment.monthly_rent.number,22500,Monthly rent in numbers
+payment.monthly_rent.text,twenty-two thousand five hundred,Monthly rent in words
+payment.security_deposit_months,2,Number of months' rent as security
+payment.security_deposit.number,45000,Security deposit in numbers
+payment.security_deposit.text,forty-five thousand,Security deposit in words
+property.name,Innovation Tower
+property.address.street,789 Business Blvd
+property.address.city,New York
+property.address.state,NY
+property.address.zip,10002
+property.type,Commercial Office
+property.floor,15
+property.unit,1501
+property.size.sqft,2500
+property.size.sqm,232.26
+lease.term.start,2024-03-01
+lease.term.end,2025-02-28
+lease.term.length.months,12
+lease.rent.base.amount,12500
+lease.rent.base.currency,USD
+lease.rent.base.period,Monthly
+lease.rent.security_deposit.amount,25000
+lease.rent.security_deposit.currency,USD
+lease.rent.payment.method,Bank Transfer
+lease.rent.payment.due_day,1
+lease.rent.late_fee.percentage,5
+lease.rent.late_fee.grace_period_days,5
+services.additional.0,Electricity consumption,Additional expense
+services.additional.1,Internet and telecommunications,Additional expense
+services.additional.2,Additional cleaning services,Additional expense
+services.additional.3,Contents insurance,Additional expense
+services.additional.4,Business rates,Additional expense
+services.included.0,Water
+services.included.1,Electricity
+services.included.2,Internet
+services.included.3,Heating
+services.included.4,Air Conditioning
+services.included.5,Cleaning
+services.included.6,Security
+services.included.7,Maintenance
+insurance.liability.required,true
+insurance.liability.min_coverage,2000000
+insurance.liability.currency,USD
+insurance.property.required,true
+insurance.property.min_coverage,1000000
+insurance.property.currency,USD
+utilities.responsibility.electricity,Tenant
+utilities.responsibility.water,Landlord
+utilities.responsibility.gas,Landlord
+utilities.responsibility.internet,Tenant
+utilities.responsibility.phone,Tenant
+maintenance.common_areas,Landlord
+maintenance.hvac,Landlord
+maintenance.electrical,Landlord
+maintenance.plumbing,Landlord
+maintenance.structural,Landlord
+maintenance.interior,Tenant
+maintenance.response_time.emergency,2 hours
+maintenance.response_time.non_emergency,24 hours

@@ -1,0 +1,42 @@
+key,value,comment
+ticketNumber,TKT-12345,Unique ticket identifier
+purchaseDate,2024-03-07,Date of purchase
+storeName,SuperMart Downtown,Store location name
+cashierName,John Smith,Attending cashier
+subtotal,85.50,Sum before taxes
+taxRate,8.25,Current tax rate percentage
+taxAmount,7.05,Calculated tax amount
+total,92.55,Final amount including taxes
+isMember,true,Customer loyalty program status
+pointsEarned,85,Points earned in this transaction
+pointsBalance,340,Total points after transaction
+receiptId,RCP-89234,Unique receipt identifier
+items.0.name,Organic Bananas,Fresh produce item
+items.0.price,4.99,Unit price
+items.0.onSale,false,Discount status
+items.1.name,Fresh Bread,Bakery item
+items.1.price,3.50,Unit price
+items.1.onSale,true,Discount status
+items.2.name,Coffee Beans,Grocery item
+items.2.price,15.99,Unit price
+items.2.onSale,false,Discount status
+items.3.name,Chocolate Bar,Snack item
+items.3.price,2.99,Unit price
+items.3.onSale,true,Discount status
+items.4.name,Paper Towels,Household item
+items.4.price,8.99,Unit price
+items.4.onSale,false,Discount status
+businessHours.0.day,Monday,Start of week
+businessHours.0.hours,9:00 AM - 9:00 PM,Regular business hours
+businessHours.1.day,Tuesday,Second day
+businessHours.1.hours,9:00 AM - 9:00 PM,Regular business hours
+businessHours.2.day,Wednesday,Mid week
+businessHours.2.hours,9:00 AM - 9:00 PM,Regular business hours
+businessHours.3.day,Thursday,Fourth day
+businessHours.3.hours,9:00 AM - 9:00 PM,Regular business hours
+businessHours.4.day,Friday,Extended hours day
+businessHours.4.hours,9:00 AM - 10:00 PM,Extended evening hours
+businessHours.5.day,Saturday,Weekend hours
+businessHours.5.hours,10:00 AM - 8:00 PM,Weekend schedule
+businessHours.6.day,Sunday,Weekend hours
+businessHours.6.hours,11:00 AM - 6:00 PM,Limited Sunday hours 

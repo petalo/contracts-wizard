@@ -1,0 +1,18 @@
+/* Invalid CSS for testing */
+
+.missing-value {
+  color: red;
+  font-style: italic;
+}
+
+.table-responsive {
+  display: invalid-value;
+}
+
+.123-invalid {
+  color: blue;
+}
+
+body {
+  color: not-a-color;
+}

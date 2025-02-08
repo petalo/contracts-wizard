@@ -1,0 +1,122 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Package Management
+yarn.lock
+
+# Build and Output
+dist/
+build/
+output/
+output_files/
+docs/
+
+# Testing and Coverage
+coverage/
+.nyc_output/
+reports/
+tests/reports/
+tests/output/
+tests/logs/
+*.test-report.html
+jest-junit.xml
+tests-output/
+tests/reports/junit/
+!tests/__common__/fixtures/**
+
+# Cache and Temporary
+.cache/
+.eslintcache
+.tsbuildinfo
+temp/
+tmp/
+*.temp
+*.temp.*
+*.tmp
+*~
+*.bak
+*.backup
+*.swx
+*.sw[a-p]
+*.vi
+
+# Data Files
+data-csv/*.csv
+!data-csv/*.example.csv
+
+# IDE and Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-*
+.project
+.settings/
+.classpath
+*.code-workspace
+*.cursorrules
+.cursor
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Logs and Debugging
+logs/
+!logs/.gitkeep
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+crash-report/
+debug.log
+
+# Backup and Copy files
+*copy*.md
+*copy*.txt
+*.orig
+*.rej
+
+# Project Specific
+*petalo*
+*legacy*
+
+# Templates
+templates/*
+
+# Environment
+.env*
+!.env.example
+!.env.test.example
+
+# Release previews
+CHANGELOG.preview.md
+*.preview.md
+
+# Skip files
+*.skip.test.js
+*.skip.spec.js
+*.skip.test.js.skip
+*.skip.*
+
+# Generated Documentation
+/docs/
+/api-docs/
+/jsdoc/
+*.generated.*
+
+# Security and Keys
+*.pem
+*.key
+*.cert
+*.crt
+.env.*.local

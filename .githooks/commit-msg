@@ -1,0 +1,49 @@
+#!/bin/sh
+
+# Commit message validation
+# Follows Conventional Commits specification: https://www.conventionalcommits.org/
+
+commit_msg_file=$1
+commit_msg=$(cat "$commit_msg_file")
+
+# Conventional Commits pattern
+conventional_pattern="^(feat|fix|docs|style|refactor|perf|test|chore)(\([a-z-]+\))?!?: .+"
+
+if ! echo "$commit_msg" | grep -qE "$conventional_pattern"; then
+    echo "❌ Error: Commit message does not follow Conventional Commits format."
+    echo "Format: <type>(<scope>): <description>"
+    echo ""
+    echo "Types:"
+    echo "- feat: A new feature"
+    echo "- fix: A bug fix"
+    echo "- docs: Documentation only changes"
+    echo "- style: Changes that do not affect the meaning of the code"
+    echo "- refactor: A code change that neither fixes a bug nor adds a feature"
+    echo "- perf: A code change that improves performance"
+    echo "- test: Adding missing tests or correcting existing tests"
+    echo "- chore: Changes to the build process or auxiliary tools"
+    echo ""
+    echo "Example: feat(cli): add new command for template validation"
+    echo ""
+    echo "Your commit message: $commit_msg"
+    exit 1
+fi
+
+# Check description length (recommended: less than 72 characters)
+description=$(echo "$commit_msg" | head -1)
+if [ ${#description} -gt 72 ]; then
+    echo "❌ Warning: Commit message first line is longer than 72 characters."
+    echo "Consider making it shorter for better readability."
+    exit 1
+fi
+
+# If there is a body, ensure it's separated by a blank line
+if [ $(echo "$commit_msg" | wc -l) -gt 1 ]; then
+    second_line=$(echo "$commit_msg" | sed -n '2p')
+    if [ ! -z "$second_line" ]; then
+        echo "❌ Error: The commit message body must be separated from the subject by a blank line."
+        exit 1
+    fi
+fi
+
+echo "✅ Commit message follows conventional format."

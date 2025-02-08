@@ -1,0 +1,55 @@
+body {
+  font-family: 'Arial', sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+h1 {
+  color: #2c3e50;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+}
+
+h2 {
+  color: #34495e;
+  margin-top: 20px;
+}
+
+.missing-value {
+  color: #e74c3c;
+  background-color: #ffecec;
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px dashed #e74c3c;
+  font-style: italic;
+}
+
+ul,
+ol {
+  padding-left: 20px;
+}
+
+.on-sale {
+  color: #27ae60;
+  font-weight: bold;
+}
+
+.total {
+  font-size: 1.2em;
+  font-weight: bold;
+  margin: 15px 0;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+}
+
+.receipt-footer {
+  margin-top: 30px;
+  text-align: center;
+  color: #7f8c8d;
+  font-size: 0.9em;
+  border-top: 1px solid #bdc3c7;
+  padding-top: 15px;
+}

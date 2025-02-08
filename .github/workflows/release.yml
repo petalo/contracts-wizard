@@ -1,0 +1,38 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          CHANGELOG_SECTION=$(awk "/## \[$VERSION\]/{p=1;print;next} /## \[/{p=0} p" CHANGELOG.md)
+          gh release create $GITHUB_REF_NAME \
+            --title "Release $VERSION" \
+            --notes "$CHANGELOG_SECTION" \
+            --draft=false \
+            --prerelease=false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci

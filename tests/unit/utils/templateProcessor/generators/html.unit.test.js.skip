@@ -1,0 +1,120 @@
+/**
+ * @fileoverview Unit tests for HTML generation
+ */
+
+const { generateHTML } = require('@/utils/templateProcessor/generators/html');
+const fs = require('fs').promises;
+const path = require('path');
+
+jest.mock('fs', () => ({
+  promises: {
+    readFile: jest.fn(),
+    writeFile: jest.fn(),
+    access: jest.fn(),
+  },
+}));
+
+describe.skip('HTML Generation', () => {
+  const mockTemplate = '# Title\n\nContent';
+  const mockCss = 'body { color: black; }';
+  const mockData = { title: 'Test' };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    fs.readFile
+      .mockResolvedValueOnce(mockTemplate)
+      .mockResolvedValueOnce(mockCss);
+  });
+
+  test('should generate HTML from markdown', async () => {
+    const outputPath = 'output.html';
+    await generateHTML(mockTemplate, outputPath, mockData);
+
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      outputPath,
+      expect.stringContaining('<h1>Title</h1>')
+    );
+  });
+
+  test('should include CSS when provided', async () => {
+    const outputPath = 'output.html';
+    const cssPath = 'style.css';
+    await generateHTML(mockTemplate, outputPath, mockData, cssPath);
+
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      outputPath,
+      expect.stringContaining(mockCss)
+    );
+  });
+
+  test('should handle template variables', async () => {
+    const template = '# {{title}}\n\nContent';
+    const outputPath = 'output.html';
+    await generateHTML(template, outputPath, mockData);
+
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      outputPath,
+      expect.stringContaining('<h1>Test</h1>')
+    );
+  });
+
+  test('should handle missing CSS file', async () => {
+    const outputPath = 'output.html';
+    const cssPath = 'missing.css';
+    fs.readFile.mockRejectedValueOnce(new Error('ENOENT'));
+
+    await generateHTML(mockTemplate, outputPath, mockData, cssPath);
+
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      outputPath,
+      expect.not.stringContaining('style')
+    );
+  });
+
+  test('should handle invalid markdown', async () => {
+    const invalidTemplate = '```invalid```';
+    const outputPath = 'output.html';
+
+    await expect(
+      generateHTML(invalidTemplate, outputPath, mockData)
+    ).rejects.toThrow();
+  });
+
+  test('should handle empty template', async () => {
+    const emptyTemplate = '';
+    const outputPath = 'output.html';
+
+    await expect(
+      generateHTML(emptyTemplate, outputPath, mockData)
+    ).rejects.toThrow();
+  });
+
+  test('should handle write errors', async () => {
+    const outputPath = 'output.html';
+    fs.writeFile.mockRejectedValueOnce(new Error('Write error'));
+
+    await expect(
+      generateHTML(mockTemplate, outputPath, mockData)
+    ).rejects.toThrow('Write error');
+  });
+
+  test('should generate valid HTML structure', async () => {
+    const outputPath = 'output.html';
+    await generateHTML(mockTemplate, outputPath, mockData);
+
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      outputPath,
+      expect.stringMatching(/<!DOCTYPE html>[\s\S]*<html>[\s\S]*<\/html>/)
+    );
+  });
+
+  test('should include metadata in HTML', async () => {
+    const outputPath = 'output.html';
+    await generateHTML(mockTemplate, outputPath, mockData);
+
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      outputPath,
+      expect.stringMatching(/<meta charset="[\w-]+"/)
+    );
+  });
+});

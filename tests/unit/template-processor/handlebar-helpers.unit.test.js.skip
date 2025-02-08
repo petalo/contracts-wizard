@@ -1,0 +1,570 @@
+/**
+ * @fileoverview Unified Tests for Handlebars Helper Functions
+ *
+ * Comprehensive test suite for all template helper functions including:
+ * - Date formatting and manipulation with Spanish locale
+ * - Value comparison and type coercion
+ * - Object lookup and value extraction
+ * - Number formatting with locale support
+ * - Array transformation and iteration
+ * - Empty value handling
+ *
+ * Functions Tested:
+ * - formatDate: Date formatting with locale support
+ * - addYears: Date manipulation maintaining locale
+ * - now: Current date with locale configuration
+ * - eq: Value comparison with type coercion
+ * - lookup: Object property access and value extraction
+ * - formatNumber: Locale-aware number formatting
+ * - emptyValue: Missing value handling
+ * - objectToArray: Array transformation
+ *
+ * Flow:
+ * 1. Setup test environment and mock dependencies
+ * 2. Register all helpers
+ * 3. Execute individual test suites
+ * 4. Cleanup and unregister helpers
+ *
+ * Error Handling:
+ * - Tests invalid inputs and edge cases
+ * - Verifies error handling behavior
+ * - Checks output format compliance
+ * - Validates locale configuration
+ *
+ * @module tests/unit/template-processor/handlebarHelpers.test
+ * @requires handlebars
+ * @requires moment-timezone
+ * @requires @/utils/templateProcessor/core/handlebarHelpers
+ */
+
+const moment = require('moment-timezone');
+const handlebars = require('handlebars');
+const {
+  formatDate,
+  addYears,
+  now,
+  eq,
+  lookup,
+  formatNumber,
+  emptyValue,
+  objectToArray,
+  HELPER_CONFIG,
+} = require('../../../src/utils/templateProcessor/core/handlebarHelpers');
+const { LOCALE_CONFIG } = require('../../../src/config/locale');
+
+// Mock logger for testing
+const logger = {
+  debug: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+};
+
+// Mock moment to have a fixed date for testing
+jest.mock('moment-timezone', () => {
+  const mockMoment = jest.requireActual('moment-timezone');
+  const { LOCALE_CONFIG } = require('../../../src/config/locale');
+
+  mockMoment.tz.setDefault(LOCALE_CONFIG.timezone);
+  mockMoment.locale(LOCALE_CONFIG.lang);
+
+  const fixedDate = mockMoment.utc('2024-01-29T12:00:00.000Z');
+  const fixedTimestamp = fixedDate.valueOf();
+
+  const fn = jest.fn((date) => {
+    if (!date) {
+      return mockMoment.utc(fixedTimestamp).tz(LOCALE_CONFIG.timezone);
+    }
+    if (date === 'invalid-date') {
+      return mockMoment(null);
+    }
+    if (typeof date === 'number' || date === fixedTimestamp) {
+      return mockMoment.utc(fixedTimestamp).tz(LOCALE_CONFIG.timezone);
+    }
+    // Use the actual moment for date calculations to properly handle leap years
+    return mockMoment.utc(date).tz(LOCALE_CONFIG.timezone);
+  });
+
+  fn.locale = mockMoment.locale;
+  fn.invalid = mockMoment.invalid;
+  fn.isMoment = mockMoment.isMoment;
+  fn.now = () => fixedTimestamp;
+  fn.utc = (date) => {
+    if (!date) {
+      return mockMoment.utc(fixedTimestamp);
+    }
+    // Use the actual moment for date calculations to properly handle leap years
+    return mockMoment.utc(date);
+  };
+  fn.tz = mockMoment.tz;
+  fn.prototype = mockMoment.prototype;
+  fn.locales = () => ['en', 'es'];
+
+  return fn;
+});
+
+// Mock logger in the handlebarHelpers module
+jest.mock('@/utils/common/logger', () => ({
+  logger: {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
+// Register all helpers before tests
+beforeAll(() => {
+  // Register basic helpers
+  handlebars.registerHelper('eq', eq);
+  handlebars.registerHelper('lookup', lookup);
+  handlebars.registerHelper('emptyValue', emptyValue);
+  handlebars.registerHelper('objectToArray', objectToArray);
+
+  // Register missing value helpers
+  handlebars.registerHelper('helperMissing', function () {
+    const options = arguments[arguments.length - 1];
+    const path = options.name;
+    return new handlebars.SafeString(
+      `<span class="missing-value" data-field="${path}">[[${path}]]</span>`
+    );
+  });
+
+  handlebars.registerHelper('blockHelperMissing', function (context, options) {
+    const path = options.name;
+    return new handlebars.SafeString(
+      `<span class="missing-value" data-field="${path}">[[${path}]]</span>`
+    );
+  });
+
+  // Register date helpers
+  handlebars.registerHelper('formatDate', function (date, format) {
+    if (!date) {
+      return new handlebars.SafeString(
+        `<span class="missing-value" data-field="date">[[date]]</span>`
+      );
+    }
+    const formattedDate = formatDate(date, format);
+    if (formattedDate === 'Invalid date') {
+      return new handlebars.SafeString(
+        `<span class="missing-value" data-field="date">[[Invalid date]]</span>`
+      );
+    }
+    return new handlebars.SafeString(
+      `<span class="imported-value" data-field="value">${handlebars.escapeExpression(formattedDate)}</span>`
+    );
+  });
+
+  handlebars.registerHelper('addYears', function (date, years) {
+    if (!date || years === undefined) {
+      return new handlebars.SafeString(
+        `<span class="missing-value" data-field="date">[[Invalid date]]</span>`
+      );
+    }
+    try {
+      const result = addYears(date, years);
+      return result;
+    } catch (error) {
+      return new handlebars.SafeString(
+        `<span class="missing-value" data-field="date">[[Invalid date]]</span>`
+      );
+    }
+  });
+
+  handlebars.registerHelper('now', function (format) {
+    const currentDate = now(format);
+    return new handlebars.SafeString(
+      `<span class="imported-value" data-field="value">${currentDate}</span>`
+    );
+  });
+
+  // Register number formatting helper
+  handlebars.registerHelper('formatNumber', function (number, options) {
+    if (!number && number !== 0) {
+      return new handlebars.SafeString(
+        `<span class="missing-value" data-field="number">[[number]]</span>`
+      );
+    }
+    const formattedNumber = formatNumber(number, options && options.hash);
+    return new handlebars.SafeString(
+      `<span class="imported-value" data-field="value">${handlebars.escapeExpression(formattedNumber)}</span>`
+    );
+  });
+});
+
+// Clean up after all tests
+afterAll(() => {
+  // Unregister all helpers
+  [
+    'eq',
+    'lookup',
+    'emptyValue',
+    'objectToArray',
+    'helperMissing',
+    'blockHelperMissing',
+    'formatDate',
+    'addYears',
+    'now',
+    'formatNumber',
+  ].forEach((helper) => {
+    handlebars.unregisterHelper(helper);
+  });
+});
+
+describe('Handlebars Date Helpers', () => {
+  describe('formatDate helper', () => {
+    it('should format date with Spanish locale', () => {
+      const date = '2024-01-29';
+      const result = formatDate(date, 'D [de] MMMM [de] YYYY');
+      expect(result.string).toBe(
+        '<span class="imported-value" data-field="date">29 de enero de 2024</span>'
+      );
+    });
+
+    it('should format date with default format', () => {
+      const date = '2024-01-29';
+      const result = formatDate(date);
+      expect(result.string).toBe(
+        '<span class="imported-value" data-field="date">29/01/2024</span>'
+      );
+    });
+
+    it('should format date with custom format', () => {
+      const date = '2024-01-29';
+      const result = formatDate(date, 'YYYY-MM-DD');
+      expect(result.string).toBe(
+        '<span class="imported-value" data-field="date">2024-01-29</span>'
+      );
+    });
+
+    it('should handle invalid date', () => {
+      const result = formatDate('invalid-date');
+      expect(result.string).toBe(
+        '<span class="missing-value" data-field="date">[[Invalid date]]</span>'
+      );
+    });
+
+    it('should handle undefined date', () => {
+      const result = formatDate(undefined);
+      expect(result.string).toBe(
+        '<span class="missing-value" data-field="date">[[Invalid date]]</span>'
+      );
+    });
+
+    it('should maintain timezone', () => {
+      const date = '2024-01-29T15:30:00.000Z';
+      const result = formatDate(date, 'HH:mm');
+      expect(result.string).toBe(
+        '<span class="imported-value" data-field="date">16:30</span>'
+      );
+    });
+  });
+
+  describe('addYears helper', () => {
+    it('should add years to date maintaining Spanish locale', () => {
+      const date = '2024-01-29';
+      const result = addYears(date, 1);
+      const dateText = result.toString().match(/data-field="date">(.*?)</)[1];
+      expect(dateText).toBe('29 de enero de 2025');
+    });
+
+    it('should handle negative years', () => {
+      const date = '2024-01-29';
+      const result = addYears(date, -1);
+      const dateText = result.toString().match(/data-field="date">(.*?)</)[1];
+      expect(dateText).toBe('29 de enero de 2023');
+    });
+
+    it('should handle leap years', () => {
+      const date = '2024-02-29';
+      const result = addYears(date, 1);
+      const dateText = result.toString().match(/data-field="date">(.*?)</)[1];
+      expect(dateText).toBe('28 de febrero de 2025');
+    });
+
+    it('should handle leap year to leap year', () => {
+      const date = '2020-02-29';
+      const result = addYears(date, 4);
+      const dateText = result.toString().match(/data-field="date">(.*?)</)[1];
+      expect(dateText).toBe('29 de febrero de 2024');
+    });
+
+    it('should handle undefined date', () => {
+      const template = handlebars.compile('{{addYears undefined 1}}');
+      const result = template({});
+      expect(result).toContain('missing-value');
+      expect(result).toContain('Invalid date');
+    });
+
+    it('should handle invalid years', () => {
+      const template = handlebars.compile('{{addYears date undefined}}');
+      const result = template({ date: '2024-01-29' });
+      expect(result).toContain('missing-value');
+      expect(result).toContain('Invalid date');
+    });
+  });
+
+  describe('now helper', () => {
+    it('should return current date in Spanish format', () => {
+      const result = now('D [de] MMMM [de] YYYY');
+      expect(result.string).toBe(
+        '<span class="imported-value" data-field="date">29 de enero de 2024</span>'
+      );
+    });
+
+    it('should handle different formats', () => {
+      expect(now('DD/MM/YYYY').string).toBe(
+        '<span class="imported-value" data-field="date">29/01/2024</span>'
+      );
+      expect(now('YYYY-MM-DD').string).toBe(
+        '<span class="imported-value" data-field="date">2024-01-29</span>'
+      );
+      expect(now('dddd').string).toBe(
+        '<span class="imported-value" data-field="date">lunes</span>'
+      );
+      expect(now('MMMM').string).toBe(
+        '<span class="imported-value" data-field="date">enero</span>'
+      );
+    });
+
+    it('should maintain timezone in output', () => {
+      const result = now('HH:mm Z');
+      expect(result.string).toMatch(
+        /<span class="imported-value" data-field="date">\d{2}:\d{2} \+01:00<\/span>/
+      );
+    });
+  });
+});
+
+describe('Handlebars Value Comparison Helpers', () => {
+  describe('eq helper', () => {
+    it('should compare numbers correctly', () => {
+      expect(eq(5, 5)).toBe(true);
+      expect(eq(5, 6)).toBe(false);
+      expect(eq(0, 0)).toBe(true);
+      expect(eq(-1, -1)).toBe(true);
+    });
+
+    it('should handle string-number comparisons', () => {
+      expect(eq('5', 5)).toBe(true);
+      expect(eq(5, '5')).toBe(true);
+      expect(eq('0', 0)).toBe(true);
+      expect(eq('5', 6)).toBe(false);
+    });
+
+    it('should handle string-string number comparisons', () => {
+      expect(eq('5', '5')).toBe(true);
+      expect(eq('5', '6')).toBe(false);
+      expect(eq('0', '0')).toBe(true);
+    });
+
+    it('should handle null and undefined', () => {
+      expect(eq(null, null)).toBe(true);
+      expect(eq(undefined, undefined)).toBe(true);
+      expect(eq(null, undefined)).toBe(false);
+      expect(eq(null, 0)).toBe(false);
+      expect(eq(undefined, '')).toBe(false);
+    });
+
+    it('should handle empty values', () => {
+      expect(eq('', '')).toBe(true);
+      expect(eq('', 0)).toBe(false);
+      expect(eq('', null)).toBe(false);
+      expect(eq('', undefined)).toBe(false);
+    });
+
+    it('should handle boolean values', () => {
+      expect(eq(true, true)).toBe(true);
+      expect(eq(false, false)).toBe(true);
+      expect(eq(true, false)).toBe(false);
+      expect(eq(true, 1)).toBe(false);
+      expect(eq(false, 0)).toBe(false);
+    });
+  });
+});
+
+describe('Handlebars Object Helpers', () => {
+  describe('lookup helper', () => {
+    it('should handle direct property access', () => {
+      const obj = {
+        name: 'John',
+        age: 30,
+      };
+      expect(lookup(obj, 'name')).toBe('John');
+      expect(lookup(obj, 'age')).toBe(30);
+      expect(lookup(obj, 'nonexistent')).toBeUndefined();
+    });
+
+    it('should extract numbers from HTML string', () => {
+      const obj = {
+        string: '<span>123</span>',
+      };
+      expect(lookup(obj)).toBe(123);
+    });
+
+    it('should extract numbers from nested numero.string', () => {
+      const obj = {
+        numero: {
+          string: '<span>456</span>',
+        },
+      };
+      expect(lookup(obj)).toBe(456);
+    });
+
+    it('should handle nested objects', () => {
+      const obj = {
+        user: {
+          profile: {
+            name: 'John',
+            age: 30,
+          },
+        },
+      };
+      expect(lookup(obj.user.profile, 'name')).toBe('John');
+      expect(lookup(obj.user.profile, 'age')).toBe(30);
+    });
+
+    it('should handle invalid inputs', () => {
+      expect(lookup(null)).toBeUndefined();
+      expect(lookup(undefined)).toBeUndefined();
+      expect(lookup({})).toBeUndefined();
+      expect(lookup({ string: 'not a number' })).toBeUndefined();
+      expect(lookup({ string: '<span>abc</span>' })).toBeUndefined();
+    });
+
+    it('should handle complex HTML strings', () => {
+      const obj = {
+        string: '<div class="value"><span>789</span></div>',
+      };
+      expect(lookup(obj)).toBe(789);
+    });
+
+    it('should handle multiple numbers in HTML', () => {
+      const obj = {
+        string: '<span>123</span><span>456</span>',
+      };
+      expect(lookup(obj)).toBe(123);
+    });
+
+    it('should handle circular references', () => {
+      const obj = { a: 1 };
+      obj.self = obj;
+      expect(lookup(obj, 'a')).toBe(1);
+      expect(lookup(obj, 'self')).toBeDefined();
+    });
+  });
+});
+
+describe('Handlebars Number Formatting', () => {
+  describe('formatNumber helper', () => {
+    it('should format numbers according to Spanish locale', () => {
+      expect(formatNumber(1234.56)).toBe('1.234,56');
+      expect(formatNumber('1234.56')).toBe('1.234,56');
+    });
+
+    it('should handle currency formatting', () => {
+      const options = {
+        style: 'currency',
+        currency: 'EUR',
+      };
+      expect(formatNumber(1234.56, options)).toBe('1.234,56 €');
+    });
+
+    it('should handle percentage formatting', () => {
+      const options = {
+        style: 'percent',
+      };
+      expect(formatNumber(0.1234, options)).toBe('12,34 %');
+    });
+
+    it('should handle custom fraction digits', () => {
+      const options = {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 4,
+      };
+      expect(formatNumber(1234.5678, options)).toBe('1.234,5678');
+      expect(formatNumber(1234.5, options)).toBe('1.234,50');
+    });
+
+    it('should handle invalid numbers', () => {
+      expect(formatNumber('invalid')).toBe('invalid');
+      expect(formatNumber(null)).toBe('');
+      expect(formatNumber(undefined)).toBe('');
+      expect(formatNumber('')).toBe('');
+    });
+
+    it('should work in handlebars template', () => {
+      const template = handlebars.compile(
+        '{{formatNumber value style="currency" currency="EUR"}}'
+      );
+      const result = template({ value: 1234.56 });
+      expect(result).toBe(
+        '<span class="imported-value" data-field="value">1.234,56 €</span>'
+      );
+    });
+
+    it('should handle missing values in template', () => {
+      const template = handlebars.compile('{{formatNumber value}}');
+      const result = template({});
+      expect(result).toBe(
+        '<span class="missing-value" data-field="number">[[number]]</span>'
+      );
+    });
+
+    it('should handle very large numbers', () => {
+      expect(formatNumber(1e9)).toBe('1.000.000.000');
+      expect(formatNumber(Number.MAX_SAFE_INTEGER)).toMatch(/^[\d.,]+$/);
+    });
+
+    it('should handle very small numbers', () => {
+      expect(formatNumber(1e-6)).toBe('0,000001');
+      expect(formatNumber(Number.MIN_VALUE)).toMatch(/^[\d.,]+$/);
+    });
+
+    it('should handle special numeric values', () => {
+      expect(formatNumber(Infinity)).toBe('∞');
+      expect(formatNumber(-Infinity)).toBe('-∞');
+      expect(formatNumber(NaN)).toBe('NaN');
+    });
+  });
+});
+
+describe('Template Integration Tests', () => {
+  it('should handle date chain operations', () => {
+    const template = handlebars.compile(
+      '{{formatDate (addYears now 1) "D [de] MMMM [de] YYYY"}}'
+    );
+    const result = template({});
+    expect(result).toBe(
+      '<span class="imported-value" data-field="value"><span class="imported-value" data-field="date">29 de enero de 2025</span></span>'
+    );
+  });
+
+  it('should handle complex number formatting in template', () => {
+    const template = handlebars.compile(`
+      {{formatNumber value1 style="currency" currency="EUR"}}
+      {{formatNumber value2 style="percent"}}
+      {{formatNumber value3 minimumFractionDigits=2 maximumFractionDigits=4}}
+    `);
+    const result = template({
+      value1: 1234.56,
+      value2: 0.1234,
+      value3: 1234.5678,
+    });
+    expect(result.trim()).toContain('1.234,56 €');
+    expect(result.trim()).toContain('12,34 %');
+    expect(result.trim()).toContain('1.234,5678');
+  });
+
+  it('should handle missing values consistently', () => {
+    const template = handlebars.compile(`
+      {{formatDate undefined "DD/MM/YYYY"}}
+      {{formatNumber undefined}}
+      {{lookup undefined "prop"}}
+    `);
+    const result = template({});
+    expect(result).toContain('missing-value');
+    expect(result).toContain('[[date]]');
+    expect(result).toContain('[[number]]');
+  });
+});

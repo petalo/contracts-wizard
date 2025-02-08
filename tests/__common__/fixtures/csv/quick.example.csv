@@ -1,0 +1,31 @@
+key,value
+status,1
+email,joanne@example.com
+simple,A simple value
+user.name,John Doe
+user.email,john@example.com
+company.address.street,123 Main St
+company.address.city,Anytown
+condition,true
+items.0,First item
+items.1,Second item
+items.2,Third item
+date,2024-01-28
+object.key1,value1
+object.key2,value2
+users.0.name,Alice
+users.0.email,alice@example.com
+users.0.address.street,456 Oak Ave
+users.0.address.city,Somewhere
+users.1.name,Bob
+users.1.email,bob@example.com
+users.2.name,Charlie
+users.2.email,charlie@example.com
+users.2.address.street,789 Pine St
+users.2.address.city,Elsewhere
+parent.0.child.0,First child of group 0
+parent.0.child.2,Last child of group 0
+parent.1.child.0,First child of group 1
+parent.1.child.2,Last child of group 1
+parent.2.child.0,First child of group 2
+parent.2.child.1,Second child of group 2
