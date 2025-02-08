@@ -36,7 +36,7 @@ jest.mock('fs/promises', () => ({
   mkdir: jest.fn().mockResolvedValue(undefined),
 }));
 
-describe.skip('Path Configuration', () => {
+describe('Path Configuration', () => {
   let originalEnv;
 
   beforeEach(() => {
