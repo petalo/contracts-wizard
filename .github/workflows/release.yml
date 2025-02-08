@@ -18,11 +18,13 @@ jobs:
 
       - name: Create GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           CHANGELOG_SECTION=$(awk "/## \[$VERSION\]/{p=1;print;next} /## \[/{p=0} p" CHANGELOG.md)
           gh release create $GITHUB_REF_NAME \
+            --repo $REPO \
             --title "Release $VERSION" \
             --notes "$CHANGELOG_SECTION" \
             --draft=false \
