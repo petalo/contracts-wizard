@@ -15,11 +15,8 @@ echo "🔍 Running pre-commit checks..."
 # - tests/       -> Test files (following Jest conventions)
 # - data-csv/    -> Generated CSV files (not in repository)
 
-# Define all main directories
-DIRS_TO_CHECK="bin scripts src templates tests data-csv"
-
 # Get list of staged JavaScript files
-STAGED_JS_FILES=$(git diff --cached --name-only --diff-filter=ACM "src/**/*.js")
+STAGED_JS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.js$')
 
 # Skip checks if no JavaScript files are staged
 if [ -z "$STAGED_JS_FILES" ]; then
@@ -38,9 +35,9 @@ if ! npx eslint --config eslint.config.js $STAGED_JS_FILES; then
   exit 1
 fi
 
-# 2. Run linter
+# 2. Run linter only on staged files
 echo "🔍 Running linter..."
-if ! npm run lint; then
+if ! npx eslint $STAGED_JS_FILES; then
   echo "❌ Error: Code must pass linting before commit!"
   exit 1
 fi

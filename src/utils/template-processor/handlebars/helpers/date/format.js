@@ -1,5 +1,5 @@
 /**
- * @fileoverview Date formatting helpers for Handlebars with Spanish locale support
+ * @file Date formatting helpers for Handlebars with Spanish locale support
  *
  * Provides date formatting and manipulation helpers that:
  * - Support Spanish locale formatting
@@ -52,11 +52,10 @@ moment.locale(LOCALE_CONFIG.locale);
 moment.tz.setDefault(LOCALE_CONFIG.timezone);
 
 /**
- * Formats a date according to the specified format
- *
- * @param {moment.Moment|string|Date} date - The date to format
- * @param {string} format - The format string
- * @return {string} The formatted date string
+ * Format date using moment.js
+ * @param {Date|string} date - The date to format
+ * @param {string} format - Format string
+ * @returns {string} Formatted date string
  */
 function formatDate(date, format = HANDLEBARS_CONFIG.dateFormats.DEFAULT) {
   try {
@@ -139,7 +138,7 @@ function formatDate(date, format = HANDLEBARS_CONFIG.dateFormats.DEFAULT) {
  *
  * @param {moment.Moment|string|Date} date - The date to add years to. If undefined, uses current date.
  * @param {number} years - The number of years to add
- * @return {moment.Moment} A moment object with the years added
+ * @returns {moment.Moment} A moment object with the years added
  */
 function addYears(date, years) {
   try {
@@ -220,8 +219,8 @@ function addYears(date, years) {
 /**
  * Returns the current date/time, optionally formatted
  *
- * @param {string|Object} format - Optional format string or Handlebars options object
- * @return {string|moment.Moment} Formatted date string or moment object if chained
+ * @param {string|object} format - Optional format string or Handlebars options object
+ * @returns {string|moment.Moment} Formatted date string or moment object if chained
  */
 function now(format) {
   try {

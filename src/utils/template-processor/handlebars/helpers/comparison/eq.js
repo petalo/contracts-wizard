@@ -1,5 +1,5 @@
 /**
- * @fileoverview Equality comparison helper for Handlebars
+ * @file Equality comparison helper for Handlebars
  *
  * Provides a comprehensive equality comparison helper that can handle:
  * - String values (case-insensitive)
@@ -43,7 +43,7 @@ const { extractValue } = require('../value/extract');
  *
  * @param {*} value1 - First value to compare
  * @param {*} value2 - Second value to compare
- * @param {Object} options - Handlebars options object
+ * @param {object} options - Handlebars options object
  * @returns {boolean|string} True if values are equal, false otherwise
  * @example
  * // Basic string comparison

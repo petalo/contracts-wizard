@@ -1,5 +1,5 @@
 /**
- * @fileoverview Custom text renderer for Handlebars templates with enhanced formatting and value wrapping.
+ * @file Custom text renderer for Handlebars templates with enhanced formatting and value wrapping.
  *
  * This renderer extends the default Markdown renderer to add custom formatting for values,
  * specifically handling @index values and providing enhanced logging capabilities.
@@ -48,7 +48,7 @@ marked.setOptions({
  * Debug utility to log object properties
  *
  * @param {string} prefix - Log message prefix
- * @param {Object} obj - Object to debug
+ * @param {object} obj - Object to debug
  * @private
  */
 function debugObject(prefix, obj) {
@@ -81,7 +81,7 @@ class CustomTextRenderer {
   /**
    * Creates a new CustomTextRenderer instance
    *
-   * @param {Object} logger - Logger instance for debugging
+   * @param {object} logger - Logger instance for debugging
    */
   constructor(logger) {
     this.logger = logger;
@@ -91,7 +91,7 @@ class CustomTextRenderer {
   /**
    * Sets data for the renderer
    *
-   * @param {Object} data - Data object to use for rendering
+   * @param {object} data - Data object to use for rendering
    */
   setData(data) {
     this.options.data = data;
@@ -137,7 +137,7 @@ class CustomTextRenderer {
   /**
    * Processes a token and returns the rendered text
    *
-   * @param {Object} token - The token to process
+   * @param {object} token - The token to process
    * @returns {string} The rendered text
    * @example
    * renderer.text({ type: 'text', text: '@index' })
@@ -247,6 +247,11 @@ class CustomTextRenderer {
     return token.toString();
   }
 
+  /**
+   * Format paragraphs with custom styling
+   * @param {string} text - Paragraph content
+   * @returns {string} Formatted paragraph HTML
+   */
   paragraph(text) {
     logger.debug('paragraph() called with:', {
       input: text,
@@ -284,11 +289,17 @@ class CustomTextRenderer {
       logger.debug('paragraph(): Converted to string', { content });
     }
 
-    const result = `<p>${content}</p>`;
+    const result = `<p class="custom-paragraph">${content}</p>`;
     logger.debug('paragraph(): Final result', { result });
     return result;
   }
 
+  /**
+   * Format headings with custom styling
+   * @param {string} text - Heading text
+   * @param {number} level - Heading level
+   * @returns {string} Formatted heading HTML
+   */
   heading(text, level) {
     logger.debug('heading() called with:', {
       input: text,
@@ -330,6 +341,12 @@ class CustomTextRenderer {
     return result;
   }
 
+  /**
+   * Format lists with custom styling
+   * @param {string} body - List content
+   * @param {boolean} ordered - Whether list is ordered
+   * @returns {string} Formatted list HTML
+   */
   list(body, ordered) {
     logger.debug('list() called with:', {
       body,
@@ -354,6 +371,11 @@ class CustomTextRenderer {
     return result;
   }
 
+  /**
+   * Format list items with custom styling
+   * @param {string} text - List item content
+   * @returns {string} Formatted list item HTML
+   */
   listitem(text) {
     logger.debug('listitem() called with:', {
       input: text,
@@ -396,39 +418,62 @@ class CustomTextRenderer {
     return result;
   }
 
+  /**
+   * Format line breaks with custom styling
+   * @returns {string} Formatted line break HTML
+   */
   br() {
     logger.debug('br() called');
-    return '<br>\n';
+    return '<br class="custom-break">';
   }
 
+  /**
+   * Format horizontal rules with custom styling
+   * @returns {string} Formatted horizontal rule HTML
+   */
   hr() {
     logger.debug('hr() called');
-    return '<hr>\n';
+    return '<hr class="custom-hr">';
   }
 
+  /**
+   * Formats a single space character.
+   * Used for consistent space handling in text content.
+   * Ensures proper spacing in rendered output.
+   *
+   * @returns {string} A single space character
+   */
   space() {
     logger.debug('space() called');
     return ' ';
   }
 
-  codespan(code) {
-    return `<code>${String(code || '')}</code>`;
+  /**
+   * Format code spans with custom styling
+   * @param {string} text - Code content
+   * @returns {string} Formatted code span HTML
+   */
+  codespan(text) {
+    return `<code class="custom-code">${text}</code>`;
   }
 
-  code(code, infostring) {
-    const lang = (infostring || '').match(/\S*/)[0];
+  /**
+   * Format code blocks with custom styling
+   * @param {string} code - Code content
+   * @param {string} lang - Programming language
+   * @returns {string} Formatted code block HTML
+   */
+  code(code, lang) {
     const langClass = lang ? ` class="language-${lang}"` : '';
     return `<pre><code${langClass}>${String(code || '')}</code></pre>\n`;
   }
 
   /**
-   * Process links in markdown content
-   * Handles both static and dynamic URLs with proper wrapping
-   *
-   * @param {string} href - The link URL
-   * @param {string} title - The link title
-   * @param {string} text - The link text
-   * @returns {string} The formatted HTML link
+   * Format links with custom styling
+   * @param {string} href - Link URL
+   * @param {string} title - Link title
+   * @param {string} text - Link text
+   * @returns {string} Formatted link HTML
    */
   link(href, title, text) {
     debugObject('LINK', {
@@ -467,6 +512,14 @@ class CustomTextRenderer {
     return `<a href="${finalHref}"${titleAttr}>${content}</a>`;
   }
 
+  /**
+   * Processes raw HTML content with proper handling of SafeStrings.
+   * Handles both direct HTML strings and Handlebars SafeString objects.
+   * Preserves HTML structure while ensuring proper escaping.
+   *
+   * @param {string|handlebars.SafeString} html - HTML content to process
+   * @returns {string} Processed HTML content
+   */
   html(html) {
     logger.debug('html() called with:', {
       input: html,
@@ -489,34 +542,87 @@ class CustomTextRenderer {
     return result;
   }
 
+  /**
+   * Formats tables with custom styling and structure.
+   * Handles header and body content separately to create a properly structured HTML table.
+   * Ensures proper nesting of thead and tbody elements.
+   *
+   * @param {string} header - Table header content
+   * @param {string} body - Table body content
+   * @returns {string} Formatted table HTML
+   */
   table(header, body) {
     return `<table>\n<thead>\n${header}</thead>\n<tbody>\n${body}</tbody>\n</table>\n`;
   }
 
+  /**
+   * Formats table rows with proper structure and styling.
+   * Creates a table row element with the provided content.
+   * Handles content formatting and ensures proper HTML structure.
+   *
+   * @param {string} content - Row content
+   * @returns {string} Formatted table row HTML
+   */
   tablerow(content) {
     return `<tr>\n${content}</tr>\n`;
   }
 
+  /**
+   * Formats table cells with custom styling and structure.
+   * Handles both header and data cells with proper alignment.
+   * Supports cell alignment and header/data cell differentiation.
+   *
+   * @param {string} content - Cell content
+   * @param {object} flags - Cell flags
+   * @param {boolean} flags.header - Whether cell is a header
+   * @param {string} [flags.align] - Cell alignment
+   * @returns {string} Formatted table cell HTML
+   */
   tablecell(content, flags) {
     const type = flags.header ? 'th' : 'td';
     const align = flags.align ? ` align="${flags.align}"` : '';
     return `<${type}${align}>${content}</${type}>\n`;
   }
 
+  /**
+   * Formats blockquotes with custom styling and structure.
+   * Creates a properly formatted blockquote element with the provided content.
+   * Ensures proper nesting and HTML structure.
+   *
+   * @param {string} quote - Quote content
+   * @returns {string} Formatted blockquote HTML
+   */
   blockquote(quote) {
     return `<blockquote>\n${quote}</blockquote>\n`;
   }
 
+  /**
+   * Format images with custom styling
+   * @param {string} href - Image URL
+   * @param {string} title - Image title
+   * @param {string} text - Alt text
+   * @returns {string} Formatted image HTML
+   */
   image(href, title, text) {
     const titleAttr = title ? ` title="${title}"` : '';
     const altAttr = text ? ` alt="${text}"` : '';
     return `<img src="${href}"${altAttr}${titleAttr}>`;
   }
 
+  /**
+   * Format strong text with custom styling
+   * @param {string} text - Text content
+   * @returns {string} Formatted strong text HTML
+   */
   strong(text) {
     return `<strong>${text}</strong>`;
   }
 
+  /**
+   * Format emphasized text with custom styling
+   * @param {string} text - Text content
+   * @returns {string} Formatted emphasized text HTML
+   */
   em(text) {
     return `<em>${text}</em>`;
   }
