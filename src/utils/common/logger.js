@@ -1,5 +1,5 @@
 /**
- * @fileoverview Application Logging System
+ * @file Application Logging System
  *
  * Provides a comprehensive logging system with standardized formatting,
  * context validation, metadata grouping, and error handling.
@@ -42,7 +42,7 @@
  * @requires path
  * @requires dotenv
  * @requires @/config/env
- * @exports {Object} logger - Logging interface
+ * @exports logger - Logging interface
  *
  * @example
  * // Import logger
@@ -153,7 +153,7 @@ const originalEmit = process.emit;
  * Ensures that the provided context is valid according to logging standards.
  * Handles context normalization and provides fallback to system context.
  *
- * @param {string|Object} context - The context to validate
+ * @param {string|object} context - The context to validate
  * @returns {string} Validated and normalized context
  */
 const validateContext = (context) => {
@@ -193,8 +193,8 @@ const validateContext = (context) => {
  * Organizes metadata fields into predefined groups for better readability
  * and analysis. Fields that don't match any group remain ungrouped.
  *
- * @param {Object} metadata - The metadata to group
- * @returns {Object} Grouped metadata object
+ * @param {object} metadata - The metadata to group
+ * @returns {object} Grouped metadata object
  * @example
  * // Groups related fields
  * groupMetadata({
@@ -250,7 +250,7 @@ const groupMetadata = (metadata) => {
  * Processes and formats metadata object for logging, handling special cases
  * and providing consistent output format.
  *
- * @param {Object} metadata - The metadata to format
+ * @param {object} metadata - The metadata to format
  * @returns {string} Formatted metadata string
  * @throws {Error} If metadata processing fails
  * @example
@@ -326,8 +326,8 @@ const formatMetadata = (metadata) => {
  * Analyzes stack trace to determine the original source file
  * of the log call, filtering out internal and library calls.
  *
- * @param {Object} info - Winston log information object
- * @returns {Object} Modified info object with filename
+ * @param {object} info - Winston log information object
+ * @returns {object} Modified info object with filename
  * @example
  * // Adds filename to log info
  * addFilename({ message: 'test' })
@@ -355,13 +355,13 @@ const addFilename = winston.format((info) => {
  * Creates standardized log entries with timestamp, level,
  * filename, context, message, and formatted metadata.
  *
- * @param {Object} params - Format parameters
+ * @param {object} params - Format parameters
  * @param {string} params.level - Log level
  * @param {string} params.message - Log message
  * @param {string} params.timestamp - ISO timestamp
  * @param {string} [params.filename] - Source file
  * @param {string} [params.context] - Log context
- * @param {Object} [params.metadata] - Additional data
+ * @param {object} [params.metadata] - Additional data
  * @returns {string} Formatted log entry
  * @example
  * // Basic log formatting
@@ -494,7 +494,7 @@ if (isDebugEnabled()) {
  * Provides standardized logging methods with automatic context handling,
  * error processing, and metadata formatting.
  *
- * @type {Object}
+ * @type {object}
  * @property {Function} error - Logs error messages with stack traces
  * @property {Function} warn - Logs warning messages
  * @property {Function} info - Logs informational messages
@@ -524,7 +524,7 @@ const logger = {
    * Logs error messages with stack traces
    *
    * @param {string|Error} message - Error message or Error object
-   * @param {Object} [metadata={}] - Additional error context
+   * @param {object} [metadata={}] - Additional error context
    * @returns {void}
    * @example
    * logger.error(new Error('Database connection failed'));
@@ -549,7 +549,7 @@ const logger = {
    * Logs warning messages
    *
    * @param {string} message - Warning message
-   * @param {Object} [metadata={}] - Additional warning context
+   * @param {object} [metadata={}] - Additional warning context
    * @returns {void}
    * @example
    * logger.warn('High memory usage', { context: 'perf', usage: '85%' });
@@ -565,7 +565,7 @@ const logger = {
    * Logs informational messages
    *
    * @param {string} message - Info message
-   * @param {Object} [metadata={}] - Additional information context
+   * @param {object} [metadata={}] - Additional information context
    * @returns {void}
    * @example
    * logger.info('User logged in', { context: 'auth', userId: '123' });
@@ -581,7 +581,7 @@ const logger = {
    * Logs debug information
    *
    * @param {string} message - Debug message
-   * @param {Object} [metadata={}] - Additional debug context
+   * @param {object} [metadata={}] - Additional debug context
    * @returns {void}
    * @example
    * logger.debug('Processing batch', { context: 'task', items: 50 });
