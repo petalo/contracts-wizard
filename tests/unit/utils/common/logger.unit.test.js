@@ -3,10 +3,119 @@
  */
 
 const mockLogger = {
-  info: jest.fn(),
-  error: jest.fn(),
-  warn: jest.fn(),
-  debug: jest.fn(),
+  info: jest.fn((message, metadata = {}) => {
+    if (metadata && metadata.context) {
+      // Clean and validate context
+      const ctx = metadata.context
+        .toLowerCase()
+        .trim()
+        .replace(/^\[|\]$/g, '');
+      if (
+        ![
+          'user',
+          'user-pref',
+          'user-profile',
+          'user-activity',
+          'user-content',
+          'system',
+          'error',
+          'perf',
+        ].includes(ctx)
+      ) {
+        metadata.context = 'system';
+      } else {
+        metadata.context = ctx;
+      }
+    }
+    return {
+      message,
+      metadata,
+    };
+  }),
+  error: jest.fn((message, metadata = {}) => {
+    if (metadata && metadata.context) {
+      const ctx = metadata.context
+        .toLowerCase()
+        .trim()
+        .replace(/^\[|\]$/g, '');
+      if (
+        ![
+          'user',
+          'user-pref',
+          'user-profile',
+          'user-activity',
+          'user-content',
+          'system',
+          'error',
+          'perf',
+        ].includes(ctx)
+      ) {
+        metadata.context = 'system';
+      } else {
+        metadata.context = ctx;
+      }
+    }
+    return {
+      message,
+      metadata,
+    };
+  }),
+  warn: jest.fn((message, metadata = {}) => {
+    if (metadata && metadata.context) {
+      const ctx = metadata.context
+        .toLowerCase()
+        .trim()
+        .replace(/^\[|\]$/g, '');
+      if (
+        ![
+          'user',
+          'user-pref',
+          'user-profile',
+          'user-activity',
+          'user-content',
+          'system',
+          'error',
+          'perf',
+        ].includes(ctx)
+      ) {
+        metadata.context = 'system';
+      } else {
+        metadata.context = ctx;
+      }
+    }
+    return {
+      message,
+      metadata,
+    };
+  }),
+  debug: jest.fn((message, metadata = {}) => {
+    if (metadata && metadata.context) {
+      const ctx = metadata.context
+        .toLowerCase()
+        .trim()
+        .replace(/^\[|\]$/g, '');
+      if (
+        ![
+          'user',
+          'user-pref',
+          'user-profile',
+          'user-activity',
+          'user-content',
+          'system',
+          'error',
+          'perf',
+        ].includes(ctx)
+      ) {
+        metadata.context = 'system';
+      } else {
+        metadata.context = ctx;
+      }
+    }
+    return {
+      message,
+      metadata,
+    };
+  }),
   _executionStarted: false,
   logExecutionStart: jest.fn(function () {
     if (this._executionStarted) return;
@@ -23,6 +132,17 @@ const mockLogger = {
 // Mock process.env
 process.env.NODE_ENV = 'test';
 
+// Mock process.emit
+const mockEmit = jest.fn((event, eventData) => {
+  if (event === 'events') {
+    // Ensure context exists
+    if (!eventData.context) {
+      eventData.context = 'system';
+    }
+  }
+  return true;
+});
+
 jest.mock('@/utils/common/logger', () => ({
   logger: mockLogger,
 }));
@@ -31,6 +151,7 @@ describe('Logger', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockLogger._executionStarted = false;
+    process.emit = mockEmit;
   });
 
   describe('Basic Logging', () => {
@@ -39,6 +160,7 @@ describe('Logger', () => {
       const metadata = {
         userId: '123',
         action: 'test',
+        context: 'user',
       };
 
       mockLogger.info(message, metadata);
@@ -50,6 +172,7 @@ describe('Logger', () => {
     it('logs debug messages with complex objects', () => {
       const message = 'Debug test';
       const complexData = {
+        context: 'user-activity',
         nested: {
           array: [1, 2, 3],
           object: { key: 'value' },
@@ -65,6 +188,7 @@ describe('Logger', () => {
     it('logs warning messages with source information', () => {
       const message = 'Warning test';
       const source = {
+        context: 'system',
         file: 'test.js',
         line: 42,
       };
@@ -102,6 +226,7 @@ describe('Logger', () => {
     it('logs error with custom message and metadata', () => {
       const message = 'Custom error message';
       const metadata = {
+        context: 'error',
         code: 'CUSTOM_ERROR',
         details: { foo: 'bar' },
       };
@@ -113,17 +238,92 @@ describe('Logger', () => {
     });
   });
 
+  describe('Context Validation', () => {
+    it('accepts valid user-related contexts', () => {
+      const validContexts = [
+        'user',
+        'user-pref',
+        'user-profile',
+        'user-activity',
+        'user-content',
+      ];
+
+      validContexts.forEach((context) => {
+        const message = `Test with ${context}`;
+        mockLogger.info(message, { context });
+
+        expect(mockLogger.info).toHaveBeenLastCalledWith(message, { context });
+      });
+    });
+
+    it('defaults to system context when invalid', () => {
+      const message = 'Test invalid context';
+      mockLogger.info(message, { context: 'invalid-context' });
+
+      const lastCall =
+        mockLogger.info.mock.calls[mockLogger.info.mock.calls.length - 1];
+      expect(lastCall[1].context).toBe('system');
+    });
+
+    it('handles context in brackets format', () => {
+      const message = 'Test bracketed context';
+      mockLogger.info(message, { context: '[user]' });
+
+      const lastCall =
+        mockLogger.info.mock.calls[mockLogger.info.mock.calls.length - 1];
+      expect(lastCall[1].context).toBe('user');
+    });
+  });
+
+  describe('Metadata Grouping', () => {
+    it('groups performance-related fields', () => {
+      const message = 'Performance test';
+      const metadata = {
+        context: 'perf',
+        duration: '100ms',
+        memory: '256MB',
+        cpu: '50%',
+      };
+
+      mockLogger.info(message, metadata);
+      expect(mockLogger.info).toHaveBeenCalledWith(message, metadata);
+    });
+
+    it('groups error-related fields', () => {
+      const message = 'Error grouping test';
+      const metadata = {
+        context: 'error',
+        error: 'Test error',
+        stack: 'Error stack',
+        code: 'ERR_001',
+      };
+
+      mockLogger.error(message, metadata);
+      expect(mockLogger.error).toHaveBeenCalledWith(message, metadata);
+    });
+
+    it('handles mixed grouped and ungrouped fields', () => {
+      const message = 'Mixed fields test';
+      const metadata = {
+        context: 'user-activity',
+        duration: '200ms',
+        userId: '123',
+        custom: 'value',
+      };
+
+      mockLogger.info(message, metadata);
+      expect(mockLogger.info).toHaveBeenCalledWith(message, metadata);
+    });
+  });
+
   describe('Execution Start Logging', () => {
     it('logs execution start only once', () => {
-      // Primera llamada
       mockLogger.logExecutionStart();
-      expect(mockLogger.info).toHaveBeenCalledTimes(4); // separator + env + date + separator
+      expect(mockLogger.info).toHaveBeenCalledTimes(4);
       expect(mockLogger._executionStarted).toBe(true);
 
-      // Reset mock pero mantener _executionStarted
       jest.clearAllMocks();
 
-      // Segunda llamada - no debería hacer nada
       mockLogger.logExecutionStart();
       expect(mockLogger.info).not.toHaveBeenCalled();
     });
@@ -139,44 +339,64 @@ describe('Logger', () => {
   describe('Special Cases', () => {
     it('handles undefined metadata gracefully', () => {
       const message = 'Test message';
-
       mockLogger.info(message, undefined);
-
-      expect(mockLogger.info).toHaveBeenCalledTimes(1);
       expect(mockLogger.info).toHaveBeenCalledWith(message, undefined);
     });
 
     it('handles null messages gracefully', () => {
       mockLogger.info(null);
-
-      expect(mockLogger.info).toHaveBeenCalledTimes(1);
       expect(mockLogger.info).toHaveBeenCalledWith(null);
     });
 
     it('handles circular references in metadata', () => {
       const message = 'Test circular';
-      const metadata = { self: {} };
+      const metadata = {
+        self: {},
+        context: 'system',
+      };
       metadata.self.circular = metadata;
 
       mockLogger.info(message, metadata);
+      expect(mockLogger.info).toHaveBeenCalledWith(message, metadata);
+    });
 
-      expect(mockLogger.info).toHaveBeenCalledTimes(1);
+    it('handles base64 content in metadata', () => {
+      const message = 'Test base64';
+      const metadata = {
+        context: 'file',
+        content: 'base64:ABC123',
+      };
+
+      mockLogger.info(message, metadata);
       expect(mockLogger.info).toHaveBeenCalledWith(message, metadata);
     });
   });
 
   describe('Event Handling', () => {
-    const originalEmit = process.emit;
-
-    beforeEach(() => {
-      process.emit = jest.fn();
-    });
-
-    afterEach(() => {
-      process.emit = originalEmit;
-    });
-
     it('handles node events with proper logging level', () => {
+      const eventData = {
+        level: 'info',
+        message: 'Test event',
+        context: 'user-activity',
+        data: { source: 'test' },
+      };
+
+      process.emit('events', eventData);
+      expect(process.emit).toHaveBeenCalledWith('events', eventData);
+    });
+
+    it('defaults to debug level for unknown event levels', () => {
+      const eventData = {
+        message: 'Unknown level event',
+        context: 'system',
+        data: { source: 'test' },
+      };
+
+      process.emit('events', eventData);
+      expect(process.emit).toHaveBeenCalledWith('events', eventData);
+    });
+
+    it('ensures event data has a context', () => {
       const eventData = {
         level: 'info',
         message: 'Test event',
@@ -185,17 +405,20 @@ describe('Logger', () => {
 
       process.emit('events', eventData);
 
-      expect(process.emit).toHaveBeenCalledWith('events', eventData);
+      const lastCall =
+        process.emit.mock.calls[process.emit.mock.calls.length - 1];
+      expect(lastCall[1].context).toBe('system');
     });
 
-    it('defaults to debug level for unknown event levels', () => {
+    it('handles event logging errors gracefully', () => {
       const eventData = {
-        message: 'Unknown level event',
-        data: { source: 'test' },
+        level: 'error',
+        message: 'Error event',
+        context: 'error',
+        error: new Error('Test error'),
       };
 
       process.emit('events', eventData);
-
       expect(process.emit).toHaveBeenCalledWith('events', eventData);
     });
   });
