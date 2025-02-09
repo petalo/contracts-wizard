@@ -96,6 +96,7 @@ const RETRY_DELAY = 1000;
  *   type: 'validation',
  *   details: { field: 'name' }
  * });
+
  */
 class WorkflowError extends AppError {
   /**
@@ -124,6 +125,7 @@ class WorkflowError extends AppError {
  *   field: 'email',
  *   value: 'invalid'
  * });
+
  */
 class ValidationError extends WorkflowError {
   /**
@@ -153,6 +155,7 @@ class ValidationError extends WorkflowError {
  *   template: 'invoice.md',
  *   reason: 'syntax error'
  * });
+
  */
 class ProcessingError extends WorkflowError {
   /**
@@ -182,6 +185,7 @@ class ProcessingError extends WorkflowError {
  *   file: 'output.pdf',
  *   reason: 'disk full'
  * });
+
  */
 class OutputError extends WorkflowError {
   /**

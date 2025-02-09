@@ -1,5 +1,5 @@
 /**
- * @fileoverview Lookup helper for accessing nested object properties
+ * @file Lookup helper for accessing nested object properties
  *
  * Provides a helper for accessing nested properties that can handle:
  * - Plain objects with nested properties
@@ -39,7 +39,7 @@ const { extractValue } = require('./extract');
 /**
  * Extracts values from nested objects and HTML content
  *
- * @param {Object} obj - Source object to extract value from
+ * @param {object} obj - Source object to extract value from
  * @param {string} prop - Property path to look up
  * @returns {any} Extracted value or undefined if not found
  * @throws {TypeError} When obj is not an object

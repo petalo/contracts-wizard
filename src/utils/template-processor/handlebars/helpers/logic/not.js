@@ -1,5 +1,5 @@
 /**
- * @fileoverview Logical NOT helper for Handlebars
+ * @file Logical NOT helper for Handlebars
  *
  * Provides a logical NOT operation helper that:
  * - Handles boolean negation
