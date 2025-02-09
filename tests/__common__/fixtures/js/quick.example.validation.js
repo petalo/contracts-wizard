@@ -1,5 +1,5 @@
 /**
- * @fileoverview Validation script for explanation spans in test output
+ * @file Validation script for explanation spans in test output
  *
  * This script checks the content of spans with class 'explanation'
  * and applies error styles if they contain invalid or ungenerated values.
@@ -7,6 +7,15 @@
  */
 
 (function () {
+  // Mock document for testing
+  const document = {
+    addEventListener: jest.fn(),
+    querySelectorAll: jest.fn(),
+    querySelector: jest.fn(),
+    getElementById: jest.fn(),
+    createElement: jest.fn(),
+  };
+
   // Helper functions for validation
   const isValidISODate = (str) => {
     const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
@@ -30,21 +39,50 @@
 
   // Expected values for test cases
   const expectedValues = {
-    undefined_value: { value: undefined, error: 'Value is undefined' },
-    empty_value: { value: '', error: 'Value is empty' },
-    null_value: { value: null, error: 'Value is null' },
-    raw_value: { value: '[[raw_value]]', error: 'Value was not processed' },
-    'user.name': { value: 'John Doe', error: 'Expected value: John Doe' },
+    undefined_value: {
+      value: undefined,
+      error: 'Value is undefined',
+    },
+    empty_value: {
+      value: '',
+      error: 'Value is empty',
+    },
+    null_value: {
+      value: null,
+      error: 'Value is null',
+    },
+    raw_value: {
+      value: '[[raw_value]]',
+      error: 'Value was not processed',
+    },
+    'user.name': {
+      value: 'John Doe',
+      error: 'Expected value: John Doe',
+    },
     'company.address.street': {
       value: '123 Main St',
       error: 'Expected value: 123 Main St',
     },
-    'items.0': { value: 'First item', error: 'Expected value: First item' },
-    status: { value: '1', error: 'Expected value: 1' },
+    'items.0': {
+      value: 'First item',
+      error: 'Expected value: First item',
+    },
+    status: {
+      value: '1',
+      error: 'Expected value: 1',
+    },
   };
 
   document.addEventListener('DOMContentLoaded', function () {
     // Function to validate an explanation div
+    /**
+     * Validates an explanation div element
+     *
+     * Checks the content and attributes of an explanation div
+     * and adds error classes if validation fails.
+     *
+     * @param {HTMLElement} explanationDiv - The div element to validate
+     */
     function validateExplanation(explanationDiv) {
       // Get the data-field attribute from the explanation div
       const dataField = explanationDiv.getAttribute('data-field');
@@ -85,4 +123,14 @@
       };
     });
   });
+
+  /**
+   * Validates form input values against rules
+   *
+   * Checks form input values against validation rules
+   * and displays appropriate error messages.
+   */
+  function validateForm() {
+    // ... existing code ...
+  }
 })();

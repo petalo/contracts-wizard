@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * @fileoverview Command Line Interface for Contracts Wizard
+ * @file Command Line Interface for Contracts Wizard
  *
  * Main entry point for the Contracts Wizard CLI application.
  * Provides commands for project initialization and contract generation
@@ -165,28 +165,92 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
 
 // Add custom error classes
+/**
+ * Custom error class for validation failures
+ * Represents errors that occur during input validation
+ *
+ * @example
+ * throw new ValidationError('Invalid template format', {
+ *   template: 'contract.md',
+ *   reason: 'Missing required sections'
+ * });
+ */
 class ValidationError extends AppError {
+  /**
+   * Creates a new ValidationError instance
+   *
+   * @param {string} message - Error message
+   * @param {object} details - Additional error details
+   */
   constructor(message, details) {
     super(message, 'VALIDATION_ERROR', details);
     this.name = 'ValidationError';
   }
 }
 
+/**
+ * Custom error class for configuration issues
+ * Represents errors related to application configuration
+ *
+ * @example
+ * throw new ConfigurationError('Missing required environment variable', {
+ *   variable: 'API_KEY',
+ *   source: '.env'
+ * });
+ */
 class ConfigurationError extends AppError {
+  /**
+   * Creates a new ConfigurationError instance
+   *
+   * @param {string} message - Error message
+   * @param {object} details - Additional error details
+   */
   constructor(message, details) {
     super(message, 'CONFIG_ERROR', details);
     this.name = 'ConfigurationError';
   }
 }
 
+/**
+ * Custom error class for file system operations
+ * Represents errors that occur during file system interactions
+ *
+ * @example
+ * throw new FileSystemError('Failed to create directory', {
+ *   path: '/path/to/dir',
+ *   reason: 'Permission denied'
+ * });
+ */
 class FileSystemError extends AppError {
+  /**
+   * Creates a new FileSystemError instance
+   *
+   * @param {string} message - Error message
+   * @param {object} details - Additional error details
+   */
   constructor(message, details) {
     super(message, 'FILESYSTEM_ERROR', details);
     this.name = 'FileSystemError';
   }
 }
 
+/**
+ * Custom error class for template processing issues
+ * Represents errors that occur during template compilation or rendering
+ *
+ * @example
+ * throw new ProcessingError('Failed to compile template', {
+ *   template: 'invoice.md',
+ *   reason: 'Invalid syntax at line 42'
+ * });
+ */
 class ProcessingError extends AppError {
+  /**
+   * Creates a new ProcessingError instance
+   *
+   * @param {string} message - Error message
+   * @param {object} details - Additional error details
+   */
   constructor(message, details) {
     super(message, 'PROCESSING_ERROR', details);
     this.name = 'ProcessingError';
@@ -440,14 +504,14 @@ https://github.com/petalo/contracts-wizard`);
  * file paths, and runtime options. Validates required paths
  * and settings before creating the context.
  *
- * @param {Object} options - CLI options and configuration
+ * @param {object} options - CLI options and configuration
  * @param {string} [options.template] - Path to template file
  * @param {string} [options.data] - Path to data file
  * @param {string} [options.css] - Path to CSS file
  * @param {boolean} [options.debug] - Enable debug mode
  * @param {string} [options.output] - Output directory path
  * @throws {ConfigurationError} When required configuration is missing
- * @returns {Object} Initialized application context
+ * @returns {object} Initialized application context
  * @example
  * const context = createContext({
  *   template: './template.md',
@@ -503,7 +567,7 @@ function createContext(options = {}) {
  * HTML and PDF output files. Implements retry logic for file operations
  * and proper error handling for all steps of the generation process.
  *
- * @param {Object} options - Generation options
+ * @param {object} options - Generation options
  * @param {string} options.template - Path to markdown template
  * @param {string} [options.data] - Path to CSV data file
  * @param {string} [options.css] - Path to CSS styling file
@@ -673,7 +737,9 @@ program.description('Generate contracts interactively').action(async () => {
       display.status.info(
         'Please fill in the CSV file and run the command again with the filled file.'
       );
-      process.exit(0);
+      // Asegurar que todos los procesos se cierren antes de salir
+      await cleanupAndExit(0);
+      return;
     } else {
       // No data input selected
       data = null;
@@ -723,7 +789,8 @@ program.description('Generate contracts interactively').action(async () => {
     await startWorkflow(context);
 
     display.status.success('Contract generated successfully!');
-    process.exit(0);
+    // Asegurar que todos los procesos se cierren antes de salir
+    await cleanupAndExit(0);
   } catch (error) {
     logger.error('Interactive mode failed:', error);
 
@@ -739,9 +806,68 @@ program.description('Generate contracts interactively').action(async () => {
       `2. Check the log file at: ${process.env.LATEST_LOG_PATH || 'logs/logging-latest.log'}`
     );
 
-    process.exit(1);
+    // Asegurar que todos los procesos se cierren antes de salir con error
+    await cleanupAndExit(1);
   }
 });
+
+/**
+ * Performs cleanup operations and exits the process
+ * Ensures all resources are properly released before exit
+ *
+ * @param {number} code - Exit code to use when terminating the process
+ * @returns {Promise<void>}
+ * @example
+ * // Clean up and exit with success code
+ * await cleanupAndExit(0);
+ *
+ * // Clean up and exit with error code
+ * await cleanupAndExit(1);
+ */
+async function cleanupAndExit(code) {
+  // Force cleanup of any remaining resources
+  if (global.gc) {
+    try {
+      global.gc();
+    } catch (error) {
+      logger.warn('Failed to force garbage collection:', error);
+    }
+  }
+
+  // Ensure all file handles are closed
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Ensure all loggers are flushed
+  await new Promise((resolve) => {
+    const loggers = logger.getLoggers ? logger.getLoggers() : [];
+    if (loggers.length > 0) {
+      Promise.all(loggers.map((l) => l.end())).then(resolve);
+    } else {
+      resolve();
+    }
+  });
+
+  // Kill any remaining child processes
+  const processes = process
+    ._getActiveHandles()
+    .filter((h) => h._handle && h._handle.hasRef());
+  if (processes.length > 0) {
+    processes.forEach((p) => {
+      try {
+        if (typeof p.destroy === 'function') p.destroy();
+        else if (typeof p.kill === 'function') p.kill();
+      } catch (error) {
+        logger.warn('Failed to kill process:', error);
+      }
+    });
+  }
+
+  // Final delay to ensure everything is cleaned up
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Force exit
+  process.exit(code);
+}
 
 // Handle generate command
 program

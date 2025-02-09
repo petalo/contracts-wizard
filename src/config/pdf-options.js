@@ -1,5 +1,5 @@
 /**
- * @fileoverview PDF Generation Configuration
+ * @file PDF Generation Configuration
  *
  * Manages PDF document generation settings:
  * - Page format and margins
@@ -77,6 +77,15 @@ const { AppError } = require('@/utils/common/errors');
 const { PATHS } = require('@/config/paths');
 
 const MAX_LOGO_SIZE = 500 * 1024; // 500KB
+
+/**
+ * PDF generation options configuration
+ *
+ * @typedef {object} PdfOptions
+ * @property {{[key: string]: string}} margins Page margin settings
+ * @property {{[key: string]: string}} format Page format settings
+ * @property {{[key: string]: boolean}} printBackground Background print settings
+ */
 
 /**
  * Extract logo filename from CSS content
@@ -161,7 +170,7 @@ async function loadLogo(logoPath) {
  * - Performance optimizations
  * - Platform-specific options
  *
- * @returns {Object} Puppeteer launch options
+ * @returns {object} Puppeteer launch options
  *
  * @example
  * const browser = await puppeteer.launch({
@@ -217,7 +226,7 @@ function getPuppeteerOptions() {
  * - Print and layout settings
  *
  * @param {string} [cssPath] - Path to CSS file for logo extraction
- * @returns {Promise<Object>} PDF generation options
+ * @returns {Promise<PdfOptions>} PDF generation options
  *
  * @example
  * // Basic usage

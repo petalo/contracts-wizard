@@ -1,5 +1,5 @@
 /**
- * @fileoverview E2E test specific configuration and setup
+ * @file E2E test specific configuration and setup
  *
  * Configures the environment specifically for E2E tests, including:
  * - Browser setup

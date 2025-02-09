@@ -1,5 +1,5 @@
 /**
- * @fileoverview Mock implementation of puppeteer for testing PDF generation
+ * @file Mock implementation of puppeteer for testing PDF generation
  *
  * This mock simulates the basic functionality needed for PDF generation:
  * - Browser launch and close

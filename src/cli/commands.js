@@ -1,5 +1,5 @@
 /**
- * @fileoverview CLI Command Handlers and Utilities
+ * @file CLI Command Handlers and Utilities
  *
  * Implements command handlers and utilities for CLI operations:
  * - File listing by type (templates, CSV, CSS)
@@ -39,10 +39,13 @@
  * @requires @/utils/template-processor/generators/csv - CSV generation
  * @requires @/cli/display - CLI output formatting
  * @requires @/config/file-extensions - File type definitions
- * @exports {Object} LIST_TYPES - File type constants
- * @exports {Function} validateListType - Type validation
- * @exports {Function} createNewDataTemplate - Template creation
- * @exports {Function} handleListCommand - File listing
+ * @exports LIST_TYPES - File type constants
+ * @exports validateListType - Type validation
+ * @exports createNewDataTemplate - Template creation
+ * @exports handleListCommand - File listing
+ * @exports handleHelpCommand - Handler for help command
+ * @exports handleVersionCommand - Handler for version command
+ * @exports validateCommand - Command validator
  *
  * @example
  * // List template files
@@ -69,7 +72,7 @@ const { FILE_EXTENSIONS } = require('@/config/file-extensions');
  * list commands and file operations. Maps directly to
  * file extensions configuration.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string} TEMPLATE - Markdown template files
  * @property {string} CSV - Data files
  * @property {string} CSS - Style sheets
@@ -196,9 +199,62 @@ async function handleListCommand(type) {
   }
 }
 
+/**
+ * Handles help command display
+ * Shows usage information and available commands
+ */
+function handleHelpCommand() {
+  display.header('Contracts Wizard Help');
+  display.list('Available Commands:', [
+    'generate - Generate contract documents',
+    'init    - Create new project',
+    'list    - List available resources',
+    'help    - Show this help message',
+    'version - Show version information',
+  ]);
+}
+
+/**
+ * Handles version command display
+ * Shows current version and environment info
+ */
+function handleVersionCommand() {
+  const pkg = require('../../package.json');
+  display.header('Contracts Wizard Version');
+  display.list('Version Information:', [
+    `Version: ${pkg.version}`,
+    `Node: ${process.version}`,
+    `Environment: ${process.env.NODE_ENV || 'development'}`,
+  ]);
+}
+
+/**
+ * Validates command arguments and options
+ *
+ * @param {string} command Command to validate
+ * @returns {boolean} True if command is valid
+ */
+function validateCommand(command) {
+  if (!command) {
+    display.status.error('No command specified');
+    return false;
+  }
+
+  const validCommands = ['generate', 'init', 'list', 'help', 'version'];
+  if (!validCommands.includes(command)) {
+    display.status.error(`Invalid command: ${command}`);
+    return false;
+  }
+
+  return true;
+}
+
 module.exports = {
   LIST_TYPES,
   validateListType,
   createNewDataTemplate,
   handleListCommand,
+  handleHelpCommand,
+  handleVersionCommand,
+  validateCommand,
 };

@@ -205,6 +205,33 @@ class OutputError extends WorkflowError {
 }
 
 /**
+ * Cleanup handler for resources
+ *
+ * @param {Array} cleanupTasks - Array of cleanup functions to execute
+ * @returns {Promise<void>}
+ */
+async function cleanupResources(cleanupTasks) {
+  if (!cleanupTasks || !cleanupTasks.length) return;
+
+  logger.debug('Starting resource cleanup', {
+    taskCount: cleanupTasks.length,
+  });
+
+  await Promise.all(
+    cleanupTasks.map((task) =>
+      task().catch((error) => {
+        logger.warn('Cleanup task failed:', {
+          error: error.message,
+          stack: error.stack,
+        });
+      })
+    )
+  );
+
+  logger.debug('Resource cleanup completed');
+}
+
+/**
  * Executes the document generation workflow
  *
  * Processes the complete document generation pipeline with proper
@@ -251,7 +278,7 @@ class OutputError extends WorkflowError {
  */
 async function startWorkflow(context) {
   const correlationId = context.correlationId || Date.now().toString(36);
-  let cleanup = [];
+  const cleanupTasks = [];
 
   try {
     const { templatePath, dataPath, cssPath, outputDir } = context;
@@ -374,7 +401,7 @@ async function startWorkflow(context) {
     });
 
     // Perform cleanup if necessary
-    for (const cleanupFn of cleanup) {
+    for (const cleanupFn of cleanupTasks) {
       try {
         await cleanupFn();
       } catch (cleanupError) {
@@ -386,6 +413,17 @@ async function startWorkflow(context) {
     }
 
     throw error;
+  } finally {
+    // Ensure cleanup runs even if there's an error
+    await cleanupResources(cleanupTasks);
+
+    // Force garbage collection if available
+    if (global.gc) {
+      global.gc();
+    }
+
+    // Small delay to ensure all resources are released
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
 

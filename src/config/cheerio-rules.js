@@ -1,5 +1,5 @@
 /**
- * @fileoverview HTML DOM Transformation Rules
+ * @file HTML DOM Transformation Rules
  *
  * Manages HTML content manipulation rules:
  * - List page break prevention
@@ -34,13 +34,13 @@
  * - Configuration validation
  * - Cheerio API error handling
  *
- * @module @/config/cheerioRules
+ * @module @/config/cheerio-rules
  * @requires cheerio - HTML parsing and manipulation
- * @exports {Object} CHEERIO_RULES - DOM transformation configuration
+ * @exports CHEERIO_RULES Cheerio parsing configuration
  *
  * @example
  * // Import rules
- * const { CHEERIO_RULES } = require('@/config/cheerioRules');
+ * const { CHEERIO_RULES } = require('@/config/cheerio-rules');
  * const $ = cheerio.load(html);
  *
  * // Apply specific transformation
@@ -57,11 +57,11 @@
  * including thresholds, selectors, and transformation rules
  * for consistent document processing.
  *
- * @constant {Object}
- * @property {Object} thresholds - Numeric transformation limits
- * @property {Object} selectors - DOM element selectors
- * @property {Object} classes - CSS class names
- * @property {Object} rules - Transformation functions
+ * @constant {object}
+ * @property {object} thresholds - Numeric transformation limits
+ * @property {object} selectors - DOM element selectors
+ * @property {object} classes - CSS class names
+ * @property {object} rules - Transformation functions
  */
 const CHEERIO_RULES = {
   // Numeric thresholds for transformations
@@ -92,7 +92,7 @@ const CHEERIO_RULES = {
      * Improves readability by maintaining list integrity.
      *
      * @param {CheerioAPI} $ - Cheerio instance
-     * @return {void}
+     * @returns {void}
      * @example
      * // Keep short list together
      * CHEERIO_RULES.rules.applyListTransformation($);
@@ -117,7 +117,7 @@ const CHEERIO_RULES = {
      * preserving table structure and readability.
      *
      * @param {CheerioAPI} $ - Cheerio instance
-     * @return {void}
+     * @returns {void}
      * @example
      * // Make table mobile-friendly
      * CHEERIO_RULES.rules.applyTableResponsive($);
@@ -139,7 +139,7 @@ const CHEERIO_RULES = {
      * compatibility.
      *
      * @param {CheerioAPI} $ - Cheerio instance
-     * @return {void}
+     * @returns {void}
      * @example
      * // Add missing alt attributes
      * CHEERIO_RULES.rules.applyImageAccessibility($);
@@ -157,7 +157,7 @@ const CHEERIO_RULES = {
      * and PDF output quality.
      *
      * @param {CheerioAPI} $ - Cheerio instance
-     * @return {void}
+     * @returns {void}
      * @example
      * // Apply all optimizations
      * const $ = cheerio.load(html);

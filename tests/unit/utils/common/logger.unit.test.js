@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for logger functionality
+ * @file Unit tests for logger functionality
  */
 
 const mockLogger = {

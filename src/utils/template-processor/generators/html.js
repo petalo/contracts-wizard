@@ -60,7 +60,7 @@
  * }
  */
 
-const { marked } = require('marked');
+const MarkdownIt = require('markdown-it');
 const cheerio = require('cheerio');
 const fs = require('fs/promises');
 const path = require('path');
@@ -85,49 +85,61 @@ const PRETTIER_OPTIONS = {
   endOfLine: 'lf',
 };
 
-// Configure marked with HTML_CONFIG settings
-const renderer = new marked.Renderer();
+// Initialize markdown-it with options from HTML_CONFIG
+const md = new MarkdownIt(HTML_CONFIG.markdownit);
 
 // Custom heading renderer
-renderer.heading = function (text, level) {
-  const safeText = String(text || '').trim();
-  return `<h${level}>${safeText}</h${level}>`;
+md.renderer.rules.heading_open = (tokens, idx) => {
+  const token = tokens[idx];
+  return `<h${token.tag.slice(1)}>`;
+};
+
+md.renderer.rules.heading_close = (tokens, idx) => {
+  const token = tokens[idx];
+  return `</h${token.tag.slice(1)}>`;
 };
 
 // Custom link renderer
-renderer.link = function (href, title, text) {
-  if (href && href.startsWith('#')) {
-    // Internal link - normalize ID
-    const normalizedText = String(text || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    href = '#' + normalizedText;
+md.renderer.rules.link_open = (tokens, idx) => {
+  const token = tokens[idx];
+  const href = token.attrGet('href');
+  const title = token.attrGet('title');
+
+  // Ensure href is a string and handle internal links
+  const safeHref = String(href || '');
+  const isInternalLink = safeHref.startsWith('#');
+
+  // For internal links, normalize the ID
+  const normalizedHref = isInternalLink
+    ? '#' +
+      safeHref
+        .slice(1)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '')
+    : safeHref;
+
+  // Build link tag with proper attributes
+  let tag = `<a href="${normalizedHref}"`;
+  if (title) {
+    tag += ` title="${title}"`;
   }
-  const safeHref = href || '';
-  const safeText = String(text || '');
-  const titleAttr = title ? ` title="${title}"` : '';
-  return `<a href="${safeHref}"${titleAttr}>${safeText}</a>`;
+  tag += '>';
+  return tag;
 };
 
 // Custom code block renderer
-renderer.code = function (code, language) {
+md.renderer.rules.fence = (tokens, idx) => {
+  const token = tokens[idx];
+  const code = token.content || '';
+  const lang = token.info || '';
+
   try {
-    // If code is a marked token, use its text
-    if (typeof code === 'object' && code.text) {
-      code = code.text;
-    }
-
-    // If code is an object with string property, use it directly
-    if (typeof code === 'object' && code.string) {
-      return code.string;
-    }
-
-    // If null or undefined, return empty
+    // If code is null or undefined, return empty
     if (code == null) {
       return '<pre><code></code></pre>';
     }
@@ -146,8 +158,8 @@ renderer.code = function (code, language) {
         .replace(/'/g, '&#39;');
     }
 
-    return language
-      ? `<pre><code class="language-${language}">${processedCode}</code></pre>`
+    return lang
+      ? `<pre><code class="language-${lang}">${processedCode}</code></pre>`
       : `<pre><code>${processedCode}</code></pre>`;
   } catch (error) {
     logger.error('Failed to process code block:', {
@@ -159,18 +171,11 @@ renderer.code = function (code, language) {
 };
 
 // Custom inline code renderer
-renderer.codespan = function (code) {
+md.renderer.rules.code_inline = (tokens, idx) => {
+  const token = tokens[idx];
+  const code = token.content || '';
+
   try {
-    // If code is a marked token, use its text
-    if (typeof code === 'object' && code.text) {
-      code = code.text;
-    }
-
-    // If code is an object with string property, use it directly
-    if (typeof code === 'object' && code.string) {
-      return code.string;
-    }
-
     // If null or undefined, return empty
     if (code == null) {
       return '<code></code>';
@@ -201,24 +206,8 @@ renderer.codespan = function (code) {
 };
 
 // Custom HTML renderer para preservar elementos HTML
-renderer.html = function (html) {
-  return html;
-};
-
-marked.setOptions({
-  renderer,
-  mangle: false,
-  headerIds: false,
-  gfm: true,
-  breaks: true,
-  xhtml: true,
-  pedantic: false,
-  smartLists: true,
-  smartypants: true,
-  headerPrefix: '',
-  sanitize: false,
-  silent: true,
-});
+md.renderer.rules.html_block = (tokens, idx) => tokens[idx].content;
+md.renderer.rules.html_inline = (tokens, idx) => tokens[idx].content;
 
 /**
  * Format HTML content with beautification or minification
@@ -576,26 +565,8 @@ async function createHtmlFromMarkdown(markdown) {
     // Pre-process markdown
     const processedMarkdown = preprocessMarkdown(markdown);
 
-    // Configurar marked para preservar el HTML
-    marked.setOptions({
-      renderer,
-      mangle: false,
-      headerIds: false,
-      gfm: true,
-      breaks: true,
-      xhtml: true,
-      pedantic: false,
-      smartLists: true,
-      smartypants: true,
-      headerPrefix: '',
-      sanitize: false,
-      silent: true,
-      // Preservar HTML en el contenido
-      allowDangerousHtml: true,
-    });
-
-    // Use marked with our custom renderer
-    const html = marked.parse(processedMarkdown);
+    // Use markdown-it for rendering
+    const html = md.render(processedMarkdown);
 
     // Log para debugging
     logger.debug('Markdown to HTML conversion:', {

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unified test environment configuration
+ * @file Unified test environment configuration
  *
  * Sets up the testing environment with necessary mocks, configurations,
  * directory management, and global test utilities.
@@ -118,6 +118,12 @@ jest.mock('../../src/utils/common/logger', () => ({
 }));
 
 // Directory management
+/**
+ * Configures test environment and global mocks
+ *
+ * Sets up the test environment with necessary mocks and
+ * configurations before running the test suite.
+ */
 async function cleanDirectory(dir, preserveFixtures = false) {
   if (process.env.NODE_ENV !== 'test') return;
 

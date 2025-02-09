@@ -1,5 +1,5 @@
 /**
- * @fileoverview Filename Generation and Management System
+ * @file Filename Generation and Management System
  *
  * Provides comprehensive filename generation utilities:
  * - Unique filename generation with timestamps
@@ -42,14 +42,14 @@
  * - Reserved name conflicts
  *
  * @module @/utils/common/generateFilename
- * @requires path - Path manipulation utilities
- * @requires fs/promises - File system promises
- * @requires @/utils/common/logger - Logging system
- * @requires @/utils/common/errors - Error handling
- * @requires @/config/file-extensions - File extensions configuration
- * @exports {Function} generateTimestampedFilename - Timestamp-based generator
- * @exports {Function} generateRevisionedFilename - Revision-based generator
- * @exports {Function} generateFileName - Multi-format generator
+ * @requires path Path manipulation utilities
+ * @requires fs/promises File system promises
+ * @requires @/utils/common/logger Logging system
+ * @requires @/utils/common/errors Error handling
+ * @requires @/config/file-extensions File extensions configuration
+ * @exports generateTimestampedFilename Timestamp-based filename generator
+ * @exports generateRevisionedFilename Revision-based filename generator
+ * @exports generateFileName Multi-format filename generator
  *
  * @example
  * // Import filename generators
@@ -94,7 +94,7 @@ const { FILE_EXTENSIONS } = require('@/config/file-extensions');
  * Used to maintain consistent filename
  * generation across the application.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {number} MAX_REVISIONS - Maximum revision attempts
  * @property {string} TIMESTAMP_FORMAT - Date/time pattern
  * @property {string} REVISION_PREFIX - Revision number prefix
@@ -113,6 +113,13 @@ const FILENAME_CONFIG = {
   REVISION_PREFIX: '.rev.',
   SEPARATOR: '-',
 };
+
+/**
+ * Configuration options for filename generation
+ * @typedef {object} FilenameOptions
+ * @property {Record<string, string>} format Format options for the filename
+ * @property {Record<string, boolean>} flags Additional flags for filename generation
+ */
 
 /**
  * Generates a unique filename with timestamp
@@ -319,9 +326,7 @@ async function generateRevisionedFilename(basePath, extension) {
  * @async
  * @param {string} sourcePath - Source file path
  * @param {string} outputDir - Output directory
- * @returns {Promise<Object>} Format-specific paths
- * @property {string} html - HTML output path
- * @property {string} pdf - PDF output path
+ * @returns {Promise<{html: string, pdf: string, md: string}>} Format-specific paths
  * @throws {AppError} On invalid input or path error
  *
  * @example
@@ -508,7 +513,7 @@ async function generateFileName(sourcePath, outputDir) {
 
 /**
  * Generate unique filename with format and revision handling
- * @param {Object} options - Filename generation options
+ * @param {object} options - Filename generation options
  * @returns {string} Generated filename
  */
 function generateFilename(options) {

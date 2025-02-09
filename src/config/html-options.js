@@ -1,5 +1,5 @@
 /**
- * @fileoverview HTML Generation Configuration
+ * @file HTML Generation Configuration
  *
  * Manages HTML document generation settings:
  * - Code formatting options
@@ -13,7 +13,7 @@
  *   - prettier: Code formatting rules
  *   - meta: Document metadata settings
  *   - templates: HTML document templates
- *   - marked: Markdown processing options
+ *   - markdownit: Markdown processing options
  *
  * Flow:
  * 1. Import dependencies (locale, prettier rules)
@@ -62,7 +62,7 @@
  * });
  *
  * // Configure markdown processing
- * marked.setOptions(HTML_CONFIG.marked);
+ * const md = new MarkdownIt(HTML_CONFIG.markdownit);
  */
 
 const { LOCALE_CONFIG } = require('@/config/locale');
@@ -76,11 +76,11 @@ const { HANDLEBARS_CONFIG } = require('@/config/handlebars-config');
  * including formatting rules, metadata settings, base
  * templates, and markdown processing options.
  *
- * @constant {Object}
- * @property {Object} prettier - Code formatting configuration
- * @property {Object} meta - Document metadata settings
- * @property {Object} templates - HTML document templates
- * @property {Object} marked - Markdown processing options
+ * @constant {object}
+ * @property {object} prettier - Code formatting configuration
+ * @property {object} meta - Document metadata settings
+ * @property {object} templates - HTML document templates
+ * @property {object} markdownit - Markdown processing options
  *
  * @example
  * // Metadata usage
@@ -107,10 +107,7 @@ const { HANDLEBARS_CONFIG } = require('@/config/handlebars-config');
  * });
  *
  * // Markdown options usage
- * marked.setOptions({
- *   ...HTML_CONFIG.marked,
- *   highlight: (code, lang) => highlight(code, lang)
- * });
+ * const md = new MarkdownIt(HTML_CONFIG.markdownit);
  */
 const HTML_CONFIG = {
   // Code formatting configuration
@@ -162,7 +159,7 @@ const HTML_CONFIG = {
      * - Embedded styles
      * - Content placement
      *
-     * @param {Object} options - Template options
+     * @param {object} options - Template options
      * @param {string} [options.lang='en'] - Document language
      * @param {string[]} [options.meta=[]] - Metadata tags
      * @param {string} [options.style=''] - CSS styles
@@ -188,26 +185,16 @@ const HTML_CONFIG = {
 </html>`,
   },
 
-  // Marked configuration
-  marked: {
-    renderer: {
-      code: true,
-      codespan: true,
-      html: true,
-    },
-    options: {
-      mangle: false,
-      headerIds: false,
-      gfm: true,
-      breaks: true,
-      xhtml: true,
-      pedantic: false,
-      smartLists: true,
-      smartypants: true,
-      headerPrefix: '',
-      sanitize: false,
-      silent: true,
-    },
+  // Markdown-it configuration
+  markdownit: {
+    html: true,
+    breaks: true,
+    linkify: true,
+    typographer: true,
+    xhtml: true,
+    quotes: '""\'\'',
+    langPrefix: 'language-',
+    highlight: null,
   },
 
   // Empty value configuration
@@ -219,9 +206,7 @@ Object.freeze(HTML_CONFIG);
 Object.freeze(HTML_CONFIG.prettier);
 Object.freeze(HTML_CONFIG.meta);
 Object.freeze(HTML_CONFIG.templates);
-Object.freeze(HTML_CONFIG.marked);
-Object.freeze(HTML_CONFIG.marked.renderer);
-Object.freeze(HTML_CONFIG.marked.options);
+Object.freeze(HTML_CONFIG.markdownit);
 Object.freeze(HTML_CONFIG.emptyValue);
 
 module.exports = {

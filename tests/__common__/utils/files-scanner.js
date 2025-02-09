@@ -1,5 +1,5 @@
 /**
- * @fileoverview Test utilities for file scanning
+ * @file Test utilities for file scanning
  */
 
 const fs = require('fs/promises');

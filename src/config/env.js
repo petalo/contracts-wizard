@@ -1,5 +1,5 @@
 /**
- * @fileoverview Environment Configuration Manager
+ * @file Environment Configuration Manager
  *
  * Centralizes environment variable handling and provides validated
  * configuration values to the rest of the application.
@@ -43,7 +43,7 @@ const NODE_ENVS = ['development', 'production', 'test'];
 
 /**
  * Environment configuration with defaults
- * @constant {Object}
+ * @constant {object}
  */
 const ENV = {
   // Node environment

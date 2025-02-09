@@ -1,5 +1,5 @@
 /**
- * @fileoverview Mock implementation of prettier for testing
+ * @file Mock implementation of prettier for testing
  */
 
 module.exports = {

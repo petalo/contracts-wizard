@@ -1,5 +1,5 @@
 /**
- * @fileoverview Path Conversion Utility
+ * @file Path Conversion Utility
  *
  * Converts absolute file paths to project-relative paths, handling
  * cross-platform path separators and providing consistent path formatting
@@ -27,7 +27,7 @@
  *
  * @module @/utils/fileManagement/getRelativePath
  * @requires process - Node.js process information
- * @exports {Function} getRelativePath - Path conversion utility
+ * @exports getRelativePath Path conversion utility
  */
 
 /**

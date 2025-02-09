@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * @fileoverview Version update script
+ * @file Version update script
  *
  * Updates version information across the project.
  * This script should be run before publishing a new version.
@@ -25,6 +25,7 @@
  *
  * @module scripts/update-versions
  * @requires fs/promises
+ * @requires path
  * @requires child_process
  */
 
@@ -42,12 +43,18 @@ const log = {
   error: (msg) => console.error(`✗ ${msg}`),
 };
 
+/**
+ * Fetches latest versions of dependencies from npm and Node.js API
+ *
+ * @returns {Promise<{[key: string]: string}>} Latest versions of dependencies
+ * @throws {Error} When version fetch fails
+ */
 async function getLatestVersions() {
   try {
     // Get latest versions from npm
     const deps = {
       puppeteer: execSync('npm view puppeteer version').toString().trim(),
-      marked: execSync('npm view marked version').toString().trim(),
+      'markdown-it': execSync('npm view markdown-it version').toString().trim(),
     };
 
     // Get latest LTS Node.js version
@@ -68,11 +75,21 @@ async function getLatestVersions() {
   }
 }
 
+/**
+ * Updates version configuration file with latest versions
+ *
+ * @param {{[key: string]: string}} versions - Latest dependency versions
+ * @param {string} versions.node - Latest Node.js version
+ * @param {string} versions.puppeteer - Latest Puppeteer version
+ * @param {string} versions.markdown-it - Latest markdown-it version
+ * @returns {Promise<void>}
+ * @throws {Error} When file update fails
+ */
 async function updateVersionConfig(versions) {
   const configPath = path.join(__dirname, '../src/config/version.js');
   try {
     const content = `/**
- * @fileoverview Version configuration
+ * @file Version configuration
  *
  * Centralizes version information and compatibility checks.
  * This file is auto-generated during the build process.
@@ -123,16 +140,16 @@ const VERSION = {
   compatibility: {
     node: {
       minimum: '14.0.0',
-      recommended: '\${versions.node}',
+      recommended: '${versions.node}',
       tested: ['14.0.0', '16.0.0', '18.0.0', '20.0.0'],
     },
     puppeteer: {
       minimum: '22.0.0',
-      recommended: '\${versions.puppeteer}',
+      recommended: '${versions.puppeteer}',
     },
     markdown: {
       minimum: '12.0.0',
-      recommended: '\${versions.marked}',
+      recommended: '${versions['markdown-it']}',
     },
   },
 };
@@ -157,6 +174,16 @@ module.exports = {
   }
 }
 
+/**
+ * Updates package.json with latest dependency versions
+ *
+ * @param {{[key: string]: string}} versions - Latest dependency versions
+ * @param {string} versions.node - Latest Node.js version
+ * @param {string} versions.puppeteer - Latest Puppeteer version
+ * @param {string} versions.markdown-it - Latest markdown-it version
+ * @returns {Promise<void>}
+ * @throws {Error} When package.json update fails
+ */
 async function updatePackageJson(versions) {
   const pkgPath = path.join(__dirname, '../package.json');
   try {
@@ -164,7 +191,7 @@ async function updatePackageJson(versions) {
 
     // Update dependencies
     pkg.dependencies.puppeteer = `^${versions.puppeteer}`;
-    pkg.dependencies.marked = `^${versions.marked}`;
+    pkg.dependencies['markdown-it'] = `^${versions['markdown-it']}`;
 
     // Update engines
     pkg.engines.node = `>=${pkg.engines.node.replace('>=', '')}`;
@@ -177,6 +204,11 @@ async function updatePackageJson(versions) {
   }
 }
 
+/**
+ * Main function that orchestrates the version update process
+ *
+ * @returns {Promise<void>}
+ */
 async function main() {
   log.info('Fetching latest versions...');
   const versions = await getLatestVersions();
