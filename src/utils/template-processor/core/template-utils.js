@@ -1,5 +1,5 @@
 /**
- * @fileoverview Template Utility Functions for Field Extraction and Processing
+ * @file Template Utility Functions for Field Extraction and Processing
  *
  * Provides utility functions for template processing:
  * - Template field extraction from Handlebars templates
@@ -25,16 +25,16 @@
  * - Missing field handling
  * - Syntax error reporting
  *
- * @module @/utils/templateProcessor/core/templateUtils
+ * @module @/utils/template-processor/core/template-utils
  * @requires fs/promises - File system promises
  * @requires path - Path manipulation
  * @requires handlebars - Template engine
  * @requires @/utils/common/logger - Logging system
  * @requires @/utils/common/errors - Error handling
  * @requires @/config/encoding - File encoding configuration
- * @exports {Function} extractTemplateFields - Field extractor
- * @exports {Function} validateFields - Field validator
- * @exports {Function} processTemplateContent - Content processor
+ * @exports validateTemplate Template validator function
+ * @exports extractFields Field extractor function
+ * @exports formatValue Value formatter function
  *
  * @example
  * // Extract and validate template fields
@@ -85,7 +85,7 @@ const { ENCODING_CONFIG } = require('@/config/encoding');
  * the template processing system and ensure data
  * structure integrity.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {RegExp} FIELD_PATTERN - Handlebars field extraction pattern
  * @property {RegExp} NAME_PATTERN - Valid field name pattern (alphanumeric + underscore)
  * @property {number} MAX_NESTING - Maximum allowed nesting depth for fields

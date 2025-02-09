@@ -1,5 +1,5 @@
 /**
- * @fileoverview Custom Jest resolver to handle dynamic imports and ESM modules
+ * @file Custom Jest resolver to handle dynamic imports and ESM modules
  *
  * This resolver is used to handle dynamic imports and ESM modules in Jest tests.
  * It ensures that modules like Prettier, which use dynamic imports, can be properly

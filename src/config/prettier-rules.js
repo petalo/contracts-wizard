@@ -1,5 +1,5 @@
 /**
- * @fileoverview Prettier Code Formatting Configuration
+ * @file Prettier Code Formatting Configuration
  *
  * Defines code formatting rules for consistent style:
  * - Line length and wrapping
@@ -92,7 +92,7 @@
  * - HTML/CSS:
  *   - htmlWhitespaceSensitivity: CSS-driven
  *
- * @constant {Object}
+ * @constant {object}
  * @property {number} printWidth - Maximum line length
  * @property {number} tabWidth - Spaces per indent
  * @property {boolean} useTabs - Tab vs space preference

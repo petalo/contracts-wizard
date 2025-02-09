@@ -1,5 +1,5 @@
 /**
- * @fileoverview Static Asset Configuration
+ * @file Static Asset Configuration
  *
  * Manages static resource configuration:
  * - Default image assets
@@ -77,10 +77,10 @@
  * - Media: Audio, video files
  * - Fonts: Typography resources
  *
- * @constant {Object}
- * @property {Object} images - Image asset configuration
+ * @constant {object}
+ * @property {object} images - Image asset configuration
  * @property {string} images.defaultLogo - Default logo filename
- * @property {Object} images.dimensions - Standard image dimensions
+ * @property {object} images.dimensions - Standard image dimensions
  * @property {number} images.maxSize - Maximum file size in bytes
  *
  * @example

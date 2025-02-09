@@ -1,5 +1,5 @@
 /**
- * @fileoverview Internationalization and Locale Configuration
+ * @file Internationalization and Locale Configuration
  *
  * Manages application localization settings:
  * - Language and country codes
@@ -37,7 +37,7 @@
  * - Invalid format recovery
  *
  * @module @/config/locale
- * @exports {Object} LOCALE_CONFIG - Locale configuration
+ * @exports LOCALE_CONFIG Locale and internationalization settings
  *
  * @example
  * // Import locale configuration
@@ -90,7 +90,7 @@
  * during runtime, ensuring consistent localization
  * across the application.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string} lang - ISO 639-1 language code
  * @property {string} country - ISO 3166-1 country code
  * @property {string} timezone - IANA timezone identifier

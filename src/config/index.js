@@ -1,5 +1,5 @@
 /**
- * @fileoverview Main Configuration Exports
+ * @file Main Configuration Exports
  *
  * Centralizes and exports all application configuration:
  * - File and path configurations
@@ -107,7 +107,7 @@ const { HANDLEBARS_CONFIG } = require('@/config/handlebarsConfig');
  * - Output directory
  * - File size limits
  *
- * @constant {Object}
+ * @constant {object}
  * @property {boolean} debug - Debug mode flag
  * @property {string} logLevel - Logging verbosity
  * @property {string} outputDir - Output directory

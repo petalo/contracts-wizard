@@ -1,5 +1,5 @@
 /**
- * @fileoverview Common utilities for testing
+ * @file Common utilities for testing
  */
 
 const path = require('path');
@@ -47,6 +47,12 @@ const loadFixture = async (type, filename) => {
   return await fs.readFile(filepath, 'utf8');
 };
 
+/**
+ * Creates a test context with mocked dependencies
+ *
+ * Initializes a test environment with mocked versions of
+ * common dependencies like logger, filesystem, etc.
+ */
 async function withTimeout(promise, ms = 5000) {
   return Promise.race([
     promise,

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Path Configuration Unit Tests
+ * @file Path Configuration Unit Tests
  *
  * Tests the path resolution and configuration functionality:
  * - Path resolution for absolute and relative paths

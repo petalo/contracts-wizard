@@ -1,5 +1,5 @@
 /**
- * @fileoverview Data Validation Utilities
+ * @file Data Validation Utilities
  *
  * Provides comprehensive data validation functions for:
  * - Empty field detection
@@ -52,9 +52,9 @@
  * - Nested validation failures
  *
  * @module @/utils/common/validateData
- * @exports {Function} validateData - Data validator
- * @exports {Object} FORMAT_PATTERNS - Format validation patterns
- * @exports {Object} SUSPICIOUS_PATTERNS - Security validation patterns
+ * @exports validateData Data validator function
+ * @exports FORMAT_PATTERNS Format validation patterns
+ * @exports SUSPICIOUS_PATTERNS Security validation patterns
  *
  * @example
  * // Import validation utilities
@@ -96,7 +96,7 @@
  * - URLs (HTTP/HTTPS)
  * - Phone numbers (international)
  *
- * @constant {Object}
+ * @constant {object}
  * @property {RegExp} EMAIL - Validates email format
  * @property {RegExp} DATE_ISO - Validates ISO date format
  * @property {RegExp} URL - Validates URL format
@@ -135,7 +135,7 @@ const FORMAT_PATTERNS = {
  * - Command injection
  * - Empty content masking
  *
- * @constant {Object}
+ * @constant {object}
  * @property {RegExp} SQL_INJECTION - Detects common SQL injection patterns
  * @property {RegExp} SCRIPT_TAGS - Detects script tag injection attempts
  * @property {RegExp} NULL_BYTES - Detects null byte injection attempts
@@ -186,24 +186,24 @@ Object.freeze(SUSPICIOUS_PATTERNS);
  * 7. Reports validation issues with context
  * 8. Applies custom validation rules
  *
- * @param {Object} data - Data object to validate
- * @param {Object} [options] - Validation options
+ * @param {object} data - Data object to validate
+ * @param {object} [options] - Validation options
  * @param {boolean} [options.strictMode=false] - Enable strict validation
  * @param {string[]} [options.requiredFields] - Fields that must be present
- * @param {Object} [options.fieldTypes] - Expected types for fields
- * @param {Object} [options.fieldFormats] - Expected formats for fields
- * @param {Object} [options.fieldLengths] - Min/max lengths for fields
- * @param {Object} [options.nestedValidation] - Rules for nested objects
- * @returns {Object} Validation results
+ * @param {object} [options.fieldTypes] - Expected types for fields
+ * @param {object} [options.fieldFormats] - Expected formats for fields
+ * @param {object} [options.fieldLengths] - Min/max lengths for fields
+ * @param {object} [options.nestedValidation] - Rules for nested objects
+ * @returns {object} Validation results
  * @property {string[]} emptyFields - Fields with empty values
  * @property {string[]} undefinedFields - Fields with undefined values
- * @property {Object[]} suspiciousFields - Fields with suspicious content
- * @property {Object[]} typeErrors - Fields with incorrect types
- * @property {Object[]} formatErrors - Fields with incorrect formats
- * @property {Object[]} lengthErrors - Fields with invalid lengths
- * @property {Object[]} nestedErrors - Validation errors in nested objects
+ * @property {object[]} suspiciousFields - Fields with suspicious content
+ * @property {object[]} typeErrors - Fields with incorrect types
+ * @property {object[]} formatErrors - Fields with incorrect formats
+ * @property {object[]} lengthErrors - Fields with invalid lengths
+ * @property {object[]} nestedErrors - Validation errors in nested objects
  * @property {boolean} hasIssues - Whether any issues were found
- * @property {Object} context - Additional validation context
+ * @property {object} context - Additional validation context
  *
  * @example
  * // Basic validation

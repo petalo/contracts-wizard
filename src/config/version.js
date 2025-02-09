@@ -62,7 +62,7 @@ const VERSION = {
     },
     markdown: {
       minimum: '12.0.0',
-      recommended: '${versions.marked}',
+      recommended: '${versions.markdown-it}',
     },
   },
 };

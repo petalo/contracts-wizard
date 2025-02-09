@@ -1,5 +1,5 @@
 /**
- * @fileoverview Environment Configuration Tests
+ * @file Environment Configuration Tests
  *
  * Tests environment variable handling and configuration:
  * - Log level management

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Environment Configuration Logging System
+ * @file Environment Configuration Logging System
  *
  * Provides a dedicated logging system for environment configuration details,
  * designed to avoid circular dependencies with the main logger. Handles
@@ -36,9 +36,12 @@ const path = require('path');
  * Processes paths to show them relative to project root for better
  * readability. Handles both string paths and path objects.
  *
- * @param {Object} logger - Logger instance with info() and debug() methods
- * @param {Object} paths - Application paths configuration
- * @param {string} paths.* - Path entries to log
+ * @param {object} logger - Logger instance with info() and debug() methods
+ * @param {object} paths - Application paths configuration
+ * @param {string} paths.output - Output directory path
+ * @param {string} paths.templates - Templates directory path
+ * @param {string} paths.css - CSS files directory path
+ * @param {string} paths.images - Image files directory path
  * @returns {void}
  *
  * @example

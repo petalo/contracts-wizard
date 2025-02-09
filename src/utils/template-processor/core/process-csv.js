@@ -1,5 +1,5 @@
 /**
- * @fileoverview CSV Data Processing and Validation System for Template Engine
+ * @file CSV Data Processing and Validation System for Template Engine
  *
  * Provides a comprehensive CSV processing system that handles:
  * - Complex nested data structures
@@ -47,7 +47,7 @@ const { ENCODING_CONFIG } = require('@/config/encoding');
  * Creates nested objects and arrays based on field paths
  *
  * @param {string[]} fields - List of fields from template
- * @returns {Object} Data object with empty values
+ * @returns {object} Data object with empty values
  */
 function initializeDataFromFields(fields) {
   const data = {};
@@ -121,29 +121,8 @@ function initializeDataFromFields(fields) {
  * 4. Ensures consistent column count
  *
  * @param {string[]} lines - Array of CSV lines to validate
- * @param {Object} options - Validation options
- * @param {string[]} [options.requiredColumns=[]] - Required column names
- * @param {boolean} [options.allowExtraColumns=false] - Allow additional columns
  * @returns {boolean} True if structure is valid
  * @throws {AppError} On validation failure with details
- *
- * @example
- * // Basic validation
- * const isValid = validateCsvStructure(
- *   ['name,age', 'John,30', 'Jane,25'],
- *   { requiredColumns: ['name'] }
- * );
- * // Returns: true
- *
- * // Invalid structure (missing column)
- * try {
- *   validateCsvStructure(
- *     ['name', 'John'],
- *     { requiredColumns: ['name', 'age'] }
- *   );
- * } catch (error) {
- *   // error.message: 'Required column "age" not found'
- * }
  */
 function validateCsvStructure(lines) {
   if (lines.length === 0) {
@@ -183,25 +162,8 @@ function validateCsvStructure(lines) {
  * 4. Empty field handling
  *
  * @param {string} line - CSV line to parse
- * @param {Object} [options] - Parsing options
- * @param {string} [options.delimiter=','] - Field delimiter
- * @param {string} [options.quote='"'] - Quote character
- * @param {string} [options.escape='"'] - Escape character
  * @returns {string[]} Array of parsed field values
  * @throws {AppError} On malformed line or quote mismatch
- *
- * @example
- * // Basic parsing
- * const fields = parseCsvLine('name,age,city');
- * // Returns: ['name', 'age', 'city']
- *
- * // Quoted values with embedded delimiter
- * const fields = parseCsvLine('"Doe, John",30,"New York"');
- * // Returns: ['Doe, John', '30', 'New York']
- *
- * // Escaped quotes
- * const fields = parseCsvLine('"""quoted""",value');
- * // Returns: ['"quoted"', 'value']
  */
 function parseCsvLine(line) {
   const values = [];
@@ -243,16 +205,8 @@ function parseCsvLine(line) {
  *
  * @param {string} csvPath - Path to CSV file
  * @param {string[]} templateFields - Array of fields from template
- * @returns {Promise<Object>} Processed data object
+ * @returns {{[key: string]: any}} Processed data object
  * @throws {AppError} If CSV is invalid or processing fails
- * @example
- * // Basic usage with template fields
- * const data = await processCsvData('data.csv', ['user.name', 'user.age']);
- * // Returns: { user: { name: 'John', age: '30' } }
- *
- * // Handle missing template fields
- * const data = await processCsvData('data.csv', ['name', 'missing']);
- * // Returns: { name: 'John', age: '30', missing: '' }
  */
 async function processCsvData(csvPath, templateFields = []) {
   try {
@@ -458,7 +412,7 @@ async function processCsvData(csvPath, templateFields = []) {
  * 3. Handling array indices and gaps
  * 4. Setting the final value
  *
- * @param {Object} obj - Target object to modify
+ * @param {object} obj - Target object to modify
  * @param {string} path - Dot notation path (e.g. 'user.addresses.0.city')
  * @param {*} value - Value to set at the path
  * @returns {void}
@@ -531,7 +485,7 @@ function setNestedValue(obj, path, value) {
  * - Empty value indicators
  * - Type information
  *
- * @param {Object} obj - Object to print
+ * @param {object} obj - Object to print
  * @param {string} [prefix=''] - Indentation prefix
  * @example
  * // Print a nested object structure
@@ -597,7 +551,7 @@ function printDataStructure(obj, prefix = '') {
  * Process CSV data lines and create structured object
  * @param {string[]} lines - Array of CSV lines
  * @param {string[]} templateFields - Array of template fields
- * @returns {Promise<Object>} Processed data object
+ * @returns {{[key: string]: any}} Processed data object
  */
 async function processDataLines(lines, templateFields) {
   const data = {};

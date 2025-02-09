@@ -1,5 +1,5 @@
 /**
- * @fileoverview Global test setup
+ * @file Global test setup
  *
  * This file is executed once before all test files.
  * It sets up the global test environment.

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Version configuration tests
+ * @file Version configuration tests
  */
 
 const { VERSION } = require('../../../src/config/version');

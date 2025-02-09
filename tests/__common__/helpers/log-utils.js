@@ -1,5 +1,5 @@
 /**
- * @fileoverview Test utilities for handling logs
+ * @file Test utilities for handling logs
  *
  * Provides utilities for managing and reading logs during tests
  *

@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 /**
- * @fileoverview CLI Display and Formatting Utilities
+ * @file CLI Display and Formatting Utilities
  *
  * Provides a comprehensive set of utilities for CLI output formatting:
  * - Status messages with icons (success, error, warning, info)
@@ -45,8 +45,10 @@
  *
  * @module @/cli/display
  * @requires chalk - Terminal string styling
- * @exports {Object} display - Display utility functions
- * @exports {Object} SYMBOLS - Unicode display symbols
+ * @requires @/utils/common/logger
+ * @exports display - Display utilities
+ * @exports status - Status message utilities
+ * @exports SYMBOLS - Unicode display symbols
  *
  * @example
  * // Import display utilities
@@ -62,7 +64,7 @@ const chalk = require('chalk');
 
 /**
  * Unicode symbols with fallbacks for CLI display
- * @type {Object.<string, string>}
+ * @type {{[key: string]: string}}
  */
 const SYMBOLS = {
   check: '✓',
@@ -81,11 +83,11 @@ const SYMBOLS = {
  * messages, lists, and status updates in the terminal
  * with consistent styling and symbols.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {Function} header - Displays section headers
  * @property {Function} blank - Adds vertical spacing
  * @property {Function} list - Shows bullet-point lists
- * @property {Object} status - Status message functions
+ * @property {object} status - Status message functions
  * @property {Function} path - Formats file paths
  * @property {Function} command - Formats commands
  */

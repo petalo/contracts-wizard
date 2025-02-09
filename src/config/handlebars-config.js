@@ -1,5 +1,5 @@
 /**
- * @fileoverview Handlebars Configuration System
+ * @file Handlebars Configuration System
  *
  * Manages Handlebars template engine configuration:
  * - Helper settings and defaults
@@ -53,11 +53,11 @@ const { LOCALE_CONFIG } = require('@/config/locale');
  * - Array processing rules
  * - Error message formats
  *
- * @constant {Object}
- * @property {Object} dateFormats - Date format patterns
- * @property {Object} emptyValue - Empty value handling
- * @property {Object} arrayConfig - Array processing rules
- * @property {Object} errorMessages - Error message templates
+ * @constant {object}
+ * @property {object} dateFormats - Date format patterns
+ * @property {object} emptyValue - Empty value handling
+ * @property {object} arrayConfig - Array processing rules
+ * @property {object} errorMessages - Error message templates
  */
 const HANDLEBARS_CONFIG = {
   dateFormats: {

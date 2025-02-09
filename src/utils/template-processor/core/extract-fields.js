@@ -1,5 +1,5 @@
 /**
- * @fileoverview Template Field Extraction System
+ * @file Template Field Extraction System
  *
  * Provides advanced template field extraction:
  * - AST-based template parsing
@@ -42,16 +42,16 @@
  * - Invalid helper usage
  * - Block parameter errors
  *
- * @module @/utils/templateProcessor/core/extractFields
+ * @module @/utils/template-processor/core/extract-fields
  * @requires handlebars - Template parsing engine
  * @requires fs/promises - File system promises
  * @requires path - Path manipulation
  * @requires @/utils/common/logger - Logging system
  * @requires @/utils/common/errors - Error handling
  * @requires @/config/encoding - File encoding configuration
- * @exports {Function} extractTemplateFields - Template field extractor
- * @exports {Function} processNode - AST node processor
- * @exports {Function} normalizeFieldName - Field name normalizer
+ * @exports extractFields Field extractor function
+ * @exports validateFields Field validator function
+ * @exports processFields Field processor function
  *
  * @example
  * // Extract fields from template
@@ -94,7 +94,7 @@ const { ENCODING_CONFIG } = require('@/config/encoding');
  * Used to maintain consistent node
  * processing across the system.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string} MUSTACHE - Mustache expression
  * @property {string} BLOCK - Block expression
  * @property {string} PROGRAM - Program node
@@ -119,7 +119,7 @@ const NODE_TYPES = {
  * 4. Block handling
  * 5. Recursive processing
  *
- * @param {Object} node - AST node to process
+ * @param {object} node - AST node to process
  * @param {Set} fields - Field collection set
  * @throws {AppError} On invalid node structure
  */

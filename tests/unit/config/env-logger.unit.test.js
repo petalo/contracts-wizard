@@ -1,5 +1,5 @@
 /**
- * @fileoverview Environment Logger Tests
+ * @file Environment Logger Tests
  *
  * Tests environment logging functionality:
  * - Configuration logging

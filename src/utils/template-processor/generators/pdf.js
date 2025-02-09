@@ -139,6 +139,7 @@ async function generatePdf(content, options = {}) {
   let browser;
   let tempHtmlPath;
   let page;
+  let cleanupPromises = [];
 
   try {
     // Validate content
@@ -198,10 +199,32 @@ async function generatePdf(content, options = {}) {
     });
 
     browser = await puppeteer.launch(puppeteerOptions);
+    cleanupPromises.push(async () => {
+      try {
+        if (browser) {
+          const pages = await browser.pages();
+          await Promise.all(pages.map((p) => p.close().catch(() => {})));
+          await browser.close();
+        }
+      } catch (e) {
+        logger.warn('Failed to close browser', { error: e });
+      }
+    });
+
     logger.debug('Browser launched successfully');
 
     // Create and configure page
     page = await browser.newPage();
+    cleanupPromises.push(async () => {
+      try {
+        if (page && !page.isClosed()) {
+          await page.close();
+        }
+      } catch (e) {
+        logger.warn('Failed to close page', { error: e });
+      }
+    });
+
     logger.debug('Browser page created');
 
     // Load the file
@@ -241,15 +264,16 @@ async function generatePdf(content, options = {}) {
       details: error.message,
     });
   } finally {
-    // Ensure cleanup
-    if (page)
-      await page
-        .close()
-        .catch((e) => logger.warn('Failed to close page', { error: e }));
-    if (browser)
-      await browser
-        .close()
-        .catch((e) => logger.warn('Failed to close browser', { error: e }));
+    // Execute all cleanup promises in parallel
+    await Promise.all(
+      cleanupPromises.map((cleanup) =>
+        cleanup().catch((e) => {
+          logger.warn('Cleanup operation failed', { error: e });
+        })
+      )
+    );
+
+    // Remove temporary HTML file
     if (tempHtmlPath && !options.keepHtml) {
       try {
         await fs.unlink(tempHtmlPath);
@@ -257,6 +281,11 @@ async function generatePdf(content, options = {}) {
       } catch (cleanupError) {
         logger.warn('Failed to remove temporary file', { cleanupError });
       }
+    }
+
+    // Force garbage collection if available
+    if (global.gc) {
+      global.gc();
     }
   }
 }

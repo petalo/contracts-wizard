@@ -1,5 +1,5 @@
 /**
- * @fileoverview Helper utilities for PDF testing
+ * @file Helper utilities for PDF testing
  *
  * Provides utilities for:
  * - Validating PDF options
@@ -12,9 +12,16 @@ const fs = require('fs/promises');
 const path = require('path');
 
 /**
+ * PDF test configuration options
+ * @typedef {object} PdfTestOptions
+ * @property {Record<string, string>} format Page format settings
+ * @property {Record<string, number>} dimensions Page dimension settings
+ */
+
+/**
  * Validates PDF options structure
- * @param {Object} options - PDF options to validate
- * @returns {boolean} True if valid, throws error if invalid
+ * @param {object} options - PDF options to validate
+ * @returns {{isValid: boolean, errors?: string[]}} Validation result with errors if any
  */
 function validatePdfOptions(options) {
   const requiredProps = ['format', 'displayHeaderFooter'];
@@ -61,7 +68,7 @@ function compareBase64Images(base64A, base64B) {
 /**
  * Creates test image files
  * @param {string} fixturesPath - Path to fixtures directory
- * @returns {Promise<Object>} Paths to created test files
+ * @returns {Promise<Record<string, string>>} Paths to created test files
  */
 async function createTestImages(fixturesPath) {
   const imagesPath = path.join(fixturesPath, 'images');
@@ -95,7 +102,7 @@ async function createTestImages(fixturesPath) {
 /**
  * Validates header/footer templates
  * @param {string} template - Template HTML string
- * @returns {Object} Validation result with errors if any
+ * @returns {{isValid: boolean, errors?: string[]}} Validation result with errors if any
  */
 function validateTemplate(template) {
   const errors = [];

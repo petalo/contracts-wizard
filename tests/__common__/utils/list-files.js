@@ -1,5 +1,5 @@
 /**
- * @fileoverview Test utilities for file listing
+ * @file Test utilities for file listing
  */
 
 const fs = require('fs/promises');
@@ -8,7 +8,7 @@ const path = require('path');
 /**
  * Lists files in a directory with optional filtering
  * @param {string} dirPath - Directory path to list files from
- * @param {Object} options - Listing options
+ * @param {object} options - Listing options
  * @param {boolean} [options.includeDirs=false] - Include directories in results
  * @param {string[]} [options.extensions] - Filter by file extensions
  * @param {boolean} [options.includeHidden=false] - Include hidden files

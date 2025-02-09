@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @fileoverview Script for managing releases and changelog generation
+ * @file Script for managing releases and changelog generation
  *
  * This script handles the automated release process with the following logic:
  *
@@ -652,6 +652,12 @@ function validateChangesAndType(changes, type) {
   log.success('Changes and version type validated');
 }
 
+/**
+ * Validates release configuration and requirements
+ *
+ * Checks that all necessary conditions are met before
+ * proceeding with the release process.
+ */
 async function release(
   options = {
     type: 'patch',
