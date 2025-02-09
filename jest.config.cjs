@@ -46,7 +46,7 @@ module.exports = {
 
   // Specifies which node_modules should not be ignored during transformation
   transformIgnorePatterns: [
-    'node_modules/(?!(@puppeteer|puppeteer-core|debug|prettier)/)',
+    'node_modules/(?!(@puppeteer|puppeteer-core|debug|prettier|@prettier|@babel/runtime)/)',
   ],
 
   // Module resolution settings
@@ -113,4 +113,7 @@ module.exports = {
 
   // Module resolution settings
   moduleFileExtensions: ['js', 'json', 'node'],
+
+  // Enable experimental features
+  resolver: '<rootDir>/tests/config/jest-resolver.js',
 };
