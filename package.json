@@ -1,6 +1,6 @@
 {
   "name": "@petalo/contracts-wizard",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "A powerful template engine for generating beautifully formatted PDF contracts from markdown templates and CSV data",
   "keywords": [
     "markdown",

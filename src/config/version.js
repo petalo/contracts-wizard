@@ -1,9 +1,12 @@
 /**
- * @fileoverview Version configuration
+ * @file Version configuration
  *
  * Centralizes version information and compatibility checks.
  * This file is auto-generated during the build process.
- * Last updated: 2025-02-08T15:01:54.362Z
+ * Last updated: 2025-02-09T17:44:58.602Z
+ *
+ * Functions:
+ * - None (configuration only)
  *
  * Constants:
  * - VERSION: Main version configuration object
