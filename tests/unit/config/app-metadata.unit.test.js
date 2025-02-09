@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for application metadata configuration
+ * @file Unit tests for application metadata configuration
  */
 
 const { APP_METADATA } = require('@/config/app-metadata');
