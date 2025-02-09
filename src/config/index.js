@@ -31,7 +31,7 @@
  *    - APP_CONFIG: Runtime configuration
  *    - APP_METADATA: Application information
  *    - VERSION_INFO: Version details
- *    - ASSETS: Static resources
+ *    - ASSETS_CONFIG: Static resources
  *
  * 4. Formatting Rules:
  *    - PRETTIER_OPTIONS: Code formatting
@@ -87,7 +87,7 @@ const { DEFAULT_PRETTIER_OPTIONS } = require('@/config/prettierRules');
 const { LOCALE_CONFIG } = require('@/config/locale');
 const { CHEERIO_RULES } = require('@/config/cheerioRules');
 const { APP_METADATA } = require('@/config/appMetadata');
-const { ASSETS } = require('@/config/assets');
+const { ASSETS_CONFIG } = require('@/config/assets');
 const { VERSION_INFO } = require('@/config/version');
 const { validateEnv } = require('@/config/envValidation');
 const { configureAliases } = require('@/config/aliases');
@@ -148,7 +148,7 @@ module.exports = {
   APP_CONFIG,
   APP_METADATA,
   VERSION_INFO,
-  ASSETS,
+  ASSETS_CONFIG,
 
   // Document generation configurations
   PDF_CONFIG,

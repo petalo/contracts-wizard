@@ -1,11 +1,11 @@
 /**
- * @fileoverview Unit tests for assets configuration
+ * @file Unit tests for assets configuration
  */
 
 const { ASSETS_CONFIG } = require('@/config/assets');
 const path = require('path');
 
-describe.skip('Assets Configuration', () => {
+describe('Assets Configuration', () => {
   test('should have valid logo configuration', () => {
     expect(ASSETS_CONFIG.logo).toBeDefined();
     expect(ASSETS_CONFIG.logo.path).toBeDefined();
