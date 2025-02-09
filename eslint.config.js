@@ -2,10 +2,17 @@ const globals = require('globals');
 const js = require('@eslint/js');
 const shopify = require('@shopify/eslint-plugin');
 const prettier = require('eslint-plugin-prettier');
+const jsdoc = require('eslint-plugin-jsdoc');
 
 module.exports = [
   js.configs.recommended,
   {
+    files: ['**/*.js'],
+    plugins: {
+      jsdoc,
+      prettier,
+      '@shopify': shopify,
+    },
     languageOptions: {
       globals: {
         ...globals.node,
@@ -14,11 +21,141 @@ module.exports = [
       ecmaVersion: 2022,
       sourceType: 'module',
     },
-    plugins: {
-      '@shopify': shopify,
-      prettier: prettier,
-    },
     rules: {
+      // JSDoc rules
+      'jsdoc/require-jsdoc': [
+        'error',
+        {
+          require: {
+            FunctionDeclaration: true,
+            MethodDefinition: true,
+            ClassDeclaration: true,
+            ArrowFunctionExpression: false,
+            FunctionExpression: false,
+          },
+          exemptEmptyFunctions: true,
+        },
+      ],
+      'jsdoc/require-description': [
+        'error',
+        {
+          contexts: [
+            'ClassDeclaration',
+            'FunctionDeclaration',
+            'MethodDefinition',
+          ],
+        },
+      ],
+      'jsdoc/require-param-description': 'error',
+      'jsdoc/require-returns-description': 'error',
+      'jsdoc/require-param-type': 'error',
+      'jsdoc/require-returns-type': 'error',
+      'jsdoc/valid-types': [
+        'error',
+        {
+          allowEmptyNamepaths: true,
+        },
+      ],
+      'jsdoc/check-param-names': 'error',
+      'jsdoc/check-tag-names': [
+        'error',
+        {
+          definedTags: [
+            'file',
+            'fileoverview',
+            'function',
+            'constant',
+            'flow',
+            'error',
+            'module',
+            'requires',
+            'exports',
+            'example',
+            'throws',
+            'returns',
+            'param',
+            'type',
+            'typedef',
+            'property',
+            'async',
+            'augments',
+            'class',
+            'description',
+            'private',
+            'public',
+            'protected',
+            'readonly',
+            'todo',
+          ],
+        },
+      ],
+      'jsdoc/check-types': [
+        'error',
+        {
+          unifyParentAndChildTypeChecks: true,
+          noDefaults: true,
+        },
+      ],
+      'jsdoc/require-example': [
+        'error',
+        {
+          contexts: ['ClassDeclaration'],
+          exemptedBy: ['private', 'internal'],
+          checkConstructors: false,
+          checkGetters: false,
+          checkSetters: false,
+        },
+      ],
+      'jsdoc/require-file-overview': [
+        'error',
+        {
+          tags: {
+            file: {
+              initialCommentsOnly: true,
+              mustExist: true,
+              preventDuplicates: true,
+            },
+            fileoverview: {
+              initialCommentsOnly: true,
+              mustExist: true,
+              preventDuplicates: true,
+            },
+          },
+          sections: {
+            Functions: {
+              mustExist: true,
+              preventDuplicates: true,
+              initialInFile: true,
+            },
+            Constants: {
+              mustExist: true,
+              preventDuplicates: true,
+              initialInFile: true,
+            },
+            Flow: {
+              mustExist: true,
+              preventDuplicates: true,
+              initialInFile: true,
+            },
+            'Error Handling': {
+              mustExist: true,
+              preventDuplicates: true,
+              initialInFile: true,
+            },
+          },
+        },
+      ],
+      // Console statements not allowed in production code
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+      // No unused variables allowed
+      'no-unused-vars': [
+        'error',
+        {
+          vars: 'all',
+          args: 'after-used',
+          ignoreRestSiblings: false,
+        },
+      ],
       // Indentation rule:
       // - 'error': Severity level
       // - 2: Base number of spaces for indentation
@@ -66,15 +203,6 @@ module.exports = [
             'TemplateLiteral > *',
             'TaggedTemplateExpression',
           ],
-        },
-      ],
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
-      'no-unused-vars': [
-        'error',
-        {
-          vars: 'all',
-          args: 'after-used',
-          ignoreRestSiblings: false,
         },
       ],
       'prettier/prettier': [
