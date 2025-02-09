@@ -153,18 +153,29 @@ const originalEmit = process.emit;
  * Ensures that the provided context is valid according to logging standards.
  * Handles context normalization and provides fallback to system context.
  *
- * @param {string} context - The context to validate
+ * @param {string|Object} context - The context to validate
  * @returns {string} Validated and normalized context
- * @example
- * // Returns 'system' for invalid context
- * validateContext('invalid') // returns 'system'
- *
- * // Normalizes valid context
- * validateContext('[API]') // returns 'api'
  */
 const validateContext = (context) => {
+  // Si el contexto es undefined o null, retornar 'system'
   if (!context) return 'system';
-  const ctx = context.toLowerCase().trim();
+
+  // Si el contexto es un objeto, intentar obtener una propiedad válida
+  if (typeof context === 'object') {
+    // Si tiene una propiedad 'context', usarla
+    if (context.context) {
+      return validateContext(context.context);
+    }
+    // Si tiene una propiedad 'name', usarla
+    if (context.name) {
+      return validateContext(context.name);
+    }
+    // Si no tiene propiedades útiles, usar 'system'
+    return 'system';
+  }
+
+  // Convertir a string y limpiar
+  const ctx = String(context).toLowerCase().trim();
 
   // Remove brackets if present
   const cleanContext = ctx.replace(/^\[|\]$/g, '');
@@ -364,22 +375,29 @@ const addFilename = winston.format((info) => {
 const customFormat = winston.format.printf(
   ({ level, message, timestamp, filename, context, ...metadata }) => {
     try {
-      // Format the base log message
+      // Format the base log message with padding for alignment
       let log = `${timestamp || new Date().toISOString()}`;
 
-      // Add level (siempre requerido)
-      log += ` ┃ [${(level || 'info').toUpperCase()}]`;
+      // Add level with color and padding (siempre requerido)
+      const levelPad = 7; // Longitud máxima de los niveles (ERROR, INFO, etc)
+      const levelStr = (level || 'info').toUpperCase();
+      const levelFormatted = levelStr.padEnd(levelPad);
+      log += ` ┃ [${levelFormatted}]`;
 
-      // Add filename if available
+      // Add filename if available with padding
       if (filename) {
-        log += ` ┃ [${filename}]`;
+        const filenamePad = 20; // Ajusta según necesidad
+        const filenameFormatted = filename.padEnd(filenamePad);
+        log += ` ┃ [${filenameFormatted}]`;
       }
 
-      // Add validated context (siempre requerido)
+      // Add validated context with padding
+      const contextPad = 10; // Ajusta según necesidad
       const validContext = validateContext(context);
-      log += ` ┃ [${validContext}]`;
+      const contextFormatted = validContext.padEnd(contextPad);
+      log += ` ┃ [${contextFormatted}]`;
 
-      // Add message (si no hay mensaje, usar un placeholder)
+      // Add message
       log += ` ┃ ${message || 'No message provided'}`;
 
       // Add formatted metadata
@@ -389,7 +407,6 @@ const customFormat = winston.format.printf(
           log += metadataStr;
         }
       } catch (error) {
-        // If metadata formatting fails, at least log the main message
         console.error('Error formatting metadata:', error);
       }
 
@@ -441,10 +458,29 @@ const winstonLogger = winston.createLogger({
 
 // Add console transport in development
 if (isDebugEnabled()) {
+  // Configurar los colores de Winston
+  winston.addColors({
+    error: 'red',
+    warn: 'yellow',
+    info: 'green',
+    debug: 'cyan',
+  });
+
   winstonLogger.add(
     new winston.transports.Console({
       format: winston.format.combine(
-        winston.format.colorize(),
+        winston.format.colorize({
+          all: false,
+          level: true,
+          message: false,
+          colors: {
+            error: 'red',
+            warn: 'yellow',
+            info: 'green',
+            debug: 'cyan',
+          },
+        }),
+        winston.format.timestamp(),
         addFilename(),
         customFormat
       ),

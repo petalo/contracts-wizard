@@ -225,9 +225,12 @@ function addYears(date, years) {
 function now(format) {
   try {
     logger.debug('now helper called:', {
+      context: 'template',
       format,
-      context: this,
-      isChained: this && this.name === 'now',
+      chainInfo: {
+        isChained: this && this.name === 'now',
+        name: this?.name,
+      },
     });
 
     const momentNow = moment();
