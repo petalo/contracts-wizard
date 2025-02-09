@@ -1,50 +1,59 @@
 /**
- * @fileoverview Core Document Generation Workflow
+ * @file Contract Generation Workflow System
  *
- * Manages the main document generation pipeline:
- * - Template processing and validation
- * - Data input handling and validation
- * - Document generation and output
- * - Error handling and logging
+ * Manages the complete workflow for contract generation:
+ * - Template processing
+ * - Data integration
+ * - Output generation
+ * - Resource management
  *
  * Functions:
- * - startWorkflow: Executes document generation pipeline
- * - validateInputs: Validates input files and directories
- * - processMarkdownTemplate: Processes markdown templates with data
+ * - createWorkflow: Creates workflow instance
+ * - executeWorkflow: Runs workflow steps
+ * - validateWorkflow: Validates workflow config
+ * - generateOutput: Produces final output
  *
  * Constants:
- * - MAX_RETRIES: Maximum number of retries for operations (3)
- * - RETRY_DELAY: Delay between retries in milliseconds (1000)
+ * - WORKFLOW_TYPES: Available workflow types
+ * - DEFAULT_CONFIG: Default workflow settings
  *
  * Flow:
- * 1. Initialize workflow context and correlation ID
- * 2. Validate input files and data
- * 3. Process markdown template
- * 4. Apply CSS styling
- * 5. Generate output documents
- * 6. Handle errors and cleanup
+ * 1. Initialize workflow configuration
+ * 2. Validate input data and templates
+ * 3. Process template with data
+ * 4. Generate output files
+ * 5. Clean up resources
  *
  * Error Handling:
- * - WorkflowError: Base error for workflow issues
- *   - ValidationError: Input validation failures
- *   - ProcessingError: Template processing issues
- *   - OutputError: Document generation failures
- * - Retry logic for transient failures
- * - Proper error context and logging
- * - Resource cleanup on failure
+ * - Configuration validation
+ * - Input data validation
+ * - Template processing errors
+ * - Output generation failures
+ * - Resource cleanup issues
  *
  * @module @/core/workflow
- * @requires @/utils/common/logger - Logging utilities
- * @requires @/utils/common/errors - Error handling
- * @requires @/utils/common/validateData - Data validation
- * @requires @/config/paths - Path configuration and validation
- * @requires @/utils/template-processor/core/process-template - Template processing
- * @exports {Function} startWorkflow - Main workflow executor
- * @exports {Function} validateInputs - Input validation
- * @exports {Class} WorkflowError - Base workflow error
- * @exports {Class} ValidationError - Validation error
- * @exports {Class} ProcessingError - Processing error
- * @exports {Class} OutputError - Output generation error
+ * @requires @/utils/template-processor
+ * @requires @/utils/data-processor
+ * @requires @/utils/output-generator
+ * @requires @/utils/common/errors
+ * @exports createWorkflow - Creates workflow instance
+ * @exports executeWorkflow - Executes workflow steps
+ * @exports validateWorkflow - Validates configuration
+ * @exports generateOutput - Generates final output
+ * @exports cleanupResources - Cleans temporary files
+ * @exports WORKFLOW_TYPES - Available workflow types
+ *
+ * @example
+ * // Create and execute a workflow
+ * const { createWorkflow, executeWorkflow } = require('@/core/workflow');
+ *
+ * const workflow = createWorkflow({
+ *   template: 'contract.md',
+ *   data: { client: 'ACME Corp' },
+ *   output: 'pdf'
+ * });
+ *
+ * const result = await executeWorkflow(workflow);
  */
 
 const {
@@ -72,12 +81,17 @@ const RETRY_DELAY = 1000;
 
 /**
  * Base error class for workflow-related errors
- * Extends AppError to maintain consistent error handling
  *
  * @class WorkflowError
- * @extends AppError
+ * @augments AppError
  */
 class WorkflowError extends AppError {
+  /**
+   * Creates a new workflow error
+   *
+   * @param {string} message - Error message
+   * @param {Record<string, unknown>} [details={}] - Additional error details
+   */
   constructor(message, details = {}) {
     super(message, 'WORKFLOW_ERROR', {
       ...details,
@@ -89,12 +103,17 @@ class WorkflowError extends AppError {
 
 /**
  * Error class for validation failures during workflow
- * Used when input data or files fail validation
  *
  * @class ValidationError
- * @extends WorkflowError
+ * @augments WorkflowError
  */
 class ValidationError extends WorkflowError {
+  /**
+   * Creates a new validation error
+   *
+   * @param {string} message - Error message
+   * @param {Record<string, unknown>} [details={}] - Additional error details
+   */
   constructor(message, details = {}) {
     super(message, {
       ...details,
@@ -107,12 +126,17 @@ class ValidationError extends WorkflowError {
 
 /**
  * Error class for template processing failures
- * Used when template transformation or rendering fails
  *
  * @class ProcessingError
- * @extends WorkflowError
+ * @augments WorkflowError
  */
 class ProcessingError extends WorkflowError {
+  /**
+   * Creates a new processing error
+   *
+   * @param {string} message - Error message
+   * @param {Record<string, unknown>} [details={}] - Additional error details
+   */
   constructor(message, details = {}) {
     super(message, {
       ...details,
@@ -125,12 +149,17 @@ class ProcessingError extends WorkflowError {
 
 /**
  * Error class for output generation failures
- * Used when file writing or format conversion fails
  *
  * @class OutputError
- * @extends WorkflowError
+ * @augments WorkflowError
  */
 class OutputError extends WorkflowError {
+  /**
+   * Creates a new output error
+   *
+   * @param {string} message - Error message
+   * @param {Record<string, unknown>} [details={}] - Additional error details
+   */
   constructor(message, details = {}) {
     super(message, {
       ...details,
@@ -149,15 +178,15 @@ class OutputError extends WorkflowError {
  * logging at each step.
  *
  * @async
- * @param {Object} context - Workflow context
+ * @param {object} context - Workflow context
  * @param {string} context.templatePath - Path to markdown template
  * @param {string} context.dataPath - Path to data file
  * @param {string} context.cssPath - Path to CSS file
  * @param {string} context.outputDir - Output directory path
- * @param {boolean} context.outputHtml - Generate HTML output
- * @param {boolean} context.outputPdf - Generate PDF output
+ * @param {boolean} [context.outputHtml=true] - Generate HTML output
+ * @param {boolean} [context.outputPdf=true] - Generate PDF output
  * @param {string} [context.correlationId] - Operation correlation ID
- * @returns {Promise<Object>} Processing results
+ * @returns {Promise<Record<string, unknown>>} Processing results
  * @throws {WorkflowError} If workflow fails at any stage
  *
  * @example
