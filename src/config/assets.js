@@ -10,11 +10,12 @@
  * - File size limits
  *
  * Constants:
- * - ASSETS: Static resource configuration object
- *   - images: Image asset specifications
- *     - defaultLogo: Default logo filename
- *     - dimensions: Standard image dimensions
- *     - maxSize: Maximum file sizes
+ * - ASSETS_CONFIG: Static resource configuration object
+ *   - logo: Logo specifications and paths
+ *   - templates: Template file configuration
+ *   - css: CSS file configuration
+ *   - data: Data file configuration
+ *   - output: Output file configuration
  *
  * Flow:
  * 1. Define asset specifications
@@ -32,37 +33,21 @@
  * - Format verification
  *
  * @module @/config/assets
+ * @requires path
  *
  * @example
  * // Import asset configuration
- * const { ASSETS } = require('@/config/assets');
+ * const { ASSETS_CONFIG } = require('@/config/assets');
  *
- * // Access default logo
- * const logoFile = ASSETS.images.defaultLogo;
+ * // Access logo configuration
+ * const logoPath = ASSETS_CONFIG.logo.path;
  *
- * // Validate image dimensions
- * const validateImage = (width, height) => {
- *   const { minWidth, maxWidth, minHeight, maxHeight } =
- *     ASSETS.images.dimensions;
- *   return width >= minWidth && width <= maxWidth &&
- *          height >= minHeight && height <= maxHeight;
- * };
- *
- * // Check file size
- * const isValidSize = (size) => {
- *   return size <= ASSETS.images.maxSize;
- * };
- *
- * // Generate asset path
- * const getAssetPath = (filename) => {
- *   return path.join(process.env.DIR_IMAGES, filename);
- * };
- *
- * // Asset naming convention
- * const generateAssetName = (type, id) => {
- *   return `${type}-${id}-${Date.now()}.png`;
- * };
+ * // Check template extensions
+ * const isValidTemplate = (filename) =>
+ *   ASSETS_CONFIG.templates.extensions.some(ext => filename.endsWith(ext));
  */
+
+const path = require('path');
 
 /**
  * Static asset configuration object
@@ -72,70 +57,64 @@
  * asset usage and management.
  *
  * Asset Types:
- * - Images: Logos, icons, backgrounds
- * - Documents: Templates, examples
- * - Media: Audio, video files
- * - Fonts: Typography resources
+ * - Logo: Company branding assets
+ * - Templates: Document templates
+ * - CSS: Style sheets
+ * - Data: CSV and other data files
+ * - Output: Generated files
  *
  * @constant {object}
- * @property {object} images - Image asset configuration
- * @property {string} images.defaultLogo - Default logo filename
- * @property {object} images.dimensions - Standard image dimensions
- * @property {number} images.maxSize - Maximum file size in bytes
- *
- * @example
- * // Image asset configuration
- * {
- *   images: {
- *     defaultLogo: '160x40.png',
- *     dimensions: {
- *       minWidth: 160,
- *       maxWidth: 1920,
- *       minHeight: 40,
- *       maxHeight: 1080
- *     },
- *     maxSize: 500 * 1024 // 500KB
- *   }
- * }
- *
- * // Adding new asset types:
- * // {
- * //   fonts: {
- * //     primary: 'OpenSans-Regular.ttf',
- * //     formats: ['ttf', 'woff', 'woff2'],
- * //     maxSize: 2 * 1024 * 1024 // 2MB
- * //   }
- * // }
+ * @property {object} logo - Logo configuration
+ * @property {string} logo.path - Logo file path
+ * @property {number} logo.maxSize - Maximum logo file size
+ * @property {object} templates - Template configuration
+ * @property {string} templates.path - Templates directory
+ * @property {string[]} templates.extensions - Valid extensions
+ * @property {object} css - CSS configuration
+ * @property {string} css.path - CSS directory
+ * @property {string[]} css.extensions - Valid extensions
+ * @property {object} data - Data file configuration
+ * @property {string} data.path - Data directory
+ * @property {string[]} data.extensions - Valid extensions
+ * @property {object} output - Output configuration
+ * @property {string} output.path - Output directory
  */
-const ASSETS = {
-  // Image asset configuration
-  images: {
-    defaultLogo: '160x40.png', // 160x40px logo image
-    defaultPlaceholder: 'placeholder.png', // Default placeholder image
-    paths: {
-      fixtures: 'fixtures/images', // Path to fixture images
-      templates: 'templates/images', // Path to template images
-    },
-    dimensions: {
-      logo: {
-        width: 160,
-        height: 40,
-      },
-      placeholder: {
-        width: 100,
-        height: 100,
-      },
-    },
-    maxSize: 500 * 1024, // 500KB maximum size
+const ASSETS_CONFIG = {
+  // Logo configuration
+  logo: {
+    path: path.join(process.cwd(), 'assets', 'images'),
+    maxSize: 500 * 1024, // 500KB
   },
+
+  // Template configuration
+  templates: {
+    path: path.join(process.cwd(), 'templates'),
+    extensions: ['.md', '.markdown'],
+  },
+
+  // CSS configuration
+  css: {
+    path: path.join(process.cwd(), 'assets', 'css'),
+    extensions: ['.css'],
+  },
+
+  // Data configuration
+  // prettier-ignore
+  data: {
+    path: path.join(process.cwd(), 'data'),
+    extensions: ['.csv']
+  },
+
+  // Output configuration
+  output: { path: path.join(process.cwd(), 'output') },
 };
 
 // Prevent runtime modifications to configuration
-Object.freeze(ASSETS);
-Object.freeze(ASSETS.images);
-Object.freeze(ASSETS.images.paths);
-Object.freeze(ASSETS.images.dimensions);
-Object.freeze(ASSETS.images.dimensions.logo);
-Object.freeze(ASSETS.images.dimensions.placeholder);
+Object.freeze(ASSETS_CONFIG);
+Object.freeze(ASSETS_CONFIG.logo);
+Object.freeze(ASSETS_CONFIG.templates);
+Object.freeze(ASSETS_CONFIG.css);
+Object.freeze(ASSETS_CONFIG.data);
+Object.freeze(ASSETS_CONFIG.output);
 
-module.exports = { ASSETS };
+module.exports = { ASSETS_CONFIG };
