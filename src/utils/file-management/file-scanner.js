@@ -214,21 +214,11 @@ async function listFiles(type, recursive = true) {
     // Scan directory with type extensions
     const files = await listFilesInPath(targetPath, extensions, recursive);
 
-    // Remove the root directory from paths while preserving root files
-    const cleanedFiles = files
-      .map((file) => {
-        // Get the relative path from the target directory
-        const relativePath = path.relative(path.basename(targetPath), file);
-        // If the path starts with "..", it means it's a root file
-        return relativePath.startsWith('..') ? file : relativePath;
-      })
-      .map((file) => {
-        // Remove the root directory name if present
-        const parts = file.split(path.sep);
-        return parts[0] === path.basename(targetPath)
-          ? parts.slice(1).join(path.sep)
-          : file;
-      });
+    // Convert absolute paths to relative paths from the target directory
+    const cleanedFiles = files.map((file) => {
+      const relativePath = path.relative(targetPath, file);
+      return relativePath;
+    });
 
     logger.debug('File listing complete', {
       type,

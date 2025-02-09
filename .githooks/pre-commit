@@ -35,9 +35,11 @@ if ! npx eslint --config eslint.config.js $STAGED_JS_FILES; then
   exit 1
 fi
 
+
 # 2. Run linter only on staged files
 echo "🔍 Running linter..."
 if ! npx eslint $STAGED_JS_FILES; then
+
   echo "❌ Error: Code must pass linting before commit!"
   exit 1
 fi
