@@ -1,10 +1,35 @@
 /**
- * @fileoverview Unit tests for CLI functionality
+ * @file CLI Unit Tests
  *
- * Tests cover:
- * 1. Command-line argument mode
- * 2. Interactive prompt mode
- * 3. Error handling for both modes
+ * Unit tests for CLI functionality:
+ * - Command-line argument mode
+ * - Interactive prompt mode
+ * - Error handling for both modes
+ *
+ * Functions:
+ * - Test suites for CLI commands
+ * - Test suites for interactive prompts
+ * - Mock implementations
+ *
+ * Constants:
+ * - Mock data and configurations
+ *
+ * Flow:
+ * 1. Setup test environment
+ * 2. Run command tests
+ * 3. Run prompt tests
+ * 4. Verify error handling
+ *
+ * Error Handling:
+ * - Mock error scenarios
+ * - Validation error tests
+ * - Edge case handling
+ *
+ * @module tests/unit/cli/cli.unit.test
+ * @requires inquirer
+ * @requires path
+ * @requires @/cli/commands
+ * @requires @/cli/prompts
  */
 
 const inquirer = require('inquirer');
@@ -36,7 +61,7 @@ jest.mock('@/utils/file-management/file-scanner');
 jest.mock('@/utils/template-processor/generators/csv');
 jest.mock('@/config/paths', () => ({
   PATHS: {
-    templates: 'templates',
+    templates: '.',
     data: 'data-csv',
     css: 'templates/css',
     csv: 'data-csv',
