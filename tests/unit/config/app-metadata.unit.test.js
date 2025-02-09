@@ -2,9 +2,9 @@
  * @fileoverview Unit tests for application metadata configuration
  */
 
-const { APP_METADATA } = require('@/config/appMetadata');
+const { APP_METADATA } = require('@/config/app-metadata');
 
-describe.skip('Application Metadata', () => {
+describe('Application Metadata', () => {
   test('should have valid application name', () => {
     expect(APP_METADATA.name).toBeDefined();
     expect(typeof APP_METADATA.name).toBe('string');

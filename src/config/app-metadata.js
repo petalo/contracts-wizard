@@ -65,6 +65,8 @@ const APP_METADATA = {
   version: '1.0.0',
   generator: 'Contracts Wizard',
   organization: 'petalo',
+  author: 'petalo',
+  license: 'MIT',
 };
 
 // Prevent runtime modifications to ensure consistency
