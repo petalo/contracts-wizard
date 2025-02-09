@@ -1,5 +1,5 @@
 /**
- * @fileoverview HTML Document Generation System
+ * @file HTML Document Generation System
  *
  * Provides comprehensive HTML document generation:
  * - Template to HTML conversion
@@ -43,7 +43,7 @@
  * @requires @/config/html-options - HTML configuration
  * @requires @/config/fileExtensions - File extensions configuration
  * @requires @/config/encoding - Encoding configuration
- * @exports {Function} generateHTML - HTML document generator
+ * @exports generateHTML - HTML document generator
  *
  * @example
  * // Generate HTML document from template
@@ -241,7 +241,6 @@ marked.setOptions({
  * - Comment preservation
  *
  * @param {string} content - HTML content to format
- * @param {boolean} [minify=false] - Whether to minify output
  * @returns {Promise<string>} Formatted HTML content
  * @throws {AppError} On formatting failure
  *
@@ -256,14 +255,6 @@ marked.setOptions({
  * // <div>
  * //   <p>Content</p>
  * // </div>
- *
- * // Minification
- * const minified = await formatHtml(`
- *   <div>
- *     <p>Content</p>
- *   </div>
- * `, true);
- * // Returns: "<div><p>Content</p></div>"
  *
  * // Error handling
  * try {
@@ -300,7 +291,7 @@ async function formatHtml(content) {
  * 3. Dynamic metadata addition
  * 4. Tag compilation
  *
- * @param {Object} options - Generation options
+ * @param {object} options - Generation options
  * @param {boolean} [options.customHeaders] - Include custom headers
  * @param {boolean} [options.metadata] - Include metadata
  * @returns {string[]} Array of meta tag strings
@@ -354,7 +345,7 @@ function generateMetaTags(options = {}) {
  * 5. Structure validation
  *
  * @param {string} content - Markdown-generated HTML content
- * @param {Object} options - Generation options
+ * @param {object} options - Generation options
  * @param {string} [options.cssPath] - Path to CSS file
  * @param {boolean} [options.customHeaders] - Include custom headers
  * @param {boolean} [options.metadata] - Include metadata
@@ -505,7 +496,7 @@ async function validateHtml(html) {
  * 4. Boolean option validation
  * 5. Type checking
  *
- * @param {Object} options - Options to validate
+ * @param {object} options - Options to validate
  * @param {string} [options.filepath] - Output file path
  * @param {string} [options.cssPath] - CSS file path
  * @param {boolean} [options.minify] - Minify output
@@ -635,33 +626,20 @@ async function createHtmlFromMarkdown(markdown) {
 }
 
 /**
- * Generates HTML document from content
+ * Generates HTML from content with optional CSS
  *
- * Process flow:
- * 1. Parameter validation
- * 2. Directory creation
- * 3. Content wrapping
- * 4. HTML validation
- * 5. Content formatting
- * 6. File writing
- *
- * @param {string} content - HTML content to process
- * @param {Object} options - Generation options
- * @param {string} options.filepath - Output file path
- * @param {string} [options.cssPath] - Path to CSS file
- * @param {boolean} [options.customHeaders] - Include custom headers
- * @param {boolean} [options.metadata] - Include metadata
+ * @param {string} content - HTML content
+ * @param {object} options - Generation options
+ * @param {string} [options.filepath] - Output file path
+ * @param {string} [options.cssPath] - CSS file path
  * @param {boolean} [options.transformations] - Apply transformations
- * @returns {Promise<void>}
- * @throws {AppError} On generation failure
+ * @returns {Promise<string>} Generated HTML
  */
 async function generateHtml(content, options = {}) {
   try {
     logger.info('Starting HTML generation...', {
       filepath: options.filepath,
       cssPath: options.cssPath,
-      customHeaders: options.customHeaders,
-      metadata: options.metadata,
       transformations: options.transformations,
     });
 
@@ -708,8 +686,6 @@ async function generateHtml(content, options = {}) {
     // Wrap content with HTML structure
     const wrappedContent = await wrapWithHtmlStructure(content, {
       cssPath: options.cssPath,
-      customHeaders: options.customHeaders,
-      metadata: options.metadata,
     });
     logger.debug('Content wrapped with HTML structure', {
       contentLength: wrappedContent.length,
@@ -747,6 +723,8 @@ async function generateHtml(content, options = {}) {
       filepath: options.filepath,
       size: stats.size,
     });
+
+    return formattedContent;
   } catch (error) {
     throw new AppError('Failed to generate HTML', 'HTML_GEN_ERROR', {
       originalError: error,

@@ -1,5 +1,5 @@
 /**
- * @fileoverview CSV Data Processing System
+ * @file CSV Data Processing System
  *
  * Provides comprehensive CSV data processing:
  * - CSV file parsing and validation
@@ -45,7 +45,7 @@
  * @requires csv-parse - CSV parsing
  * @requires @/utils/common/logger - Logging system
  * @requires @/utils/common/errors - Error handling
- * @exports {Function} processCSV - CSV data processor
+ * @exports processCSV - CSV data processor
  *
  * @example
  * // Process CSV data file

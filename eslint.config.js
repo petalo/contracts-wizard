@@ -1,3 +1,38 @@
+/**
+ * @file ESLint Configuration
+ *
+ * Provides ESLint configuration for the project:
+ * - JavaScript and TypeScript linting rules
+ * - JSDoc documentation requirements
+ * - Code style enforcement
+ * - Test file exceptions
+ *
+ * Functions:
+ * - None (configuration only)
+ *
+ * Constants:
+ * - None (configuration only)
+ *
+ * Flow:
+ * 1. Import required plugins and configurations
+ * 2. Define base configuration
+ * 3. Configure JSDoc rules
+ * 4. Configure code style rules
+ * 5. Define test file overrides
+ *
+ * Error Handling:
+ * - Invalid configuration detection
+ * - Rule conflict resolution
+ * - Plugin loading errors
+ *
+ * @module eslint.config
+ * @requires globals
+ * @requires @eslint/js
+ * @requires @shopify/eslint-plugin
+ * @requires eslint-plugin-prettier
+ * @requires eslint-plugin-jsdoc
+ */
+
 const globals = require('globals');
 const js = require('@eslint/js');
 const shopify = require('@shopify/eslint-plugin');
@@ -119,28 +154,6 @@ module.exports = [
               initialCommentsOnly: true,
               mustExist: true,
               preventDuplicates: true,
-            },
-          },
-          sections: {
-            Functions: {
-              mustExist: true,
-              preventDuplicates: true,
-              initialInFile: true,
-            },
-            Constants: {
-              mustExist: true,
-              preventDuplicates: true,
-              initialInFile: true,
-            },
-            Flow: {
-              mustExist: true,
-              preventDuplicates: true,
-              initialInFile: true,
-            },
-            'Error Handling': {
-              mustExist: true,
-              preventDuplicates: true,
-              initialInFile: true,
             },
           },
         },

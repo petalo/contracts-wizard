@@ -1,5 +1,5 @@
 /**
- * @fileoverview Main export file for all Handlebars helpers
+ * @file Main export file for all Handlebars helpers
  *
  * This file exports all available Handlebars helpers organized by category:
  * - Array helpers (each, eachWithGaps)

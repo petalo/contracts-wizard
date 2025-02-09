@@ -1,5 +1,5 @@
 /**
- * @fileoverview Custom each helper for Handlebars with enhanced object iteration support
+ * @file Custom each helper for Handlebars with enhanced object iteration support
  *
  * Provides an enhanced iteration helper that:
  * - Supports arrays and objects
@@ -41,8 +41,8 @@ const { logger } = require('@/utils/common/logger');
 
 /**
  * Converts an object with numeric keys into an array
- * @param {Object} obj - The object to convert
- * @returns {Array|Object} The resulting array or original object if no conversion needed
+ * @param {object} obj - The object to convert
+ * @returns {Array|object} The resulting array or original object if no conversion needed
  * @throws {Error} If conversion fails
  */
 function objectToArray(obj) {
@@ -133,8 +133,8 @@ function processChild(item) {
 
 /**
  * Custom each helper that handles both arrays and objects with numeric keys
- * @param {Object|Array} context - The context to iterate over
- * @param {Object} options - Handlebars options object
+ * @param {object|Array} context - The context to iterate over
+ * @param {object} options - Handlebars options object
  * @returns {string} The processed template
  */
 function eachHelper(context, options) {
