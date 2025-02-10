@@ -71,6 +71,7 @@ const SYMBOLS = {
   success: '✓',
   info: 'ℹ',
   debug: '•',
+  bullet: '•',
 };
 
 /**
