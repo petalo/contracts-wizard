@@ -113,6 +113,7 @@ const VALID_CONTEXTS = new Set([
   'file', // File system operations, I/O
   'format', // Data formatting, transformations
   'health', // Health checks, system status
+  'helper', // Helper functions
   'import', // Import operations, data loading
   'metrics', // Application metrics, stats
   'migration', // Data migrations, schema updates
@@ -141,7 +142,7 @@ const ensureLogDir = () => {
   try {
     if (!fs.existsSync(LOG_DIR)) {
       fs.mkdirSync(LOG_DIR, { recursive: true });
-      console.error('Needed to create logs directory:', LOG_DIR); // Temporal debug log
+      console.error('Forced to create logs directory:', LOG_DIR);
     }
   } catch (error) {
     console.error('Error creating logs directory:', error);
@@ -477,14 +478,24 @@ const winstonLogger = winston.createLogger({
       handleExceptions: true,
       handleRejections: true,
       json: false,
-      flags: 'w', // Move flags to the correct level
+      options: { flags: 'w' }, // Open in write mode, truncating file
     }),
   ],
 });
 
+// Ensure latest.log is recreated on each execution
+try {
+  const latestLogPath = path.join(LOG_DIR, 'latest.log');
+  if (fs.existsSync(latestLogPath)) {
+    fs.unlinkSync(latestLogPath);
+  }
+} catch (error) {
+  console.error('Error recreating latest.log:', error);
+}
+
 // Add console transport in development
 if (isDebugEnabled()) {
-  // Configurar los colores de Winston
+  // Configure Winston colors for console output
   winston.addColors({
     error: 'red',
     warn: 'yellow',
