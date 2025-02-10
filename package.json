@@ -127,10 +127,12 @@
     "jest-html-reporter": "^3.10.2",
     "jest-junit": "^16.0.0",
     "jest-mock": "^29.7.0",
-    "jsdoc": "^4.0.4",
+    "jsdoc": "^3.6.7",
+    "jsdoc-tsimport-plugin": "^1.0.5",
     "lint-staged": "^15.2.2",
     "prettier": "^3.4.2",
-    "rimraf": "^6.0.1"
+    "rimraf": "^6.0.1",
+    "tsd-jsdoc": "^2.5.0"
   },
   "engines": {
     "node": ">=14.0.0"

@@ -1,40 +1,40 @@
 /**
- * @file CSV Data Processing and Validation System for Template Engine
- *
- * Provides a comprehensive CSV processing system that handles:
- * - Complex nested data structures
- * - Array fields with gap preservation
- * - Mixed data types (objects and simple values)
- * - Template field validation and initialization
- * - Empty value handling with defaults
+ * @file Provides a comprehensive CSV data processing system for template engine
+ * that handles complex nested data structures, array fields, mixed data types,
+ * template validation, and empty value handling.
  *
  * Functions:
- * - processCsvData: Main CSV processor with template validation
- * - validateCsvStructure: CSV format validator
- * - parseCsvLine: CSV line parser with quote handling
- * - setNestedValue: Nested object value setter
- * - printDataStructure: Data structure printer for debugging
- * - initializeDataFromFields: Template fields initializer
- * - processDataLines: CSV data lines processor
+ * - processCsvData: Process CSV data and validate against template fields
+ * - validateCsvStructure: Validate CSV file structure and format
+ * - parseCsvLine: Parse CSV line with quote and escape handling
+ * - setNestedValue: Set value in nested object structure
+ * - printDataStructure: Print nested data structure for debugging
+ * - initializeDataFromFields: Initialize data object with empty values
+ * - processDataLines: Process CSV data lines and create structured object
+ *
+ * Constants:
+ * - ENCODING_CONFIG: object - File encoding configuration for CSV processing
  *
  * Flow:
  * 1. CSV file reading and structure validation
- * 2. Template fields initialization
- * 3. Data line processing and value extraction
+ * 2. Template fields initialization with empty values
+ * 3. Data line parsing and value extraction
  * 4. Nested structure creation and population
- * 5. Empty value handling and defaults
+ * 5. Array and object handling with gap preservation
+ * 6. Empty value handling with defaults
  *
  * Error Handling:
- * - Invalid CSV structure detection
- * - File access error management
- * - Malformed data line handling
- * - Type conversion error handling
+ * - Invalid CSV structure: Throws AppError with structure validation details
+ * - File access error: Throws AppError with file operation details
+ * - Malformed line: Throws AppError with line parsing details
+ * - Type conversion error: Throws AppError with conversion details
+ * - Missing columns: Throws AppError if key or value columns are missing
  *
  * @module @/utils/template-processor/core/processCsv
- * @requires fs/promises - File system operations
- * @requires @/utils/common/logger - Logging utilities
- * @requires @/utils/common/errors - Error handling
- * @requires @/config/encoding - File encoding configuration
+ * @requires fs/promises - File system operations for async file handling
+ * @requires @/utils/common/logger - Logging utilities for operation tracking
+ * @requires @/utils/common/errors - Custom error handling and AppError class
+ * @requires @/config/encoding - File encoding configuration settings
  */
 
 const fs = require('fs/promises');
@@ -44,10 +44,26 @@ const { ENCODING_CONFIG } = require('@/config/encoding');
 
 /**
  * Initialize data object with empty values for all fields
- * Creates nested objects and arrays based on field paths
  *
+ * Creates a nested object structure based on field paths, handling both
+ * array indices and object properties. Preserves array gaps and maintains
+ * proper data types.
+ *
+ * @function initializeDataFromFields
  * @param {string[]} fields - List of fields from template
- * @returns {object} Data object with empty values
+ * @returns {Record<string,*>} Data object with empty values
+ * @example
+ * // Basic object structure
+ * const data = initializeDataFromFields(['name', 'age']);
+ * // returns: { name: '', age: '' }
+ *
+ * // Nested object structure
+ * const data = initializeDataFromFields(['user.name', 'user.age']);
+ * // returns: { user: { name: '', age: '' } }
+ *
+ * // Array structure
+ * const data = initializeDataFromFields(['items.0', 'items.2']);
+ * // returns: { items: ['', '', ''] }
  */
 function initializeDataFromFields(fields) {
   const data = {};
@@ -114,15 +130,21 @@ function initializeDataFromFields(fields) {
 /**
  * Validate CSV file structure and format
  *
- * Performs comprehensive CSV validation:
- * 1. Checks file is not empty
- * 2. Validates header row format
- * 3. Verifies required columns exist
- * 4. Ensures consistent column count
+ * Performs comprehensive validation of CSV file structure including
+ * header format, required columns, and data consistency.
  *
+ * @function validateCsvStructure
  * @param {string[]} lines - Array of CSV lines to validate
  * @returns {boolean} True if structure is valid
  * @throws {AppError} On validation failure with details
+ * @example
+ * // Valid CSV structure
+ * const isValid = validateCsvStructure(['key,value', 'name,John']);
+ * // returns: true
+ *
+ * // Invalid CSV structure (missing columns)
+ * const isValid = validateCsvStructure(['invalid,csv', 'no,key,column']);
+ * // throws: AppError('Invalid CSV structure')
  */
 function validateCsvStructure(lines) {
   if (lines.length === 0) {
@@ -155,15 +177,26 @@ function validateCsvStructure(lines) {
 /**
  * Parse CSV line with quote and escape handling
  *
- * Parses a CSV line considering:
- * 1. Field delimiter (comma by default)
- * 2. Quoted values with embedded delimiters
- * 3. Escaped quotes within quoted values
- * 4. Empty field handling
+ * Parses a CSV line considering field delimiters, quoted values,
+ * escaped quotes, and empty fields. Handles complex cases like
+ * embedded delimiters and multi-line values.
  *
+ * @function parseCsvLine
  * @param {string} line - CSV line to parse
  * @returns {string[]} Array of parsed field values
  * @throws {AppError} On malformed line or quote mismatch
+ * @example
+ * // Basic parsing
+ * const fields = parseCsvLine('name,John');
+ * // returns: ['name', 'John']
+ *
+ * // Quoted values with commas
+ * const fields = parseCsvLine('address,"123 Main St, Apt 4"');
+ * // returns: ['address', '123 Main St, Apt 4']
+ *
+ * // Empty fields
+ * const fields = parseCsvLine('name,,age');
+ * // returns: ['name', '', 'age']
  */
 function parseCsvLine(line) {
   const values = [];
@@ -202,11 +235,26 @@ function parseCsvLine(line) {
  *
  * Creates a structured object from CSV data while ensuring all template fields exist.
  * Maintains all CSV fields even if not in template fields and initializes missing template fields.
+ * Handles nested objects, arrays with gaps, and mixed data types.
  *
+ * @async
+ * @function processCsvData
  * @param {string} csvPath - Path to CSV file
  * @param {string[]} templateFields - Array of fields from template
- * @returns {{[key: string]: any}} Processed data object
+ * @returns {Record<string,*>} Processed data object with all fields
  * @throws {AppError} If CSV is invalid or processing fails
+ * @example
+ * // Basic usage with simple fields
+ * const data = await processCsvData('data.csv', ['name', 'age']);
+ * // returns: { name: 'John', age: '30' }
+ *
+ * // Complex nested structure
+ * const data = await processCsvData('data.csv', ['user.name', 'user.addresses.0.city']);
+ * // returns: { user: { name: 'John', addresses: [{ city: 'NY' }] } }
+ *
+ * // Array with gaps
+ * const data = await processCsvData('data.csv', ['items.0', 'items.2']);
+ * // returns: { items: ['first', '', 'third'] }
  */
 async function processCsvData(csvPath, templateFields = []) {
   try {
@@ -406,18 +454,16 @@ async function processCsvData(csvPath, templateFields = []) {
 /**
  * Set value in nested object structure
  *
- * Sets a value in a nested object by:
- * 1. Parsing the dot-notation path
- * 2. Creating missing intermediate objects
- * 3. Handling array indices and gaps
- * 4. Setting the final value
+ * Sets a value in a nested object structure, creating intermediate
+ * objects and arrays as needed. Handles array indices, object
+ * properties, and type conversions.
  *
- * @param {object} obj - Target object to modify
+ * @function setNestedValue
+ * @param {Record<string,*>} obj - Target object to modify
  * @param {string} path - Dot notation path (e.g. 'user.addresses.0.city')
  * @param {*} value - Value to set at the path
  * @returns {void}
  * @throws {AppError} On invalid path or array index
- *
  * @example
  * // Basic object path
  * const obj = {};
@@ -428,6 +474,11 @@ async function processCsvData(csvPath, templateFields = []) {
  * const obj = { items: [] };
  * setNestedValue(obj, 'items.2', 'third');
  * // Result: { items: ['', '', 'third'] }
+ *
+ * // Mixed object and array path
+ * const obj = {};
+ * setNestedValue(obj, 'users.0.address.city', 'NY');
+ * // Result: { users: [{ address: { city: 'NY' } }] }
  */
 function setNestedValue(obj, path, value) {
   // Our format prefers to use indexes in the path, so we need to convert them to dots and inform the user
@@ -479,16 +530,22 @@ function setNestedValue(obj, path, value) {
 /**
  * Print nested data structure for debugging
  *
- * Recursively prints object structure with:
- * - Array length information
- * - Nested object indentation
- * - Empty value indicators
- * - Type information
+ * Recursively prints object structure with detailed type information,
+ * array lengths, and proper indentation. Useful for debugging and
+ * data structure visualization.
  *
- * @param {object} obj - Object to print
+ * @function printDataStructure
+ * @param {Record<string,*>} obj - Object to print
  * @param {string} [prefix=''] - Indentation prefix
  * @example
- * // Print a nested object structure
+ * // Print simple object
+ * const data = { name: 'John', age: 30 };
+ * printDataStructure(data);
+ * // Output:
+ * // name: John (string)
+ * // age: 30 (number)
+ *
+ * // Print nested structure
  * const data = {
  *   users: [
  *     { name: 'John', age: 30 },
@@ -499,11 +556,11 @@ function setNestedValue(obj, path, value) {
  * // Output:
  * // users: [Array with 2 elements]
  * //   0:
- * //     name: John
- * //     age: 30
+ * //     name: John (string)
+ * //     age: 30 (number)
  * //   1:
- * //     name: Jane
- * //     age: 25
+ * //     name: Jane (string)
+ * //     age: 25 (number)
  */
 function printDataStructure(obj, prefix = '') {
   if (!obj) {
@@ -549,9 +606,27 @@ function printDataStructure(obj, prefix = '') {
 
 /**
  * Process CSV data lines and create structured object
+ *
+ * Processes CSV lines into a structured object, handling nested paths,
+ * array indices, and object properties. Validates header structure and
+ * maintains data integrity.
+ *
+ * @async
+ * @function processDataLines
  * @param {string[]} lines - Array of CSV lines
  * @param {string[]} templateFields - Array of template fields
- * @returns {{[key: string]: any}} Processed data object
+ * @returns {Record<string, any>} Processed data object
+ * @throws {AppError} If CSV structure is invalid or processing fails
+ * @example
+ * // Basic key-value processing
+ * const lines = ['key,value', 'name,John', 'age,30'];
+ * const data = await processDataLines(lines, ['name', 'age']);
+ * // returns: { name: 'John', age: '30' }
+ *
+ * // Nested object processing
+ * const lines = ['key,value', 'user.name,John', 'user.age,30'];
+ * const data = await processDataLines(lines, ['user.name', 'user.age']);
+ * // returns: { user: { name: 'John', age: '30' } }
  */
 async function processDataLines(lines, templateFields) {
   const data = {};

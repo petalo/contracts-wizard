@@ -63,17 +63,14 @@
 const chalk = require('chalk');
 
 /**
- * Unicode symbols with fallbacks for CLI display
- * @type {{[key: string]: string}}
+ * @type {Record<string,string>}
  */
 const SYMBOLS = {
-  check: '✓',
-  cross: '✗',
-  bullet: '•',
-  arrow: '→',
+  error: '✗',
+  warning: '○',
+  success: '✓',
   info: 'ℹ',
-  warning: '⚠',
-  refresh: '⟳',
+  debug: '•',
 };
 
 /**
@@ -157,7 +154,7 @@ const display = {
      * display.status.success('File created successfully');
      */
     success(message) {
-      console.log(`${chalk.green(SYMBOLS.check)} ${message}`);
+      console.log(`${chalk.green(SYMBOLS.success)} ${message}`);
     },
 
     /**
@@ -171,7 +168,7 @@ const display = {
      * display.status.error('Failed to create file');
      */
     error(message) {
-      console.log(`${chalk.red(SYMBOLS.cross)} ${message}`);
+      console.log(`${chalk.red(SYMBOLS.error)} ${message}`);
     },
 
     /**

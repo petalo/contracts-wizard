@@ -81,10 +81,10 @@ const MAX_LOGO_SIZE = 500 * 1024; // 500KB
 /**
  * PDF generation options configuration
  *
- * @typedef {object} PdfOptions
- * @property {{[key: string]: string}} margins Page margin settings
- * @property {{[key: string]: string}} format Page format settings
- * @property {{[key: string]: boolean}} printBackground Background print settings
+ * @typedef {object} PDFOptions
+ * @property {Record<string, string>} margins - Page margin settings
+ * @property {Record<string, string>} format - Page format settings
+ * @property {Record<string, boolean>} printBackground - Background print settings
  */
 
 /**
@@ -226,7 +226,7 @@ function getPuppeteerOptions() {
  * - Print and layout settings
  *
  * @param {string} [cssPath] - Path to CSS file for logo extraction
- * @returns {Promise<PdfOptions>} PDF generation options
+ * @returns {Promise<PDFOptions>} PDF generation options
  *
  * @example
  * // Basic usage

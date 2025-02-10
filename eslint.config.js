@@ -280,6 +280,7 @@ module.exports = [
         // Controls whether all properties must be on their own line
         { allowAllPropertiesOnSameLine: false },
       ],
+      '@typescript-eslint/consistent-indexed-object-style': 'off',
     },
   },
   {
