@@ -47,6 +47,8 @@
  * @requires @/utils/common/logger Logging system
  * @requires @/utils/common/errors Error handling
  * @requires @/config/file-extensions File extensions configuration
+ * @requires @/config/locale Locale configuration
+ * @requires moment-timezone Moment.js timezone plugin
  * @exports generateTimestampedFilename Timestamp-based filename generator
  * @exports generateRevisionedFilename Revision-based filename generator
  * @exports generateFileName Multi-format filename generator
@@ -81,6 +83,8 @@ const fs = require('fs').promises;
 const { logger } = require('@/utils/common/logger');
 const { AppError } = require('@/utils/common/errors');
 const { FILE_EXTENSIONS } = require('@/config/file-extensions');
+const { LOCALE_CONFIG } = require('@/config/locale');
+const moment = require('moment-timezone');
 
 /**
  * Filename generation configuration
@@ -159,7 +163,11 @@ const FILENAME_CONFIG = {
  */
 function generateTimestampedFilename(templatePath) {
   // Validate path parameter
-  if (templatePath === undefined || templatePath === null) {
+  if (
+    templatePath === undefined ||
+    templatePath === null ||
+    templatePath === ''
+  ) {
     throw new AppError('Invalid path parameter', 'INVALID_PATH', {
       templatePath,
       type: typeof templatePath,
@@ -168,56 +176,40 @@ function generateTimestampedFilename(templatePath) {
   }
 
   try {
-    logger.debug('Generating filename from template path', {
-      templatePath,
-      exists: !!templatePath,
-      type: typeof templatePath,
+    logger.debug('Processing template path', {
+      filename: 'generate-filename.js',
+      context: 'file',
+      message: 'Processing template path for filename generation',
+      params: `path=${templatePath} • type=${typeof templatePath}`,
     });
 
     // Extract base name without extension
     const baseName = path.basename(templatePath, path.extname(templatePath));
-    logger.debug('Base name extracted', {
-      baseName,
-      originalPath: templatePath,
-      extension: path.extname(templatePath),
+    logger.debug('Base name extraction', {
+      filename: 'generate-filename.js',
+      context: 'file',
+      message: 'Base name extracted from template path',
+      params: `base=${baseName} • ext=${path.extname(templatePath)} • path=${templatePath}`,
     });
 
-    // Generate timestamp components
-    const now = new Date();
-    logger.debug('Current date created', {
-      date: now.toISOString(),
-      timestamp: now.getTime(),
-    });
+    // Generate timestamp using configured timezone or UTC as fallback
+    const now = LOCALE_CONFIG?.timezone
+      ? moment().tz(LOCALE_CONFIG.timezone)
+      : moment.utc();
 
-    // Format date components
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-
-    // Create timestamp string
-    const timestamp = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
-    logger.debug('Timestamp formatted', {
-      timestamp,
-      year,
-      month,
-      day,
-      hours,
-      minutes,
-      seconds,
-    });
+    // Format timestamp according to configuration
+    const timestamp = now.format(FILENAME_CONFIG.TIMESTAMP_FORMAT);
 
     // Generate final filename
     const filename = baseName
       ? `${baseName}${FILENAME_CONFIG.SEPARATOR}${timestamp}`
       : `${FILENAME_CONFIG.SEPARATOR}${timestamp}`;
 
-    logger.debug('Final filename generated', {
-      filename,
-      baseName,
-      timestamp,
+    logger.debug('Filename generation', {
+      filename: 'generate-filename.js',
+      context: 'file',
+      message: 'Generated filename with timestamp',
+      params: `name=${filename} • base=${baseName} • time=${timestamp} • template=${templatePath}`,
     });
 
     return filename;
@@ -388,12 +380,11 @@ async function generateFileName(sourcePath, outputDir) {
     const baseName = path.basename(sourcePath, path.extname(sourcePath));
     const basePath = path.join(absoluteOutputDir, baseName);
 
-    logger.debug('Generating filenames', {
-      sourcePath,
-      outputDir,
-      absoluteOutputDir,
-      baseName,
-      basePath,
+    logger.debug('Multi-format filename generation', {
+      filename: 'generate-filename.js',
+      context: 'file',
+      message: 'Starting filename generation process',
+      params: `source=${sourcePath} • output=${outputDir} • abs_output=${absoluteOutputDir} • base=${baseName} • base_path=${basePath}`,
     });
 
     // Find the highest existing revision for either file
@@ -426,10 +417,11 @@ async function generateFileName(sourcePath, outputDir) {
 
       if (!foundExisting) {
         // If no files exist, return base paths
-        logger.debug('No existing files found, using base paths', {
-          html: baseHtmlPath,
-          pdf: basePdfPath,
-          md: baseMdPath,
+        logger.debug('Base paths generation', {
+          filename: 'generate-filename.js',
+          context: 'file',
+          message: 'Using base paths for new files',
+          params: `html=${baseHtmlPath} • pdf=${basePdfPath} • md=${baseMdPath}`,
         });
 
         return {
@@ -463,11 +455,11 @@ async function generateFileName(sourcePath, outputDir) {
 
         if (!revisionExists.some((exists) => exists)) {
           // Found an available revision number
-          logger.debug('Found available revision', {
-            revision: currentRevision,
-            html: htmlRevPath,
-            pdf: pdfRevPath,
-            md: mdRevPath,
+          logger.debug('Revision number generation', {
+            filename: 'generate-filename.js',
+            context: 'file',
+            message: 'Found available revision for files',
+            params: `rev=${currentRevision} • html=${htmlRevPath} • pdf=${pdfRevPath} • md=${mdRevPath}`,
           });
 
           return {
@@ -517,7 +509,13 @@ async function generateFileName(sourcePath, outputDir) {
  * @returns {string} Generated filename
  */
 function generateFilename(options) {
-  const { baseName, format, outputDir, revision = 1 } = options;
+  // prettier-ignore
+  const {
+    baseName,
+    format,
+    outputDir,
+    revision = 1,
+  } = options;
 
   if (!baseName) {
     throw new AppError('Base name is required', 'FILENAME_EMPTY_BASE');
