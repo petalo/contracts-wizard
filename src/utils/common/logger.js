@@ -85,6 +85,7 @@ require('winston-daily-rotate-file');
 const path = require('path');
 const dotenv = require('dotenv');
 const { getLogLevel, isDebugEnabled } = require('@/config/env');
+const fs = require('fs');
 
 // Load environment configuration
 dotenv.config();
@@ -135,14 +136,20 @@ const VALID_CONTEXTS = new Set([
   'validation', // Input validation, schemas
 ]);
 
-// Ensure logs directory exists
-try {
-  if (!require('fs').existsSync(LOG_DIR)) {
-    require('fs').mkdirSync(LOG_DIR, { recursive: true });
+// Ensure logs directory exists BEFORE configuring winston
+const ensureLogDir = () => {
+  try {
+    if (!fs.existsSync(LOG_DIR)) {
+      fs.mkdirSync(LOG_DIR, { recursive: true });
+      console.error('Needed to create logs directory:', LOG_DIR); // Temporal debug log
+    }
+  } catch (error) {
+    console.error('Error creating logs directory:', error);
   }
-} catch (error) {
-  console.error('Error creating logs directory:', error);
-}
+};
+
+// Ensure directory exists before configuring logger
+ensureLogDir();
 
 // Store original emit for event handling
 const originalEmit = process.emit;
@@ -164,12 +171,13 @@ const validateContext = (context) => {
   if (typeof context === 'object') {
     // Si tiene una propiedad 'context', usarla
     if (context.context) {
-      return validateContext(context.context);
+      return validateContext(context.context.toString().replace(/[\s]/g, ''));
     }
     // Si tiene una propiedad 'name', usarla
     if (context.name) {
-      return validateContext(context.name);
+      return validateContext(context.name.toString().replace(/[\s]/g, ''));
     }
+
     // Si no tiene propiedades útiles, usar 'system'
     return 'system';
   }
@@ -297,13 +305,21 @@ const formatMetadata = (metadata) => {
   // Process and clean metadata
   const cleanMetadata = {};
   for (const [key, value] of Object.entries(metadata)) {
+    // Skip context and filename as they're handled separately
+    if (key === 'context' || key === 'filename') continue;
+
+    // If it's the params field, use it directly
+    if (key === 'params') {
+      return ` ┃ ${value}`; // Return params directly with bullet points
+    }
+
     const processed = processValue(value);
     if (processed !== undefined) {
       cleanMetadata[key] = processed;
     }
   }
 
-  // Group related metadata
+  // Group related metadata if no params field was found
   const groupedMetadata = groupMetadata(cleanMetadata);
 
   // Format metadata as key=value pairs for better readability
@@ -373,7 +389,15 @@ const addFilename = winston.format((info) => {
  * // Returns: '2024-01-01T00:00:00Z ┃ [INFO] ┃ [system] ┃ Test'
  */
 const customFormat = winston.format.printf(
-  ({ level, message, timestamp, filename, context, ...metadata }) => {
+  // prettier-ignore
+  ({
+    level,
+    message,
+    timestamp,
+    filename,
+    context,
+    ...metadata
+  }) => {
     try {
       // Format the base log message with padding for alignment
       let log = `${timestamp || new Date().toISOString()}`;
@@ -384,18 +408,20 @@ const customFormat = winston.format.printf(
       const levelFormatted = levelStr.padEnd(levelPad);
       log += ` ┃ [${levelFormatted}]`;
 
+      // Add validated context with padding
+      const contextPad = 10; // Ajusta según necesidad
+      context = context.replace(/[\s]/g, '');
+      const validContext = validateContext(context);
+      const contextFormatted = validContext.padEnd(contextPad);
+      log += ` ┃ [${contextFormatted}]`;
+
       // Add filename if available with padding
       if (filename) {
+        filename = filename.replace(/[\s]/g, '');
         const filenamePad = 20; // Ajusta según necesidad
         const filenameFormatted = filename.padEnd(filenamePad);
         log += ` ┃ [${filenameFormatted}]`;
       }
-
-      // Add validated context with padding
-      const contextPad = 10; // Ajusta según necesidad
-      const validContext = validateContext(context);
-      const contextFormatted = validContext.padEnd(contextPad);
-      log += ` ┃ [${contextFormatted}]`;
 
       // Add message
       log += ` ┃ ${message || 'No message provided'}`;
@@ -451,7 +477,7 @@ const winstonLogger = winston.createLogger({
       handleExceptions: true,
       handleRejections: true,
       json: false,
-      options: { flags: 'w' },
+      flags: 'w', // Move flags to the correct level
     }),
   ],
 });
@@ -487,6 +513,13 @@ if (isDebugEnabled()) {
     })
   );
 }
+
+// Watch logs directory for deletion
+fs.watch(path.dirname(LOG_DIR), (eventType, filename) => {
+  if (eventType === 'rename' && filename === path.basename(LOG_DIR)) {
+    ensureLogDir();
+  }
+});
 
 /**
  * Public logging interface
