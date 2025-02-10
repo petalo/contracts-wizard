@@ -66,7 +66,7 @@
     "test:integration": "cross-env NODE_ENV=test jest --testMatch='**/tests/integration/**/*.integration.test.js' --logHeapUsage --maxWorkers=50%",
     "test:output:clean": "node scripts/clean.js",
     "test:smoke:office": "node bin/contracts-wizard.js generate -t tests/__common__/fixtures/markdown/office_lease_EN.example.md -d tests/__common__/fixtures/csv/office_lease_EN.example.csv -c tests/__common__/fixtures/css/contract.example.css -o tests/output ",
-    "test:smoke:quick-filesize": "cross-env NODE_ENV=test jest tests/e2e/file-size.e2e.test.js --logHeapUsage --maxWorkers=50%",
+    "test:smoke:quick-filesize": "sed -i '' 's/describe.skip/describe/' tests/e2e/file-size.e2e.test.js && NODE_ENV=test npm test tests/e2e/file-size.e2e.test.js; sed -i '' 's/describe(/describe.skip(/' tests/e2e/file-size.e2e.test.js",
     "test:smoke:quick": "node bin/contracts-wizard.js generate -t tests/__common__/fixtures/markdown/quick.example.md -d tests/__common__/fixtures/csv/quick.example.csv -c tests/__common__/fixtures/css/quick.example.css -o tests/output",
     "test:smoke:ticket-some-empty-values": "node bin/contracts-wizard.js generate -t tests/__common__/fixtures/markdown/ticket.example.md -d tests/__common__/fixtures/csv/ticket.example.some.empty.fields.csv -c tests/__common__/fixtures/css/ticket.example.css -o tests/output",
     "test:smoke:ticket": "node bin/contracts-wizard.js generate -t tests/__common__/fixtures/markdown/ticket.example.md -d tests/__common__/fixtures/csv/ticket.example.csv -c tests/__common__/fixtures/css/ticket.example.css -o tests/output",
