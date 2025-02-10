@@ -114,9 +114,7 @@ handlebars.registerHelper('formatDate', function (date, format) {
 });
 
 handlebars.registerHelper('now', function (format) {
-  logger.debug('now helper called:', {
-    format,
-  });
+  logger.debug('now helper called:', { format });
   try {
     const currentDate = moment().format(format);
     return new handlebars.SafeString(
@@ -170,35 +168,43 @@ handlebars.registerHelper('formatNumber', function (number, options) {
 });
 
 // Add addYears helper
-handlebars.registerHelper('addYears', function (date, years) {
-  logger.debug('addYears helper called:', {
-    date,
-    years,
-  });
-  try {
-    if (!date || years === undefined) {
-      return new handlebars.SafeString(
-        `<span class="missing-value" data-field="date">[[Invalid date]]</span>`
-      );
-    }
-    const resultDate = moment(date).add(years, 'years');
-    if (!resultDate.isValid()) {
-      return new handlebars.SafeString(
-        `<span class="missing-value" data-field="date">[[Invalid date]]</span>`
-      );
-    }
-    return resultDate.toDate(); // Return the date object for further processing
-  } catch (error) {
-    logger.error('Error in addYears helper:', {
-      error,
+handlebars.registerHelper(
+  'addYears',
+  function (date, years, format = 'D [de] MMMM [de] YYYY') {
+    logger.debug('addYears helper called:', {
       date,
       years,
+      format,
     });
-    return new handlebars.SafeString(
-      `<span class="missing-value" data-field="date">[[Error adding years to date]]</span>`
-    );
+    try {
+      if (!date || years === undefined) {
+        return new handlebars.SafeString(
+          `<span class="missing-value" data-field="date">[[Invalid date]]</span>`
+        );
+      }
+      const resultDate = moment(date).add(years, 'years');
+      if (!resultDate.isValid()) {
+        return new handlebars.SafeString(
+          `<span class="missing-value" data-field="date">[[Invalid date]]</span>`
+        );
+      }
+      const formattedDate = resultDate.format(format);
+      return new handlebars.SafeString(
+        `<span class="imported-value" data-field="date">${handlebars.escapeExpression(formattedDate)}</span>`
+      );
+    } catch (error) {
+      logger.error('Error in addYears helper:', {
+        error,
+        date,
+        years,
+        format,
+      });
+      return new handlebars.SafeString(
+        `<span class="missing-value" data-field="date">[[Error adding years to date]]</span>`
+      );
+    }
   }
-});
+);
 
 // Register other helpers from handlebars-helpers with logging
 logger.debug('Registering other handlebars-helpers');
@@ -206,9 +212,7 @@ Object.entries(helpers).forEach(([name, helper]) => {
   if (!['eq', 'formatDate', 'now', 'number'].includes(name)) {
     try {
       handlebars.registerHelper(name, helper);
-      logger.debug('Registered helper:', {
-        name,
-      });
+      logger.debug('Registered helper:', { name });
     } catch (error) {
       logger.error('Error registering helper:', {
         name,

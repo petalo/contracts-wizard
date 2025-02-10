@@ -1,36 +1,53 @@
 /**
  * @file ESLint Configuration
  *
- * Provides ESLint configuration for the project:
- * - JavaScript and TypeScript linting rules
- * - JSDoc documentation requirements
- * - Code style enforcement
- * - Test file exceptions
+ * This file provides a comprehensive ESLint configuration for enforcing code quality,
+ * style consistency and documentation standards across the project.
  *
- * Functions:
- * - None (configuration only)
+ * Key features:
+ * - Enforces JavaScript best practices and prevents common errors
+ * - Requires thorough JSDoc documentation for functions, classes and methods
+ * - Maintains consistent code formatting through Prettier integration
+ * - Configures special rules for test files
+ * - Enforces strict object and array formatting rules
  *
- * Constants:
- * - None (configuration only)
+ * The configuration is structured in layers:
+ * 1. Base ESLint recommended rules
+ * 2. Main configuration block for all .js files:
+ *    - JSDoc documentation requirements
+ *    - Code style rules (indentation, line length, etc)
+ *    - Object/Array formatting rules
+ *    - Console logging restrictions
+ * 3. Test file overrides that relax certain rules
  *
- * Flow:
- * 1. Import required plugins and configurations
- * 2. Define base configuration
- * 3. Configure JSDoc rules
- * 4. Configure code style rules
- * 5. Define test file overrides
+ * Documentation Requirements:
+ * - All functions must have JSDoc comments with descriptions
+ * - Parameters and return values must be documented
+ * - Files must have overview documentation
+ * - Classes must include examples
  *
- * Error Handling:
- * - Invalid configuration detection
- * - Rule conflict resolution
- * - Plugin loading errors
+ * Code Style Rules:
+ * - 2 space indentation
+ * - 80 character line length limit
+ * - Consistent object/array formatting
+ * - Properties on separate lines
+ * - Strict bracket spacing rules
  *
- * @module eslint.config
- * @requires globals
- * @requires @eslint/js
- * @requires @shopify/eslint-plugin
- * @requires eslint-plugin-prettier
- * @requires eslint-plugin-jsdoc
+ * Error Prevention:
+ * - No unused variables
+ * - No console.log in production (only warn/error allowed)
+ * - Strict type checking in JSDoc
+ *
+ * Test File Exceptions:
+ * - Allows console.log
+ * - Allows unused variables
+ *
+ * @module eslint.config - Main ESLint configuration module that defines all linting rules and code style standards
+ * @requires globals - Provides predefined global variables for Node.js and testing environments
+ * @requires @eslint/js - Core ESLint rules and recommended configurations for JavaScript
+ * @requires @shopify/eslint-plugin - Additional high-quality rules and best practices from Shopify
+ * @requires eslint-plugin-prettier - Runs Prettier as an ESLint rule for consistent code formatting
+ * @requires eslint-plugin-jsdoc - Enforces comprehensive JSDoc documentation standards and validates types
  */
 
 const globals = require('globals');
@@ -239,18 +256,22 @@ module.exports = [
           ObjectExpression: {
             consistent: true,
             multiline: true,
+            minProperties: 3,
           },
           ObjectPattern: {
             consistent: true,
             multiline: true,
+            minProperties: 3,
           },
           ImportDeclaration: {
             consistent: true,
             multiline: true,
+            minProperties: 3,
           },
           ExportDeclaration: {
             consistent: true,
             multiline: true,
+            minProperties: 3,
           },
         },
       ],
