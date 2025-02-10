@@ -12,9 +12,9 @@ describe('Environment Validation', () => {
     './logs',
     './output',
     './templates',
-    './assets/css',
-    './assets/images',
-    './data',
+    './templates/css',
+    './templates/images',
+    './data-csv',
   ];
 
   beforeEach(async () => {
@@ -22,20 +22,24 @@ describe('Environment Validation', () => {
     // Set up valid environment variables for each test
     process.env = {
       NODE_ENV: 'test',
+      DEBUG: 'false',
+      DEBUG_TESTS: 'false',
       LOG_LEVEL: 'info',
       LOG_MAX_SIZE: '10MB',
       LOG_MAX_FILES: '7',
       LOG_DIR: './logs',
       DIR_OUTPUT: './output',
       DIR_TEMPLATES: './templates',
-      DIR_CSS: './assets/css',
-      DIR_IMAGES: './assets/images',
-      DIR_CSV: './data',
+      DIR_CSS: './templates/css',
+      DIR_IMAGES: './templates/images',
+      DIR_CSV: './data-csv',
+      LATEST_LOG_PATH: path.join('./logs', 'latest.log'),
+      FULL_LOG_PATH: path.join('./logs', 'history.log'),
     };
 
     // Create test directories
     for (const dir of testDirs) {
-      await fs.mkdir(dir, { recursive: true });
+      await fs.mkdir(dir, { recursive: true }).catch(() => {});
     }
   });
 
@@ -44,10 +48,9 @@ describe('Environment Validation', () => {
     // Clean up test directories
     for (const dir of testDirs) {
       try {
-        // prettier-ignore
         await fs.rm(dir, {
           recursive: true,
-          force: true
+          force: true,
         });
       } catch (error) {
         // Ignore errors if directory doesn't exist
@@ -80,26 +83,32 @@ describe('Environment Validation', () => {
   });
 
   test('should validate LOG_MAX_SIZE format', async () => {
-    // Remove all valid directories to prevent validation from passing
+    // Remove all directories to ensure validation fails
     for (const dir of testDirs) {
       try {
-        // prettier-ignore
-        await fs.rm(dir, {
-          recursive: true,
-          force: true
-        });
+        await fs.rm(dir, { recursive: true, force: true });
       } catch (error) {
         // Ignore errors if directory doesn't exist
       }
     }
 
-    process.env.LOG_MAX_SIZE = 'invalid';
+    // Set invalid format for LOG_MAX_SIZE
+    process.env.LOG_MAX_SIZE = '10XB'; // Invalid unit
+    await expect(validateEnv()).rejects.toThrow();
 
+    process.env.LOG_MAX_SIZE = 'MB10'; // Invalid order
+    await expect(validateEnv()).rejects.toThrow();
+
+    process.env.LOG_MAX_SIZE = '-10MB'; // Negative value
+    await expect(validateEnv()).rejects.toThrow();
+
+    process.env.LOG_MAX_SIZE = '10'; // Missing unit
     await expect(validateEnv()).rejects.toThrow();
   });
 
   test('should handle optional environment variables', async () => {
     process.env.DEBUG = 'true';
+    process.env.DEBUG_TESTS = 'true';
 
     await expect(validateEnv()).resolves.not.toThrow();
   });

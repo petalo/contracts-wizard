@@ -57,7 +57,8 @@
  */
 
 const path = require('path');
-const fs = require('fs/promises');
+const fs = require('fs');
+const fsPromises = require('fs').promises;
 const dotenv = require('dotenv');
 const { FILE_EXTENSIONS } = require('@/config/file-extensions');
 const { logger } = require('@/utils/common/logger');
@@ -67,9 +68,31 @@ const BASE_DIR = process.cwd();
 
 // Load environment configuration based on NODE_ENV
 if (process.env.NODE_ENV === 'test') {
-  dotenv.config({ path: '.env.test' });
+  const envTestPath = path.resolve(process.cwd(), '.env.test');
+  try {
+    // Use synchronous stat instead of existsSync
+    fs.statSync(envTestPath);
+    dotenv.config({ path: envTestPath });
+    logger.debug('Environment configuration', {
+      filename: 'paths.js',
+      context: 'config',
+      message: 'Loaded test environment configuration',
+      params: `env=test • path=${envTestPath}`,
+    });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new Error('.env.test file is required for running tests');
+    }
+    throw error;
+  }
 } else {
   dotenv.config();
+  logger.debug('Environment configuration', {
+    filename: 'paths.js',
+    context: 'config',
+    message: 'Loaded default environment configuration',
+    params: `env=${process.env.NODE_ENV || 'development'}`,
+  });
 }
 
 /**
@@ -121,29 +144,33 @@ function resolvePath(basePath, targetPath, defaultPath) {
   // If no target path is provided, use default
   if (!targetPath) {
     const resolvedPath = path.join(basePath, defaultPath);
-    logger.debug('Using default path:', {
-      basePath,
-      defaultPath,
-      resolvedPath,
+    logger.debug('Resolving default path', {
+      filename: 'paths.js',
+      context: 'file',
+      message: 'Using default path for resolution',
+      params: `base=${basePath} • default=${defaultPath} • resolved=${resolvedPath}`,
     });
     return resolvedPath;
   }
 
   // If target path is absolute, use it directly
   if (path.isAbsolute(targetPath)) {
-    logger.debug('Using absolute path:', {
-      targetPath,
-      isAbsolute: true,
+    logger.debug('Using absolute path', {
+      filename: 'paths.js',
+      context: 'file',
+      message: 'Path is absolute, using directly',
+      params: `path=${targetPath}`,
     });
     return targetPath;
   }
 
   // For relative paths, join with base path
   const resolvedPath = path.join(basePath, targetPath);
-  logger.debug('Resolved relative path:', {
-    basePath,
-    targetPath,
-    resolvedPath,
+  logger.debug('Resolving relative path', {
+    filename: 'paths.js',
+    context: 'file',
+    message: 'Joining relative path with base',
+    params: `base=${basePath} • target=${targetPath} • resolved=${resolvedPath}`,
   });
   return resolvedPath;
 }
@@ -171,7 +198,12 @@ const PATHS = {
   output: (() => {
     const envPath = process.env.DIR_OUTPUT;
     if (envPath && path.isAbsolute(envPath)) {
-      logger.debug('Using absolute output path from env:', envPath);
+      logger.debug('Output directory configuration', {
+        filename: 'paths.js',
+        context: 'config',
+        message: 'Using absolute output path from environment',
+        params: `path=${envPath}`,
+      });
       return envPath;
     }
     return resolvePath(BASE_DIR, envPath, DEFAULT_PATHS.output);
@@ -181,7 +213,12 @@ const PATHS = {
   templates: (() => {
     const envPath = process.env.DIR_TEMPLATES;
     if (envPath && path.isAbsolute(envPath)) {
-      logger.debug('Using absolute templates path from env:', envPath);
+      logger.debug('Templates directory configuration', {
+        filename: 'paths.js',
+        context: 'config',
+        message: 'Using absolute templates path from environment',
+        params: `path=${envPath}`,
+      });
       return envPath;
     }
     return resolvePath(BASE_DIR, envPath, DEFAULT_PATHS.templates);
@@ -191,7 +228,12 @@ const PATHS = {
   css: (() => {
     const envPath = process.env.DIR_CSS;
     if (envPath && path.isAbsolute(envPath)) {
-      logger.debug('Using absolute CSS path from env:', envPath);
+      logger.debug('CSS directory configuration', {
+        filename: 'paths.js',
+        context: 'config',
+        message: 'Using absolute CSS path from environment',
+        params: `path=${envPath}`,
+      });
       return envPath;
     }
     return resolvePath(BASE_DIR, envPath, DEFAULT_PATHS.css);
@@ -201,7 +243,12 @@ const PATHS = {
   csv: (() => {
     const envPath = process.env.DIR_CSV;
     if (envPath && path.isAbsolute(envPath)) {
-      logger.debug('Using absolute CSV path from env:', envPath);
+      logger.debug('CSV directory configuration', {
+        filename: 'paths.js',
+        context: 'config',
+        message: 'Using absolute CSV path from environment',
+        params: `path=${envPath}`,
+      });
       return envPath;
     }
     return resolvePath(BASE_DIR, envPath, DEFAULT_PATHS.csv);
@@ -211,7 +258,12 @@ const PATHS = {
   images: (() => {
     const envPath = process.env.DIR_IMAGES;
     if (envPath && path.isAbsolute(envPath)) {
-      logger.debug('Using absolute images path from env:', envPath);
+      logger.debug('Images directory configuration', {
+        filename: 'paths.js',
+        context: 'config',
+        message: 'Using absolute images path from environment',
+        params: `path=${envPath}`,
+      });
       return envPath;
     }
     return resolvePath(BASE_DIR, envPath, DEFAULT_PATHS.images);
@@ -234,14 +286,11 @@ const PATHS = {
 };
 
 // Log all resolved paths for debugging
-logger.debug('Resolved application paths:', {
-  base: PATHS.base,
-  output: PATHS.output,
-  templates: PATHS.templates,
-  css: PATHS.css,
-  csv: PATHS.csv,
-  images: PATHS.images,
-  logs: PATHS.logs,
+logger.debug('Application paths configuration', {
+  filename: 'paths.js',
+  context: 'config',
+  message: 'All application paths have been resolved',
+  params: `base=${PATHS.base} • output=${PATHS.output} • templates=${PATHS.templates} • css=${PATHS.css} • csv=${PATHS.csv} • images=${PATHS.images} • logs_dir=${PATHS.logs.dir} • logs_latest=${PATHS.logs.latest} • logs_history=${PATHS.logs.history}`,
 });
 
 /**
@@ -284,11 +333,11 @@ const TYPE_TO_PATH_MAP = {
 async function validateDirectory(dirPath, createIfMissing = false) {
   try {
     // Check if directory exists and is accessible
-    await fs.access(dirPath);
+    await fsPromises.access(dirPath);
   } catch (error) {
     if (error.code === 'ENOENT' && createIfMissing) {
       // Create directory with parent directories if needed
-      await fs.mkdir(dirPath, { recursive: true });
+      await fsPromises.mkdir(dirPath, { recursive: true });
     } else {
       throw error;
     }
@@ -309,7 +358,12 @@ if (process.env.NODE_ENV !== 'test') {
         validateDirectory(PATHS.logs.dir, true),
       ]);
     } catch (error) {
-      logger.error('Failed to initialize directories:', error);
+      logger.error('Directory initialization failed', {
+        filename: 'paths.js',
+        context: 'system',
+        message: 'Failed to initialize required application directories',
+        params: `error=${error.message} • stack=${error.stack}`,
+      });
       process.exit(1);
     }
   })();

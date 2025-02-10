@@ -93,7 +93,9 @@ module.exports = {
 
   // Test environment configuration
   testEnvironment: 'node',
-  setupFilesAfterEnv: ['<rootDir>/tests/config/test-setup.js'],
+  testEnvironmentOptions: {
+    NODE_ENV: 'test',
+  },
 
   // Test execution settings
   testTimeout: 30000,
@@ -116,4 +118,8 @@ module.exports = {
 
   // Enable experimental features
   resolver: '<rootDir>/tests/config/jest-resolver.js',
+
+  // Environment setup
+  setupFiles: ['<rootDir>/tests/config/env-setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/tests/config/test-setup.js'],
 };

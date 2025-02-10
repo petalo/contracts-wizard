@@ -74,7 +74,12 @@ const { logger } = require('@/utils/common/logger');
 const { AppError } = require('@/utils/common/errors');
 const fs = require('fs').promises;
 const path = require('path');
-const { ENV, LOG_LEVELS, NODE_ENVS } = require('./env');
+// prettier-ignore
+const {
+  ENV,
+  LOG_LEVELS,
+  NODE_ENVS
+} = require('./env');
 
 /**
  * Custom error class for configuration errors
