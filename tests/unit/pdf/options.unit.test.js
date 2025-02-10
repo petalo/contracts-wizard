@@ -1,5 +1,5 @@
 /**
- * @fileoverview Tests for PDF options and configuration
+ * @file Tests for PDF options and configuration
  *
  * Tests cover:
  * 1. Configuration validation

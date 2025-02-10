@@ -1,5 +1,5 @@
 /**
- * @fileoverview Value extraction utilities for Handlebars helpers
+ * @file Value extraction utilities for Handlebars helpers
  *
  * Provides utility functions for extracting values from:
  * - HTML-wrapped content

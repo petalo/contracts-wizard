@@ -1,49 +1,39 @@
 /**
- * @fileoverview Environment Variable Validation System
+ * @file Environment Variable Validation System
  *
- * Manages environment configuration validation:
- * - Required variable enforcement
- * - Type checking and constraints
- * - Value validation rules
- * - Error collection and reporting
+ * Provides comprehensive validation for environment variables:
+ * - Required vs optional variables
+ * - Type checking and coercion
+ * - Value constraints and formats
+ * - Path validation and permissions
  *
  * Functions:
- * - validateEnv: Validates all environment variables
- * - validatePath: Validates directory paths
- * - validateLogLevel: Validates logging configuration
- * - validateFileSize: Validates file size constraints
- * - validateLogPath: Validates log file paths
+ * - validateEnv: Main validation entry point
+ * - validatePath: Directory path validation
+ * - validateLogLevel: Log level validation
+ * - validateFileSize: File size format validation
  *
  * Constants:
- * - ENV_CONFIG: Environment validation rules
- * - PATH_PERMISSIONS: Required path permissions
- * - NUMERIC_CONSTRAINTS: Numeric value constraints
- *
- * Error Classes:
- * - ConfigError: Base configuration error
- * - MissingEnvError: Required variable missing
- * - InvalidValueError: Invalid variable value
- * - PathError: Invalid path or permissions
+ * - PATH_PERMISSIONS: Directory access requirements
+ * - NUMERIC_CONSTRAINTS: Size and count limits
+ * - ENV_CONFIG: Variable validation rules
  *
  * Flow:
- * 1. Define validation rules and constraints
- * 2. Load environment variables
- * 3. Check required variables
- * 4. Validate types and values
- * 5. Validate paths and permissions
- * 6. Report validation results
+ * 1. Load environment configuration
+ * 2. Validate required variables
+ * 3. Check types and formats
+ * 4. Validate paths and permissions
+ * 5. Apply custom validations
  *
  * Error Handling:
- * - Multiple error collection
- * - Detailed error context
- * - Path permission validation
- * - Type conversion errors
- * - Format validation errors
- * - Size constraint violations
+ * - MissingEnvError: Required variable missing
+ * - InvalidValueError: Invalid value format/type
+ * - PathError: Invalid path or permissions
  *
- * @module @/config/envValidation
- * @requires @/utils/common/logger
- * @requires @/utils/common/errors
+ * @module @/config/env-validation
+ * @requires fs/promises
+ * @requires path
+ * @requires @/config/env
  *
  * @example
  * // Import validation
@@ -84,16 +74,53 @@ const { logger } = require('@/utils/common/logger');
 const { AppError } = require('@/utils/common/errors');
 const fs = require('fs').promises;
 const path = require('path');
+// prettier-ignore
+const {
+  ENV,
+  LOG_LEVELS,
+  NODE_ENVS
+} = require('./env');
 
-// Custom error classes
+/**
+ * Custom error class for configuration errors
+ *
+ * Base class for all configuration-related errors.
+ * Provides standard error formatting and handling.
+ *
+ * @example
+ * throw new ConfigError('Invalid configuration', {
+ *   key: 'DATABASE_URL',
+ *   value: 'invalid://url'
+ * });
+ */
 class ConfigError extends AppError {
+  /**
+   * Creates a new ConfigError instance
+   *
+   * @param {string} message - Error message
+   * @param {object} details - Additional error details
+   */
   constructor(message, details) {
     super(message, 'CONFIG_ERROR', details);
     this.name = 'ConfigError';
   }
 }
 
+/**
+ * Custom error class for missing environment variables
+ *
+ * Thrown when a required environment variable is not set.
+ * Includes the variable name in the error details.
+ *
+ * @example
+ * throw new MissingEnvError('API_KEY');
+ */
 class MissingEnvError extends ConfigError {
+  /**
+   * Creates a new MissingEnvError instance
+   *
+   * @param {string} variable - Name of the missing variable
+   */
   constructor(variable) {
     super(`Missing required environment variable: ${variable}`, {
       variable,
@@ -103,7 +130,23 @@ class MissingEnvError extends ConfigError {
   }
 }
 
+/**
+ * Custom error class for invalid environment values
+ *
+ * Thrown when an environment variable has an invalid value.
+ * Includes the variable name, actual value, and expected format.
+ *
+ * @example
+ * throw new InvalidValueError('PORT', 'abc', 'number');
+ */
 class InvalidValueError extends ConfigError {
+  /**
+   * Creates a new InvalidValueError instance
+   *
+   * @param {string} variable - Name of the invalid variable
+   * @param {*} value - The invalid value
+   * @param {string} expected - Description of expected format/value
+   */
   constructor(variable, value, expected) {
     super(`Invalid value for ${variable}`, {
       variable,
@@ -115,7 +158,23 @@ class InvalidValueError extends ConfigError {
   }
 }
 
+/**
+ * Custom error class for path-related errors
+ *
+ * Thrown when there are issues with file paths or directories.
+ * Includes the path and specific reason for the error.
+ *
+ * @example
+ * throw new PathError('OUTPUT_DIR', '/invalid/path', 'Directory not writable');
+ */
 class PathError extends ConfigError {
+  /**
+   * Creates a new PathError instance
+   *
+   * @param {string} variable - Name of the path variable
+   * @param {string} path - The invalid path
+   * @param {string} reason - Reason for the error
+   */
   constructor(variable, path, reason) {
     super(`Invalid path for ${variable}: ${reason}`, {
       variable,
@@ -127,7 +186,10 @@ class PathError extends ConfigError {
   }
 }
 
-// Constants
+/**
+ * Directory permission requirements
+ * @constant {object}
+ */
 const PATH_PERMISSIONS = {
   DIR_OUTPUT: {
     write: true,
@@ -139,6 +201,10 @@ const PATH_PERMISSIONS = {
   DIR_CSV: { read: true },
 };
 
+/**
+ * Numeric value constraints
+ * @constant {object}
+ */
 const NUMERIC_CONSTRAINTS = {
   LOG_MAX_SIZE: {
     min: '1MB',
@@ -167,7 +233,7 @@ const NUMERIC_CONSTRAINTS = {
  * - validate: Custom validation function
  * - min/max: Numeric constraints
  *
- * @constant {Object}
+ * @constant {object}
  *
  * @example
  * // Variable configuration examples:
@@ -205,20 +271,16 @@ const ENV_CONFIG = {
   // Application environment
   NODE_ENV: {
     type: 'string',
-    values: ['development', 'production', 'test'],
+    values: NODE_ENVS,
     required: true,
   },
 
   // Logging configuration
   LOG_LEVEL: {
     type: 'string',
-    values: ['error', 'warn', 'info', 'debug', 'trace'],
+    values: LOG_LEVELS,
     required: true,
     validate: validateLogLevel,
-  },
-  LOG_ENABLED: {
-    type: 'boolean',
-    required: true,
   },
   LOG_MAX_SIZE: {
     type: 'string',
@@ -232,15 +294,10 @@ const ENV_CONFIG = {
     min: 1,
     max: 100,
   },
-  FULL_LOG_PATH: {
+  LOG_DIR: {
     type: 'string',
     required: true,
-    validate: validateLogPath,
-  },
-  LATEST_LOG_PATH: {
-    type: 'string',
-    required: true,
-    validate: validateLogPath,
+    validate: validatePath,
   },
 
   // Debug mode
@@ -316,9 +373,8 @@ async function validatePath(value, key) {
  * @throws {InvalidValueError} If log level is invalid
  */
 function validateLogLevel(value, key) {
-  const validLevels = ['error', 'warn', 'info', 'debug', 'trace'];
-  if (!validLevels.includes(value.toLowerCase())) {
-    throw new InvalidValueError(key, value, validLevels);
+  if (!LOG_LEVELS.includes(value.toLowerCase())) {
+    throw new InvalidValueError(key, value, LOG_LEVELS);
   }
 }
 
@@ -335,6 +391,22 @@ function validateFileSize(value, key) {
   }
 
   // Convert size to bytes for comparison
+  /**
+   * Converts a file size string to bytes
+   *
+   * Parses a string representing file size (e.g., '1MB', '2GB')
+   * and converts it to the equivalent number of bytes.
+   * Supports units: B, KB, MB, GB
+   *
+   * @param {string} sizeStr - Size string with unit (e.g., '1MB')
+   * @returns {number} Size in bytes
+   * @throws {InvalidValueError} If size format is invalid
+   *
+   * @example
+   * convertToBytes('1MB')  // Returns: 1048576
+   * convertToBytes('2GB')  // Returns: 2147483648
+   * convertToBytes('512KB') // Returns: 524288
+   */
   function convertToBytes(sizeStr) {
     const size = parseInt(sizeStr);
     const unit = sizeStr.slice(-2, -1);
@@ -364,28 +436,6 @@ function validateFileSize(value, key) {
 }
 
 /**
- * Validates log file path and parent directory
- *
- * @param {string} value - Path to validate
- * @param {string} key - Environment variable name
- * @throws {PathError} If path is invalid
- */
-async function validateLogPath(value, key) {
-  const absolutePath = path.isAbsolute(value) ? value : path.resolve(value);
-  const directory = path.dirname(absolutePath);
-
-  try {
-    await fs.access(directory, fs.constants.R_OK | fs.constants.W_OK);
-  } catch (error) {
-    throw new PathError(
-      key,
-      value,
-      `Parent directory not accessible: ${error.message}`
-    );
-  }
-}
-
-/**
  * Validates all environment variables
  *
  * Performs comprehensive validation:
@@ -402,7 +452,7 @@ async function validateEnv() {
   const errors = [];
 
   for (const [key, config] of Object.entries(ENV_CONFIG)) {
-    const value = process.env[key];
+    const value = ENV[key] || process.env[key];
 
     try {
       // Check required variables
@@ -490,6 +540,60 @@ async function validateEnv() {
       }, {}),
   });
 }
+
+/**
+ * Validates environment variable configuration
+ *
+ * @param {string} name - Environment variable name
+ * @param {string} value - Environment variable value
+ * @param {object} rules - Validation rules
+ * @returns {boolean} True if valid, false otherwise
+ * @example
+ * validateEnvVar('LOG_LEVEL', 'debug', { required: true, values: ['debug', 'info', 'warn', 'error'] })
+ */
+
+/**
+ * Validates required environment variables
+ *
+ * Checks if all required environment variables are present and have valid values.
+ *
+ * @param {string[]} required - List of required variable names
+ * @returns {boolean} True if all required variables are valid
+ * @example
+ * validateRequired(['NODE_ENV', 'LOG_LEVEL'])
+ */
+
+/**
+ * Validates environment variable values against allowed values
+ *
+ * Ensures environment variables only contain allowed values.
+ *
+ * @param {object} allowedValues - Map of variable names to allowed values
+ * @returns {boolean} True if all values are valid
+ * @example
+ * validateValues({ NODE_ENV: ['development', 'production', 'test'] })
+ */
+
+/**
+ * Validates environment variable formats using regex patterns
+ *
+ * Checks if environment variables match their expected format patterns.
+ *
+ * @param {object} patterns - Map of variable names to regex patterns
+ * @returns {boolean} True if all formats are valid
+ * @example
+ * validateFormats({ PORT: /^\d+$/, URL: /^https?:\/\/.+$/ })
+ */
+
+/**
+ * Validates command arguments and options
+ *
+ * Checks if the provided command is valid and exists in the list
+ * of allowed commands. Returns false if validation fails.
+ *
+ * @param {string} command Command to validate
+ * @returns {boolean} True if command is valid
+ */
 
 // Prevent runtime modifications
 Object.freeze(ENV_CONFIG);

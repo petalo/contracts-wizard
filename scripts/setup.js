@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 
 /**
- * @fileoverview Project setup script
+ * @file Project setup script
  *
  * Creates necessary directories, initializes configurations,
  * and validates the project structure. This script is designed to:
@@ -163,6 +163,15 @@ RATE_LIMIT_WINDOW=15       # Rate limiting window in minutes
 RATE_LIMIT_MAX_REQUESTS=50 # Maximum requests per window
 SESSION_TIMEOUT=15         # Session timeout in minutes`;
 
+/**
+ * Creates required project directories
+ *
+ * Iterates through the list of required directories and creates them if they don't exist.
+ * Handles errors appropriately and logs the results of each directory creation.
+ *
+ * @returns {Promise<void>} Resolves when all directories are created
+ * @throws {FileSystemError} When directory creation fails
+ */
 async function createDirectories() {
   log.info('Creating required directories...');
   for (const dir of REQUIRED_DIRS) {
@@ -184,6 +193,15 @@ async function createDirectories() {
   }
 }
 
+/**
+ * Sets up environment configuration
+ *
+ * Creates and configures the .env file with default settings if it doesn't exist.
+ * Includes all necessary environment variables for the application.
+ *
+ * @returns {Promise<void>} Resolves when environment setup is complete
+ * @throws {FileSystemError} When file creation fails
+ */
 async function setupEnvironment() {
   log.info('\nSetting up environment...');
   const envPath = path.join(process.cwd(), '.env');
@@ -210,6 +228,17 @@ async function setupEnvironment() {
   }
 }
 
+/**
+ * Configures Git hooks for the project
+ *
+ * Sets up Git hooks in the .githooks directory and makes them executable.
+ * Ensures proper hook execution for code quality checks and other pre-commit tasks.
+ *
+ * @param {object} [options={}] - Configuration options
+ * @param {boolean} [options.dryRun=false] - Whether to simulate the setup without making changes
+ * @returns {Promise<void>} Resolves when Git hooks are configured
+ * @throws {Error} When Git hook configuration fails
+ */
 async function setupGitHooks(options = {}) {
   log.info('\nSetting up Git hooks...');
   try {
@@ -488,7 +517,7 @@ function checkMissingDependencies() {
     'commander',
     'csv-parse',
     'inquirer',
-    'marked',
+    'markdown-it',
 
     // Development dependencies
     'eslint',

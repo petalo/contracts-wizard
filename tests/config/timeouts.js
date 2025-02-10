@@ -1,5 +1,5 @@
 /**
- * @fileoverview Test timeouts configuration
+ * @file Test timeouts configuration
  *
  * This file configures timeouts for different types of tests.
  */

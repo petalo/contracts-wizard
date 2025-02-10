@@ -1,5 +1,5 @@
 /**
- * @fileoverview Interactive CLI Prompt System
+ * @file Interactive CLI Prompt System
  *
  * Provides a comprehensive system for interactive user input:
  * - Template selection (Markdown, CSS)
@@ -39,10 +39,10 @@
  * @requires @/utils/common/errors - Error handling
  * @requires @/utils/file-management/file-scanner - File operations
  * @requires @/cli/display - CLI output formatting
- * @exports {Function} selectMarkdownTemplate - Template selection
- * @exports {Function} selectInputMethod - Input method choice
- * @exports {Function} selectDataFile - Data file selection
- * @exports {Function} selectCssFile - Style selection
+ * @exports selectMarkdownTemplate - Template selection function
+ * @exports selectInputMethod - Input method selection function
+ * @exports selectDataFile - Data file selection function
+ * @exports selectCssFile - Style selection function
  *
  * @example
  * // Select template and input method
@@ -93,6 +93,8 @@ async function selectMarkdownTemplate() {
   logger.debug('Available templates', {
     templates,
     templatesDir: PATHS.templates,
+    isTemplatesDirAbsolute: path.isAbsolute(PATHS.templates),
+    baseDir: process.cwd(),
   });
 
   // Sort templates by path and then by name
@@ -112,20 +114,29 @@ async function selectMarkdownTemplate() {
       message: 'Select a template:',
       choices: templates.map((file) => ({
         name: path.basename(file),
-        value: path.join(PATHS.templates, file),
+        value: file,
       })),
       pageSize: 15,
     },
   ]);
 
+  // If the template path is already absolute, use it directly
+  const fullPath = path.isAbsolute(template)
+    ? template
+    : path.join(PATHS.templates, template);
+
   logger.debug('Selected template', {
     template,
-    displayPath: getRelativePath(template),
-    exists: require('fs').existsSync(template),
+    fullPath,
+    displayPath: getRelativePath(fullPath),
+    exists: require('fs').existsSync(fullPath),
     basePath: PATHS.templates,
+    isAbsolute: path.isAbsolute(fullPath),
+    isTemplateAbsolute: path.isAbsolute(template),
+    isTemplatesDirAbsolute: path.isAbsolute(PATHS.templates),
   });
 
-  return template;
+  return fullPath;
 }
 
 /**

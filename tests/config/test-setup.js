@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unified test environment configuration
+ * @file Unified test environment configuration
  *
  * Sets up the testing environment with necessary mocks, configurations,
  * directory management, and global test utilities.
@@ -26,18 +26,18 @@ const fsPromises = require('fs').promises;
 const path = require('path');
 const dotenv = require('dotenv');
 
-// Configure module aliases before requiring any other modules
-require('../../src/config/aliases').configureAliases();
+// First load the main .env file to get critical directories
+const mainEnvResult = dotenv.config({
+  path: path.resolve(process.cwd(), '.env'),
+});
 
-const { logger } = require('../../src/utils/common/logger');
-const { AppError } = require('../../src/utils/common/errors');
-const { PATHS } = require('../../src/config/paths');
-
-// Ensure we're in test environment
-if (process.env.NODE_ENV !== 'test') {
-  process.env.NODE_ENV = 'test';
-  logger.warn('Forcing NODE_ENV to "test" in test environment');
-}
+// Store critical directory paths from main .env
+const criticalDirPaths = {
+  LOG_DIR: process.env.LOG_DIR,
+  DIR_CSS: process.env.DIR_CSS,
+  DIR_TEMPLATES: process.env.DIR_TEMPLATES,
+  DIR_IMAGES: process.env.DIR_IMAGES,
+};
 
 // Verify .env.test exists
 const envTestPath = path.resolve(process.cwd(), '.env.test');
@@ -55,6 +55,21 @@ const result = dotenv.config({
 if (result.error) {
   throw new Error(`Error loading .env.test: ${result.error.message}`);
 }
+
+// Restore critical directory paths from main .env
+Object.entries(criticalDirPaths).forEach(([key, value]) => {
+  if (value) {
+    process.env[key] = value;
+  }
+});
+
+// Configure module aliases before requiring any other modules
+require('../../src/config/aliases').configureAliases();
+
+// Now we can safely require these modules
+const { logger } = require('../../src/utils/common/logger');
+const { AppError } = require('../../src/utils/common/errors');
+const { PATHS } = require('../../src/config/paths');
 
 // Verify critical test environment variables
 const requiredTestEnvVars = [
@@ -117,21 +132,49 @@ jest.mock('../../src/utils/common/logger', () => ({
   },
 }));
 
+// Ensure critical directories exist before any test runs
+const CRITICAL_DIRS = [
+  process.env.LOG_DIR || 'logs',
+  process.env.DIR_CSS || 'templates/css',
+  process.env.DIR_TEMPLATES || 'templates',
+  process.env.DIR_OUTPUT || 'tests/output',
+  process.env.DIR_CSV || 'tests/csv',
+  process.env.DIR_IMAGES || 'templates/images',
+].map((dir) => path.resolve(process.cwd(), dir));
+
+// Create critical directories before any test runs
+CRITICAL_DIRS.forEach((dir) => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log('Created critical directory:', dir);
+  }
+});
+
+// Add these directories to PERMANENT_DIRS
+const PERMANENT_DIRS = [
+  'tests/__common__/fixtures', // Permanent fixtures directory
+  ...CRITICAL_DIRS, // Add critical directories
+]
+  .filter(Boolean)
+  .map((dir) => path.resolve(process.cwd(), dir));
+
 // Directory management
+/**
+ * Configures test environment and global mocks
+ *
+ * Sets up the test environment with necessary mocks and
+ * configurations before running the test suite.
+ */
 async function cleanDirectory(dir, preserveFixtures = false) {
   if (process.env.NODE_ENV !== 'test') return;
 
   // Define permanent and temporary test directories
-  const PERMANENT_DIRS = [
-    'tests/__common__/fixtures', // Permanent fixtures directory
-  ].map((testDir) => path.resolve(process.cwd(), testDir));
-
   const TEMPORARY_DIRS = [
     'tests/output',
-    'tests/logs',
     'tests/reports',
     'tests/coverage',
     'tests/temp',
+    'tests/logs',
   ].map((testDir) => path.resolve(process.cwd(), testDir));
 
   const absoluteDir = path.resolve(process.cwd(), dir);

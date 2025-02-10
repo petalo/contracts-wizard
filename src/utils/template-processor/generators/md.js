@@ -1,5 +1,5 @@
 /**
- * @fileoverview Markdown file generator for the template processing system
+ * @file Markdown file generator for the template processing system
  *
  * This module handles the generation of markdown files from processed template content.
  * It includes functionality for file writing, directory creation, and proper encoding handling.
@@ -24,7 +24,7 @@
  * @requires @/utils/common/errors
  * @requires @/config/encoding
  * @requires @/utils/file-management/get-file-size
- * @exports {Function} generateMarkdown - Function to generate markdown files
+ * @exports generateMarkdown - Function to generate markdown files
  *
  * @example
  * // Generate a markdown file from processed content
@@ -54,7 +54,7 @@ const { getFileSizeKB } = require('@/utils/file-management/get-file-size');
  * - Handles special characters
  *
  * @param {string} content - Processed markdown content
- * @param {Object} options - Generation options
+ * @param {object} options - Generation options
  * @param {string} options.filepath - Output file path
  * @returns {Promise<void>}
  * @throws {AppError} On file generation failure

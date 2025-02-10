@@ -116,6 +116,7 @@ function validateCsvStructure(parsedData) {
  *
  * @param {string} value - Value to convert
  * @returns {*} Converted value
+
  */
 function convertValueType(value) {
   logger.debug('Converting value type', {
@@ -126,6 +127,34 @@ function convertValueType(value) {
     operation: 'type-conversion',
   });
 
+
+/**
+ * Process CSV data and validate against template fields
+ *
+ * Creates a structured object from CSV data while ensuring all template fields exist.
+ * Maintains all CSV fields even if not in template fields and initializes missing template fields.
+ * Handles nested objects, arrays with gaps, and mixed data types.
+ *
+ * @async
+ * @function processCsvData
+ * @param {string} csvPath - Path to CSV file
+ * @param {string[]} templateFields - Array of fields from template
+ * @returns {Record<string,*>} Processed data object with all fields
+ * @throws {AppError} If CSV is invalid or processing fails
+ * @example
+ * // Basic usage with simple fields
+ * const data = await processCsvData('data.csv', ['name', 'age']);
+ * // returns: { name: 'John', age: '30' }
+ *
+ * // Complex nested structure
+ * const data = await processCsvData('data.csv', ['user.name', 'user.addresses.0.city']);
+ * // returns: { user: { name: 'John', addresses: [{ city: 'NY' }] } }
+ *
+ * // Array with gaps
+ * const data = await processCsvData('data.csv', ['items.0', 'items.2']);
+ * // returns: { items: ['first', '', 'third'] }
+ */
+async function processCsvData(csvPath, templateFields = []) {
   try {
     // Si el valor está vacío, mantenerlo como string vacío
     if (value === '' || value === undefined || value === null) {
@@ -207,6 +236,7 @@ function convertValueType(value) {
  *
  * @param {Array<Object>} parsedData - Parsed CSV data
  * @returns {Object} Processed data object
+
  */
 function processDataLines(parsedData) {
   logger.debug('Processing CSV data lines', {

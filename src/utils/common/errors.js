@@ -1,5 +1,5 @@
 /**
- * @fileoverview Application Error Management System
+ * @file Application Error Management System
  *
  * Provides centralized error handling utilities:
  * - Custom error class with code support
@@ -9,6 +9,13 @@
  * - Stack trace capture
  * - Error context enrichment
  * - Error code validation
+ *
+ * @module @/utils/common/errors
+ * @requires @/utils/common/logger
+ * @exports AppError Application error class
+ * @exports ERROR_CODES Error code constants
+ * @exports formatError Error formatter
+ * @exports isAppError Type checker
  *
  * Functions:
  * - formatError: Formats error messages with details
@@ -45,12 +52,6 @@
  * - Type checking
  * - Error inheritance
  * - Error serialization
- *
- * @module @/utils/common/errors
- * @exports {Class} AppError - Application error class
- * @exports {Object} ERROR_CODES - Error code constants
- * @exports {Function} formatError - Error formatter
- * @exports {Function} isAppError - Type checker
  *
  * @example
  * // Import error utilities
@@ -89,6 +90,8 @@
  * //    at main (/src/index.js:5:3)"
  */
 
+const { logger } = require('@/utils/common/logger');
+
 /**
  * Standard application error codes
  *
@@ -105,7 +108,7 @@
  * - Resource Errors: CSS_NOT_FOUND
  * - Processing Errors: PROCESSING_ERROR
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string} UNKNOWN - Unclassified errors
  * @property {string} VALIDATION - Input validation
  * @property {string} FILE - File operations
@@ -152,36 +155,11 @@ const ERROR_CODES = {
  * - JSON serialization
  * - Custom formatting
  *
- * @class
- * @extends Error
- * @property {string} name - Error name
- * @property {string} code - Error code
- * @property {Object} details - Additional info
- * @property {string} stack - Stack trace
- *
- * @example
- * // Basic usage
- * throw new AppError(
- *   'File not found',
- *   ERROR_CODES.FILE,
- *   { path: '/path/to/file' }
- * );
- *
- * // With error chaining
- * try {
- *   await processFile(path);
- * } catch (error) {
- *   throw new AppError(
- *     'Processing failed',
- *     ERROR_CODES.PROCESSING_ERROR,
- *     { originalError: error }
- *   );
- * }
- *
- * // Custom error properties
- * const error = new AppError('Invalid data', ERROR_CODES.VALIDATION);
- * error.details.timestamp = new Date();
- * error.details.severity = 'high';
+ * @class AppError
+ * @augments Error
+ * @param {string} message Error message
+ * @param {string} error_code Error code for identification
+ * @param {object} [details] Additional error details
  */
 class AppError extends Error {
   /**
@@ -189,7 +167,7 @@ class AppError extends Error {
    *
    * @param {string} message - Error message
    * @param {string} code - Error code from ERROR_CODES
-   * @param {Object} [details={}] - Additional error details
+   * @param {object} [details={}] - Additional error details
    */
   constructor(message, code, details = {}) {
     super(message);
@@ -197,6 +175,13 @@ class AppError extends Error {
     this.code = code;
     this.details = details;
     Error.captureStackTrace(this, this.constructor);
+
+    // Log error details
+    logger.error(message, {
+      code,
+      details,
+      stack: this.stack,
+    });
   }
 }
 
@@ -210,32 +195,7 @@ class AppError extends Error {
  * - Stack trace (in debug mode)
  *
  * @param {Error} error - Error to format
- * @param {Object} [options] - Formatting options
- * @param {boolean} [options.includeStack=false] - Include stack trace
  * @returns {string} Formatted error message
- *
- * @example
- * // Basic formatting
- * const error = new AppError('Invalid', 'VALIDATION');
- * console.log(formatError(error));
- * // "VALIDATION: Invalid
- * // Details: {}"
- *
- * // With details
- * const error = new AppError('Invalid', 'VALIDATION', {
- *   field: 'email',
- *   value: 'test'
- * });
- * console.log(formatError(error));
- * // "VALIDATION: Invalid
- * // Details: {
- * //   field: 'email',
- * //   value: 'test'
- * // }"
- *
- * // With stack trace
- * console.log(formatError(error, { includeStack: true }));
- * // Includes full stack trace in output
  */
 function formatError(error) {
   if (error instanceof AppError) {

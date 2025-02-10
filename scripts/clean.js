@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * @fileoverview Clean script
+ * @file Clean script
  *
  * Cleans output directories using paths from environment configuration.
  *

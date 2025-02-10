@@ -1,39 +1,17 @@
 /**
- * @fileoverview Module Path Alias Configuration
+ * @file Module alias configuration
  *
- * Manages module import path aliasing:
- * - Defines shorthand paths for application modules
- * - Configures module resolution aliases
- * - Provides consistent path access across application
- * - Simplifies import statements and refactoring
- * - Prevents path traversal complexity
- * - Enables module organization flexibility
+ * Configures module aliases for easier imports:
+ * - src/ -> '@'
+ * - src/ -> '@src'
+ * - src/utils/ -> '@utils'
+ * - src/core/ -> '@core'
+ * - src/cli/ -> '@cli'
+ * - src/config/ -> '@config'
  *
- * Functions:
- * - configureAliases: Initializes module path aliases
- *
- * Constants:
- * - aliases: Path mapping configuration object
- * - SRC_DIR: Source directory absolute path
- *
- * Flow:
- * 1. Define source directory location
- * 2. Create path alias mappings
- * 3. Configure module resolution
- * 4. Register aliases with module-alias
- * 5. Export configuration and setup
- *
- * Error Handling:
- * - Invalid path resolution errors
- * - Module import failures
- * - Circular dependency detection
- * - Path alias conflicts
- * - Missing module errors
- * - Resolution timeout handling
- *
- * @module @/config/aliases
- * @requires path
+ * @module config/aliases
  * @requires module-alias
+ * @requires path
  *
  * @example
  * // Import and configure aliases
@@ -72,36 +50,36 @@
  * simplified and maintainable import statements.
  *
  * Alias Structure:
- * - @: Root source directory
- * - @utils: Utility modules
- * - @core: Core functionality
- * - @config: Configuration files
- * - @cli: CLI-related modules
+ * - src: Root source directory
+ * - utils: Utility modules
+ * - core: Core functionality
+ * - config: Configuration files
+ * - cli: CLI-related modules
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string} SRC_DIR - Source directory path
- * @property {Object} aliases - Alias to path mappings
+ * @property {object} aliases - Alias to path mappings
  *
  * @example
  * // Alias configuration object
  * {
- *   '@': '/path/to/src',
- *   '@utils': '/path/to/src/utils',
- *   '@core': '/path/to/src/core',
- *   '@config': '/path/to/src/config'
+ *   'src': '/path/to/src',
+ *   'utils': '/path/to/src/utils',
+ *   'core': '/path/to/src/core',
+ *   'config': '/path/to/src/config'
  * }
  *
  * // Adding new aliases:
  * // 1. Define in aliases object
  * // {
- * //   '@features': path.join(SRC_DIR, 'features'),
- * //   '@services': path.join(SRC_DIR, 'services')
+ * //   'features': path.join(SRC_DIR, 'features'),
+ * //   'services': path.join(SRC_DIR, 'services')
  * // }
  * //
  * // 2. Update tsconfig.json paths
  * // {
- * //   "@features/*": ["src/features/*"],
- * //   "@services/*": ["src/services/*"]
+ * //   "features/*": ["src/features/*"],
+ * //   "services/*": ["src/services/*"]
  * // }
  */
 
@@ -127,13 +105,13 @@ const SRC_DIR = path.resolve(__dirname, '..');
  * - CLI components
  * - Configuration files
  *
- * @constant {Object}
- * @property {string} @ - Root source directory
- * @property {string} @src - Alternative root alias
- * @property {string} @utils - Utility modules
- * @property {string} @core - Core functionality
- * @property {string} @cli - CLI components
- * @property {string} @config - Configuration files
+ * @constant {object}
+ * @property {string} '@' Root source directory
+ * @property {string} '@src' Alternative root alias
+ * @property {string} '@utils' Utility modules
+ * @property {string} '@core' Core functionality
+ * @property {string} '@cli' CLI components
+ * @property {string} '@config' Configuration files
  */
 const aliases = {
   '@': SRC_DIR,

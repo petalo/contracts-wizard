@@ -1,3 +1,17 @@
+/**
+ * @file CLI test utilities
+ *
+ * Provides utilities for testing CLI functionality:
+ * - File creation for tests
+ * - CLI command execution
+ * - Output validation
+ *
+ * @module tests/__common__/helpers/cli-test-utils
+ * @requires fs/promises
+ * @requires path
+ * @requires child_process
+ */
+
 const fs = require('fs').promises;
 const path = require('path');
 const { exec } = require('child_process');
@@ -7,13 +21,25 @@ const FIXTURES_DIR = path.join(__dirname, '..', 'fixtures');
 const INPUT_DIR = path.join(FIXTURES_DIR, 'input');
 const OUTPUT_DIR = path.join(FIXTURES_DIR, 'output');
 
+/**
+ * Creates test files for CLI testing
+ *
+ * Creates temporary files needed for testing CLI commands,
+ * including templates, CSS files, and data files.
+ *
+ * @param {object} options Test file options
+ * @param {string} options.templateContent Template content
+ * @param {string} options.cssContent CSS content
+ * @param {string} options.dataContent Data file content
+ * @returns {Promise<{templatePath: string, dataPath: string, cssPath: string}>} Created file paths
+ */
 async function createTestFiles({
   templateContent = '',
   cssContent = '',
-  templatePath,
-  dataPath,
-  cssPath,
+  dataContent = '',
 }) {
+  let templatePath, dataPath, cssPath;
+
   // Ensure directories exist
   try {
     await fs.mkdir(FIXTURES_DIR, {
@@ -27,9 +53,9 @@ async function createTestFiles({
     });
 
     // Generate file paths if not provided
-    templatePath = templatePath || path.join(INPUT_DIR, 'example-contract.md');
-    dataPath = dataPath || path.join(INPUT_DIR, 'example-contract.yml');
-    cssPath = cssPath || path.join(INPUT_DIR, 'contract.css');
+    templatePath = path.join(INPUT_DIR, 'example-contract.md');
+    dataPath = path.join(INPUT_DIR, 'example-contract.yml');
+    cssPath = path.join(INPUT_DIR, 'contract.css');
 
     // Ensure content is string
     templateContent = String(templateContent || '');
@@ -55,6 +81,17 @@ async function createTestFiles({
   }
 }
 
+/**
+ * Executes a CLI command for testing
+ *
+ * Runs a CLI command with the specified options and returns
+ * the command output and exit code.
+ *
+ * @param {object} options Command options
+ * @param {string} options.template Template file path
+ * @param {string} options.data Data file path
+ * @param {string} options.css CSS file path
+ */
 async function executeCliCommand({ template, data, css }) {
   const CLI_PATH = path.join(process.cwd(), 'src', 'index.js');
   const command = `node ${CLI_PATH} -t "${template}" -d "${data}" -c "${css}"`;
@@ -123,6 +160,14 @@ async function executeCliCommand({ template, data, css }) {
   });
 }
 
+/**
+ * Validates PDF output file
+ *
+ * Checks if a PDF file exists and has valid content.
+ *
+ * @param {string} pdfPath Path to PDF file
+ * @returns {Promise<boolean>} True if PDF is valid
+ */
 async function validatePdfOutput(pdfPath) {
   const stats = await fs.stat(pdfPath);
   return stats.isFile() && stats.size >= 100;

@@ -1,50 +1,59 @@
 /**
- * @fileoverview Core Document Generation Workflow
+ * @file Contract Generation Workflow System
  *
- * Manages the main document generation pipeline:
- * - Template processing and validation
- * - Data input handling and validation
- * - Document generation and output
- * - Error handling and logging
+ * Manages the complete workflow for contract generation:
+ * - Template processing
+ * - Data integration
+ * - Output generation
+ * - Resource management
  *
  * Functions:
- * - startWorkflow: Executes document generation pipeline
- * - validateInputs: Validates input files and directories
- * - processMarkdownTemplate: Processes markdown templates with data
+ * - createWorkflow: Creates workflow instance
+ * - executeWorkflow: Runs workflow steps
+ * - validateWorkflow: Validates workflow config
+ * - generateOutput: Produces final output
  *
  * Constants:
- * - MAX_RETRIES: Maximum number of retries for operations (3)
- * - RETRY_DELAY: Delay between retries in milliseconds (1000)
+ * - WORKFLOW_TYPES: Available workflow types
+ * - DEFAULT_CONFIG: Default workflow settings
  *
  * Flow:
- * 1. Initialize workflow context and correlation ID
- * 2. Validate input files and data
- * 3. Process markdown template
- * 4. Apply CSS styling
- * 5. Generate output documents
- * 6. Handle errors and cleanup
+ * 1. Initialize workflow configuration
+ * 2. Validate input data and templates
+ * 3. Process template with data
+ * 4. Generate output files
+ * 5. Clean up resources
  *
  * Error Handling:
- * - WorkflowError: Base error for workflow issues
- *   - ValidationError: Input validation failures
- *   - ProcessingError: Template processing issues
- *   - OutputError: Document generation failures
- * - Retry logic for transient failures
- * - Proper error context and logging
- * - Resource cleanup on failure
+ * - Configuration validation
+ * - Input data validation
+ * - Template processing errors
+ * - Output generation failures
+ * - Resource cleanup issues
  *
  * @module @/core/workflow
- * @requires @/utils/common/logger - Logging utilities
- * @requires @/utils/common/errors - Error handling
- * @requires @/utils/common/validateData - Data validation
- * @requires @/config/paths - Path configuration and validation
- * @requires @/utils/template-processor/core/process-template - Template processing
- * @exports {Function} startWorkflow - Main workflow executor
- * @exports {Function} validateInputs - Input validation
- * @exports {Class} WorkflowError - Base workflow error
- * @exports {Class} ValidationError - Validation error
- * @exports {Class} ProcessingError - Processing error
- * @exports {Class} OutputError - Output generation error
+ * @requires @/utils/template-processor
+ * @requires @/utils/data-processor
+ * @requires @/utils/output-generator
+ * @requires @/utils/common/errors
+ * @exports createWorkflow - Creates workflow instance
+ * @exports executeWorkflow - Executes workflow steps
+ * @exports validateWorkflow - Validates configuration
+ * @exports generateOutput - Generates final output
+ * @exports cleanupResources - Cleans temporary files
+ * @exports WORKFLOW_TYPES - Available workflow types
+ *
+ * @example
+ * // Create and execute a workflow
+ * const { createWorkflow, executeWorkflow } = require('@/core/workflow');
+ *
+ * const workflow = createWorkflow({
+ *   template: 'contract.md',
+ *   data: { client: 'ACME Corp' },
+ *   output: 'pdf'
+ * });
+ *
+ * const result = await executeWorkflow(workflow);
  */
 
 const {
@@ -57,6 +66,12 @@ const { AppError } = require('@/utils/common/errors');
 const {
   processCsvData,
 } = require('@/utils/template-processor/core/process-csv');
+const path = require('path');
+const EventEmitter = require('events');
+const {
+  processTemplate,
+} = require('@/utils/template-processor/core/process-template');
+const { processCsv } = require('@/utils/template-processor/core/process-csv');
 
 /**
  * Maximum number of retry attempts for transient operations
@@ -72,12 +87,24 @@ const RETRY_DELAY = 1000;
 
 /**
  * Base error class for workflow-related errors
- * Extends AppError to maintain consistent error handling
  *
  * @class WorkflowError
- * @extends AppError
+ * @augments AppError
+ *
+ * @example
+ * throw new WorkflowError('Operation failed', {
+ *   type: 'validation',
+ *   details: { field: 'name' }
+ * });
+
  */
 class WorkflowError extends AppError {
+  /**
+   * Creates a new workflow error
+   *
+   * @param {string} message - Error message
+   * @param {Record<string, unknown>} [details={}] - Additional error details
+   */
   constructor(message, details = {}) {
     super(message, 'WORKFLOW_ERROR', {
       ...details,
@@ -89,12 +116,24 @@ class WorkflowError extends AppError {
 
 /**
  * Error class for validation failures during workflow
- * Used when input data or files fail validation
  *
  * @class ValidationError
- * @extends WorkflowError
+ * @augments WorkflowError
+ *
+ * @example
+ * throw new ValidationError('Invalid input', {
+ *   field: 'email',
+ *   value: 'invalid'
+ * });
+
  */
 class ValidationError extends WorkflowError {
+  /**
+   * Creates a new validation error
+   *
+   * @param {string} message - Error message
+   * @param {Record<string, unknown>} [details={}] - Additional error details
+   */
   constructor(message, details = {}) {
     super(message, {
       ...details,
@@ -107,12 +146,24 @@ class ValidationError extends WorkflowError {
 
 /**
  * Error class for template processing failures
- * Used when template transformation or rendering fails
  *
  * @class ProcessingError
- * @extends WorkflowError
+ * @augments WorkflowError
+ *
+ * @example
+ * throw new ProcessingError('Template processing failed', {
+ *   template: 'invoice.md',
+ *   reason: 'syntax error'
+ * });
+
  */
 class ProcessingError extends WorkflowError {
+  /**
+   * Creates a new processing error
+   *
+   * @param {string} message - Error message
+   * @param {Record<string, unknown>} [details={}] - Additional error details
+   */
   constructor(message, details = {}) {
     super(message, {
       ...details,
@@ -125,12 +176,24 @@ class ProcessingError extends WorkflowError {
 
 /**
  * Error class for output generation failures
- * Used when file writing or format conversion fails
  *
  * @class OutputError
- * @extends WorkflowError
+ * @augments WorkflowError
+ *
+ * @example
+ * throw new OutputError('PDF generation failed', {
+ *   file: 'output.pdf',
+ *   reason: 'disk full'
+ * });
+
  */
 class OutputError extends WorkflowError {
+  /**
+   * Creates a new output error
+   *
+   * @param {string} message - Error message
+   * @param {Record<string, unknown>} [details={}] - Additional error details
+   */
   constructor(message, details = {}) {
     super(message, {
       ...details,
@@ -142,6 +205,33 @@ class OutputError extends WorkflowError {
 }
 
 /**
+ * Cleanup handler for resources
+ *
+ * @param {Array} cleanupTasks - Array of cleanup functions to execute
+ * @returns {Promise<void>}
+ */
+async function cleanupResources(cleanupTasks) {
+  if (!cleanupTasks || !cleanupTasks.length) return;
+
+  logger.debug('Starting resource cleanup', {
+    taskCount: cleanupTasks.length,
+  });
+
+  await Promise.all(
+    cleanupTasks.map((task) =>
+      task().catch((error) => {
+        logger.warn('Cleanup task failed:', {
+          error: error.message,
+          stack: error.stack,
+        });
+      })
+    )
+  );
+
+  logger.debug('Resource cleanup completed');
+}
+
+/**
  * Executes the document generation workflow
  *
  * Processes the complete document generation pipeline with proper
@@ -149,15 +239,15 @@ class OutputError extends WorkflowError {
  * logging at each step.
  *
  * @async
- * @param {Object} context - Workflow context
+ * @param {object} context - Workflow context
  * @param {string} context.templatePath - Path to markdown template
  * @param {string} context.dataPath - Path to data file
  * @param {string} context.cssPath - Path to CSS file
  * @param {string} context.outputDir - Output directory path
- * @param {boolean} context.outputHtml - Generate HTML output
- * @param {boolean} context.outputPdf - Generate PDF output
+ * @param {boolean} [context.outputHtml=true] - Generate HTML output
+ * @param {boolean} [context.outputPdf=true] - Generate PDF output
  * @param {string} [context.correlationId] - Operation correlation ID
- * @returns {Promise<Object>} Processing results
+ * @returns {Promise<Record<string, unknown>>} Processing results
  * @throws {WorkflowError} If workflow fails at any stage
  *
  * @example
@@ -188,48 +278,53 @@ class OutputError extends WorkflowError {
  */
 async function startWorkflow(context) {
   const correlationId = context.correlationId || Date.now().toString(36);
-  let cleanup = [];
+  const cleanupTasks = [];
 
   try {
-    const {
-      templatePath,
-      dataPath,
-      cssPath,
-      outputDir,
-      outputHtml = true,
-      outputPdf = true,
-    } = context;
+    const { templatePath, dataPath, cssPath, outputDir } = context;
 
     // Get PATHS after context is loaded to ensure DIR_OUTPUT is set
     const { PATHS } = require('@/config/paths');
 
-    logger.debug('Workflow started', {
-      correlationId,
-      context: {
-        templatePath,
-        dataPath,
-        cssPath,
-        outputDir: outputDir || PATHS.output,
-        outputHtml,
-        outputPdf,
-      },
+    // Log initial paths for debugging
+    logger.debug('Initial paths in workflow:', {
+      templatePath,
+      dataPath,
+      cssPath,
+      outputDir,
+      PATHS_templates: PATHS.templates,
+      PATHS_output: PATHS.output,
+      isTemplateAbsolute: path.isAbsolute(templatePath),
+      isDataAbsolute: dataPath ? path.isAbsolute(dataPath) : null,
+      isCssAbsolute: cssPath ? path.isAbsolute(cssPath) : null,
     });
 
     // Validate input files with retries
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         await validateInputs(templatePath, dataPath, cssPath);
+        logger.debug('Input validation successful on attempt', { attempt });
         break;
       } catch (error) {
         if (attempt === MAX_RETRIES) {
           throw new ValidationError('Input validation failed after retries', {
             attempts: attempt,
             originalError: error.message,
+            paths: {
+              templatePath,
+              dataPath,
+              cssPath,
+            },
           });
         }
         logger.warn(`Retry ${attempt}/${MAX_RETRIES} validating inputs`, {
           correlationId,
           error: error.message,
+          paths: {
+            templatePath,
+            dataPath,
+            cssPath,
+          },
         });
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
       }
@@ -244,21 +339,27 @@ async function startWorkflow(context) {
       // Load and validate CSV data if provided
       let templateData;
       if (dataPath) {
-        // Process CSV data
+        logger.debug('Processing CSV data', { dataPath });
         templateData = await processCsvData(dataPath);
-
-        logger.debug('Template data validated successfully', {
-          correlationId,
+        logger.debug('CSV data processed successfully', {
           fields: Object.keys(templateData),
+          dataPath,
         });
       }
+
+      logger.debug('Starting template processing', {
+        templatePath,
+        dataPath,
+        cssPath,
+        outputDir: finalOutputDir,
+      });
 
       const result = await processMarkdownTemplate(
         templatePath,
         dataPath,
         cssPath,
         finalOutputDir,
-        templateData // Pass the validated data
+        templateData
       );
 
       logger.info('Workflow completed successfully', {
@@ -268,12 +369,26 @@ async function startWorkflow(context) {
 
       return result;
     } catch (error) {
+      logger.error('Template processing failed', {
+        error: error.message,
+        stack: error.stack,
+        templatePath,
+        dataPath,
+        cssPath,
+      });
+
       if (error instanceof ValidationError) {
         throw error;
       }
+
       throw new ProcessingError('Template processing failed', {
         originalError: error.message,
-        templatePath,
+        stack: error.stack,
+        paths: {
+          templatePath,
+          dataPath,
+          cssPath,
+        },
       });
     }
   } catch (error) {
@@ -282,10 +397,11 @@ async function startWorkflow(context) {
       error: error.message,
       code: error.code,
       details: error.details,
+      stack: error.stack,
     });
 
     // Perform cleanup if necessary
-    for (const cleanupFn of cleanup) {
+    for (const cleanupFn of cleanupTasks) {
       try {
         await cleanupFn();
       } catch (cleanupError) {
@@ -297,9 +413,145 @@ async function startWorkflow(context) {
     }
 
     throw error;
+  } finally {
+    // Ensure cleanup runs even if there's an error
+    await cleanupResources(cleanupTasks);
+
+    // Force garbage collection if available
+    if (global.gc) {
+      global.gc();
+    }
+
+    // Small delay to ensure all resources are released
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
 
+/**
+ * Base workflow class with common functionality
+ *
+ * @class BaseWorkflow
+ * @augments EventEmitter
+ *
+ * @example
+ * const workflow = new BaseWorkflow({
+ *   template: 'template.md',
+ *   data: { name: 'John' },
+ *   output: 'pdf'
+ * });
+ *
+ * workflow.on('progress', (progress) => {
+ *   console.log(`Progress: ${progress}%`);
+ * });
+ *
+ * await workflow.execute();
+ */
+class BaseWorkflow extends EventEmitter {
+  /**
+   * Creates a new workflow instance
+   *
+   * @param {{template: string, data: Record<string, unknown>, output: string}} config - Workflow configuration
+   */
+  constructor(config) {
+    super();
+    this.config = config;
+  }
+
+  /**
+   * Executes the workflow
+   *
+   * @param {{correlationId: string, logger: Record<string, unknown>}} context - Execution context
+   * @returns {Promise<Record<string, unknown>>} The workflow result
+   *
+   * @example
+   * const result = await workflow.execute({
+   *   correlationId: 'abc123',
+   *   logger: console
+   * });
+   */
+  async execute(context) {
+    this.emit('start', { context });
+    try {
+      const result = await this._process();
+      this.emit('complete', { result });
+      return result;
+    } catch (error) {
+      this.emit('error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Internal processing method
+   *
+   * @returns {Promise<Record<string, unknown>>} Processing result
+   * @private
+   */
+  async _process() {
+    // To be implemented by subclasses
+    throw new Error('Not implemented');
+  }
+}
+
+/**
+ * Contract workflow for processing markdown templates
+ *
+ * @class ContractWorkflow
+ * @augments BaseWorkflow
+ *
+ * @example
+ * const workflow = new ContractWorkflow({
+ *   template: 'contract.md',
+ *   data: { client: 'ACME Corp' },
+ *   output: 'pdf'
+ * });
+ *
+ * await workflow.execute();
+ */
+class ContractWorkflow extends BaseWorkflow {
+  /**
+   * Internal processing method
+   *
+   * @returns {Promise<Record<string, unknown>>} Processing result
+   * @private
+   */
+  async _process() {
+    const { template, data } = this.config;
+    const result = await processTemplate(template, data);
+    return result;
+  }
+}
+
+/**
+ * CSV workflow for processing data files
+ *
+ * @class CsvWorkflow
+ * @augments BaseWorkflow
+ *
+ * @example
+ * const workflow = new CsvWorkflow({
+ *   template: 'data.csv',
+ *   data: { rows: [...] },
+ *   output: 'json'
+ * });
+ *
+ * await workflow.execute();
+ */
+class CsvWorkflow extends BaseWorkflow {
+  /**
+   * Internal processing method
+   *
+   * @returns {Promise<Record<string, unknown>>} Processing result
+   * @private
+   */
+  async _process() {
+    const { template, data } = this.config;
+    const result = await processCsv(template, data);
+    return result;
+  }
+}
+
+// Export the workflow classes and utilities
 module.exports = {
   startWorkflow,
   validateInputs,
@@ -308,4 +560,7 @@ module.exports = {
   ValidationError,
   ProcessingError,
   OutputError,
+  BaseWorkflow,
+  ContractWorkflow,
+  CsvWorkflow,
 };

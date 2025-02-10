@@ -1,5 +1,5 @@
 /**
- * @fileoverview Mock filesystem operations for testing
+ * @file Mock filesystem operations for testing
  *
  * Provides mock implementations of common fs operations to avoid
  * actual filesystem access during tests.

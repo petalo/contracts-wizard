@@ -1,8 +1,40 @@
+/**
+ * @file Resource manager for test environment
+ *
+ * Manages test resources and cleanup:
+ * - Process management
+ * - File cleanup
+ * - Resource tracking
+ *
+ * @module tests/__common__/helpers/resource-manager
+ * @requires events
+ * @requires path
+ * @requires fs/promises
+ */
+
 const { EventEmitter } = require('events');
 const path = require('path');
 const fs = require('fs/promises');
 
+/**
+ * Resource manager class for test environment
+ *
+ * Handles resource management and cleanup for tests:
+ * - Tracks active processes
+ * - Manages test directories
+ * - Handles cleanup on shutdown
+ *
+ * @example
+ * const manager = new ResourceManager();
+ * manager.registerProcess(childProcess);
+ * await manager.cleanup();
+ */
 class ResourceManager {
+  /**
+   * Creates a new resource manager instance
+   *
+   * Initializes tracking for processes and test directories
+   */
   constructor() {
     this.processes = new Set();
     this.fileOperations = new Set();
@@ -20,11 +52,22 @@ class ResourceManager {
     ].map((dir) => path.resolve(process.cwd(), dir));
   }
 
+  /**
+   * Checks if a path is within test directories
+   *
+   * @param {string} filepath Path to check
+   * @returns {boolean} True if path is in test directories
+   */
   isTestDirectory(filepath) {
     const absolutePath = path.resolve(process.cwd(), filepath);
     return this.testDirectories.some((dir) => absolutePath.startsWith(dir));
   }
 
+  /**
+   * Registers a process for tracking
+   *
+   * @param {ChildProcess} process Process to track
+   */
   registerProcess(process) {
     if (this.isShuttingDown) return;
 
@@ -40,6 +83,13 @@ class ResourceManager {
     process.once('close', cleanup);
   }
 
+  /**
+   * Executes an operation with resource tracking
+   *
+   * @param {Function} operation Operation to execute
+   * @param {string} filepath Path associated with operation
+   * @returns {Promise<*>} Operation result
+   */
   async executeOperation(operation, filepath) {
     if (this.isShuttingDown) return;
 

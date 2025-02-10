@@ -1,5 +1,5 @@
 /**
- * @fileoverview File Extension and Type Configuration
+ * @file File Extension and Type Configuration
  *
  * Manages file extensions and type mappings for the application:
  * - Defines valid extensions for each file type
@@ -30,7 +30,7 @@
  * - Unsupported extensions are rejected during validation
  *
  * @module @/config/fileExtensions
- * @exports {Object} FILE_EXTENSIONS - File extension and type configuration
+ * @exports FILE_EXTENSIONS File extension and type configuration
  *
  * @example
  * // Import configuration
@@ -69,13 +69,13 @@
  * during runtime, ensuring consistent behavior across
  * the application.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string[]} markdown - Valid markdown extensions (.md, .markdown)
  * @property {string[]} csv - Valid CSV data file extensions (.csv)
  * @property {string[]} css - Valid stylesheet extensions (.css)
  * @property {string[]} images - Valid image file extensions (.png, .jpg, .jpeg, .gif)
- * @property {Object} types - Type alias mapping for consistent reference
- * @property {Object} output - Output format extensions for generated files
+ * @property {object} types - Type alias mapping for consistent reference
+ * @property {object} output - Output format extensions for generated files
  */
 const FILE_EXTENSIONS = {
   // Valid file extensions for each type
@@ -105,6 +105,10 @@ Object.freeze(FILE_EXTENSIONS);
 Object.freeze(FILE_EXTENSIONS.types);
 Object.freeze(FILE_EXTENSIONS.output);
 
+/**
+ * File extensions configuration object
+ * @exports fileExtensions Supported file extensions configuration
+ */
 module.exports = {
   FILE_EXTENSIONS,
 };

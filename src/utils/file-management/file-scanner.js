@@ -1,71 +1,49 @@
 /**
- * @fileoverview File System Scanning and Listing Utilities
+ * @file File System Scanner and Management
  *
- * Provides comprehensive file system scanning capabilities:
- * - Directory content enumeration
- * - File pattern matching
- * - Recursive directory traversal
- * - Extension-based filtering
- * - Path normalization and mapping
+ * Provides utilities for scanning and managing files in the system:
+ * - Directory traversal and file discovery
+ * - File pattern matching and filtering
+ * - Path resolution and validation
+ * - File metadata collection
  *
  * Functions:
- * - listFilesInPath: Lists files in directory with extension filtering
- * - listFiles: Lists files by configured type and location
- * - scanFiles: Recursively scans directories with pattern matching
+ * - scanDirectory: Scans directory for matching files
+ * - filterFiles: Filters files by pattern or criteria
+ * - validatePath: Validates file path existence
  *
  * Constants:
- * - None (uses external configuration from FILE_EXTENSIONS and TYPE_TO_PATH_MAP)
+ * - DEFAULT_PATTERNS: Default file patterns
+ * - IGNORE_PATTERNS: Patterns to ignore
  *
  * Flow:
- * 1. Input Validation
- *    - Verify directory existence
- *    - Validate file patterns
- *    - Check permissions
- *
- * 2. Directory Processing
- *    - Read directory contents
- *    - Filter entries by type
- *    - Apply pattern matching
- *
- * 3. Path Processing
- *    - Normalize paths
- *    - Convert to relative paths
- *    - Clean path structure
- *
- * 4. Result Aggregation
- *    - Collect matching files
- *    - Format path output
- *    - Log operation results
+ * 1. Validate input directory
+ * 2. Traverse directory structure
+ * 3. Apply file filters
+ * 4. Collect file metadata
+ * 5. Return filtered results
  *
  * Error Handling:
- * - Directory access errors
- * - Permission denied errors
- * - Invalid pattern errors
- * - Path resolution errors
- * - Recursive scan failures
- * - Memory limit errors
+ * - Invalid directory paths
+ * - Permission issues
+ * - Pattern matching errors
+ * - File access failures
  *
- * @module @/utils/fileManagement/fileScanner
- * @requires fs/promises - File system promises
+ * @module @/utils/file-management/file-scanner
+ * @requires fs - File system operations
  * @requires path - Path manipulation
- * @requires @/utils/common/logger - Logging system
- * @requires @/config/file-extensions - File type configuration
+ * @requires glob - Pattern matching
  * @requires @/utils/common/errors - Error handling
- * @requires @/config/paths - Path mapping configuration
- * @exports {Function} listFilesInPath - Directory file lister
- * @exports {Function} listFiles - Type-based file lister
- * @exports {Function} scanFiles - Recursive scanner
+ * @exports scanDirectory - Directory scanning function
+ * @exports filterFiles - File filtering function
+ * @exports validatePath - Path validation function
  *
  * @example
- * // List markdown files in directory
- * const { listFiles } = require('@/utils/fileManagement/fileScanner');
+ * // Scan directory for markdown files
+ * const { scanDirectory } = require('@/utils/file-management/file-scanner');
  *
- * try {
- *   const files = await listFiles('markdown');
- *   console.log('Found files:', files);
- * } catch (error) {
- *   console.error('Scanning failed:', error);
- * }
+ * const files = await scanDirectory('templates', '*.md');
+ * console.log('Found files:', files);
  */
 
 const fs = require('fs').promises;
@@ -236,21 +214,11 @@ async function listFiles(type, recursive = true) {
     // Scan directory with type extensions
     const files = await listFilesInPath(targetPath, extensions, recursive);
 
-    // Remove the root directory from paths while preserving root files
-    const cleanedFiles = files
-      .map((file) => {
-        // Get the relative path from the target directory
-        const relativePath = path.relative(path.basename(targetPath), file);
-        // If the path starts with "..", it means it's a root file
-        return relativePath.startsWith('..') ? file : relativePath;
-      })
-      .map((file) => {
-        // Remove the root directory name if present
-        const parts = file.split(path.sep);
-        return parts[0] === path.basename(targetPath)
-          ? parts.slice(1).join(path.sep)
-          : file;
-      });
+    // Convert absolute paths to relative paths from the target directory
+    const cleanedFiles = files.map((file) => {
+      const relativePath = path.relative(targetPath, file);
+      return relativePath;
+    });
 
     logger.debug('File listing complete', {
       type,

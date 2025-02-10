@@ -1,5 +1,5 @@
 /**
- * @fileoverview File Encoding Configuration
+ * @file File Encoding Configuration
  *
  * Defines standard encoding settings for file operations:
  * - Default encoding for reading/writing files
@@ -80,7 +80,7 @@
  * Supports common encodings and provides validation
  * for encoding operations.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string} default - Default encoding for file operations
  * @property {string[]} supported - List of supported encodings
  * @property {boolean} detectBOM - Whether to detect BOM in files
@@ -115,7 +115,7 @@
  * Defines encoding settings for file operations
  * including default encoding and BOM preferences.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string} default - Default encoding for file operations
  * @property {string[]} supported - List of supported encodings
  * @property {boolean} detectBOM - Whether to detect BOM in files

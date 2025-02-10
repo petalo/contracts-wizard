@@ -1,37 +1,33 @@
 /**
- * @fileoverview Unit tests for cheerio configuration rules
+ * @file Unit tests for cheerio configuration rules
  */
 
-const { CHEERIO_CONFIG } = require('@/config/cheerioRules');
+const { CHEERIO_RULES } = require('@/config/cheerio-rules');
 
-describe.skip('Cheerio Rules', () => {
+describe('Cheerio Rules Configuration', () => {
   test('should have valid XML mode configuration', () => {
-    expect(CHEERIO_CONFIG.xmlMode).toBeDefined();
-    expect(typeof CHEERIO_CONFIG.xmlMode).toBe('boolean');
+    expect(CHEERIO_RULES.thresholds).toBeDefined();
+    expect(typeof CHEERIO_RULES.thresholds.maxListItemsNoBreak).toBe('number');
   });
 
-  test('should have valid decodeEntities configuration', () => {
-    expect(CHEERIO_CONFIG.decodeEntities).toBeDefined();
-    expect(typeof CHEERIO_CONFIG.decodeEntities).toBe('boolean');
+  test('should have valid selectors configuration', () => {
+    expect(CHEERIO_RULES.selectors).toBeDefined();
+    expect(CHEERIO_RULES.selectors.lists).toBe('ul, ol');
+    expect(CHEERIO_RULES.selectors.tables).toBe('table');
+    expect(CHEERIO_RULES.selectors.images).toBe('img:not([alt])');
   });
 
-  test('should have valid lowerCaseTags configuration', () => {
-    expect(CHEERIO_CONFIG.lowerCaseTags).toBeDefined();
-    expect(typeof CHEERIO_CONFIG.lowerCaseTags).toBe('boolean');
+  test('should have valid classes configuration', () => {
+    expect(CHEERIO_RULES.classes).toBeDefined();
+    expect(CHEERIO_RULES.classes.noBreak).toBe('no-break');
+    expect(CHEERIO_RULES.classes.tableResponsive).toBe('table-responsive');
   });
 
-  test('should have valid lowerCaseAttributeNames configuration', () => {
-    expect(CHEERIO_CONFIG.lowerCaseAttributeNames).toBeDefined();
-    expect(typeof CHEERIO_CONFIG.lowerCaseAttributeNames).toBe('boolean');
-  });
-
-  test('should have valid recognizeCDATA configuration', () => {
-    expect(CHEERIO_CONFIG.recognizeCDATA).toBeDefined();
-    expect(typeof CHEERIO_CONFIG.recognizeCDATA).toBe('boolean');
-  });
-
-  test('should have valid recognizeSelfClosing configuration', () => {
-    expect(CHEERIO_CONFIG.recognizeSelfClosing).toBeDefined();
-    expect(typeof CHEERIO_CONFIG.recognizeSelfClosing).toBe('boolean');
+  test('should have transformation rules defined', () => {
+    expect(CHEERIO_RULES.rules).toBeDefined();
+    expect(typeof CHEERIO_RULES.rules.applyListTransformation).toBe('function');
+    expect(typeof CHEERIO_RULES.rules.applyTableResponsive).toBe('function');
+    expect(typeof CHEERIO_RULES.rules.applyImageAccessibility).toBe('function');
+    expect(typeof CHEERIO_RULES.rules.applyAll).toBe('function');
   });
 });

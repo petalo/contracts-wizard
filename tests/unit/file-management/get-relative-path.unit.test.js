@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for getRelativePath utility
+ * @file Unit tests for getRelativePath utility
  */
 
 const path = require('path');

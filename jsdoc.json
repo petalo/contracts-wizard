@@ -8,15 +8,30 @@
     "includePattern": ".+\\.js(doc|x)?$",
     "excludePattern": "(^|\\/|\\\\)_"
   },
-  "plugins": ["plugins/markdown"],
+  "plugins": ["plugins/markdown", "plugins/underscore"],
   "templates": {
     "cleverLinks": false,
-    "monospaceLinks": false
+    "monospaceLinks": false,
+    "default": {
+      "outputSourceFiles": true,
+      "includeDate": false
+    }
   },
   "opts": {
     "encoding": "utf8",
     "destination": "./docs/",
     "recurse": true,
     "verbose": true
+  },
+  "sourceType": "module",
+  "markdown": {
+    "hardwrap": false,
+    "idInHeadings": true
+  },
+  "types": {
+    "allowGeneric": true,
+    "allowIndexed": true,
+    "allowRecord": true,
+    "allowUnion": true
   }
 }

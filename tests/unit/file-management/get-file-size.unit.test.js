@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for getFileSize utility
+ * @file Unit tests for getFileSize utility
  */
 
 const fs = require('fs/promises');

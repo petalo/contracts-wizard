@@ -1,48 +1,42 @@
 /**
- * @fileoverview Path Configuration and Directory Management
+ * @file Path Configuration and Management System
  *
- * Manages application paths and directory structure:
- * - Defines default and environment-aware paths
- * - Handles directory validation and creation
- * - Provides path resolution utilities
- * - Maps file types to directories
+ * Centralizes path configuration and management for the application:
+ * - Project root and directory structure
+ * - Template file locations
+ * - Output file destinations
+ * - Resource file paths
  *
  * Functions:
- * - validateDirectory: Validates and creates directories
+ * - getProjectRoot: Determines project root directory
+ * - resolveProjectPath: Resolves paths relative to root
+ * - validatePath: Ensures path exists and is accessible
+ * - createDirectoryIfNotExists: Creates directory structure
  *
  * Constants:
- * - DEFAULT_PATHS: Default directory structure
- * - PATHS: Environment-aware path configuration
- * - TYPE_TO_PATH_MAP: File type to directory mapping
+ * - PATHS: Core path configuration object
+ * - TEMPLATES: Template directory paths
+ * - OUTPUT: Output directory paths
+ * - RESOURCES: Resource file paths
  *
  * Flow:
- * 1. Load environment configuration
- * 2. Define default paths
- * 3. Create environment-aware paths
- * 4. Map file types to directories
- * 5. Initialize required directories
- * 6. Freeze configurations
- *
- * Environment Variables:
- * - DIR_OUTPUT: Output directory override
- * - DIR_TEMPLATES: Templates directory override
- * - DIR_CSS: CSS directory override
- * - DIR_CSV: CSV directory override
- * - DIR_IMAGES: Images directory override
- * - LATEST_LOG_PATH: Latest log file path
- * - FULL_LOG_PATH: Full log history path
+ * 1. Initialize root path detection
+ * 2. Configure directory structure
+ * 3. Validate critical paths
+ * 4. Create missing directories
+ * 5. Export path utilities
  *
  * Error Handling:
- * - Directory access validation
- * - Missing directory creation
- * - Permission checks
- * - Environment variable validation
+ * - Invalid root directory detection
+ * - Missing required directories
+ * - Path resolution failures
+ * - Permission issues
+ * - Directory creation errors
  *
  * @module @/config/paths
- * @requires path
- * @requires fs/promises
- * @requires dotenv
- * @requires @/config/fileExtensions
+ * @requires path - Node.js path module
+ * @requires fs - File system operations
+ * @requires @/utils/common/errors - Error handling utilities
  *
  * @example
  * // Import path configuration
@@ -63,18 +57,42 @@
  */
 
 const path = require('path');
-const fs = require('fs/promises');
+const fs = require('fs');
+const fsPromises = require('fs').promises;
 const dotenv = require('dotenv');
 const { FILE_EXTENSIONS } = require('@/config/file-extensions');
+const { logger } = require('@/utils/common/logger');
 
 // Base directory is current working directory
 const BASE_DIR = process.cwd();
 
 // Load environment configuration based on NODE_ENV
 if (process.env.NODE_ENV === 'test') {
-  dotenv.config({ path: '.env.test' });
+  const envTestPath = path.resolve(process.cwd(), '.env.test');
+  try {
+    // Use synchronous stat instead of existsSync
+    fs.statSync(envTestPath);
+    dotenv.config({ path: envTestPath });
+    logger.debug('Environment configuration', {
+      filename: 'paths.js',
+      context: 'config',
+      message: 'Loaded test environment configuration',
+      params: `env=test • path=${envTestPath}`,
+    });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new Error('.env.test file is required for running tests');
+    }
+    throw error;
+  }
 } else {
   dotenv.config();
+  logger.debug('Environment configuration', {
+    filename: 'paths.js',
+    context: 'config',
+    message: 'Loaded default environment configuration',
+    params: `env=${process.env.NODE_ENV || 'development'}`,
+  });
 }
 
 /**
@@ -94,13 +112,13 @@ if (process.env.NODE_ENV === 'test') {
  *   - latest.log: Most recent log file
  *   - history.log: Historical log archive
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string} output - Output files directory
  * @property {string} templates - Markdown templates directory
  * @property {string} css - CSS styles directory
  * @property {string} csv - CSV data files directory
  * @property {string} images - Template images directory
- * @property {Object} logs - Logging directory configuration
+ * @property {object} logs - Logging directory configuration
  */
 const DEFAULT_PATHS = {
   output: 'output_files',
@@ -123,12 +141,38 @@ const DEFAULT_PATHS = {
  * @returns {string} - Resolved path
  */
 function resolvePath(basePath, targetPath, defaultPath) {
+  // If no target path is provided, use default
   if (!targetPath) {
-    return path.join(basePath, defaultPath);
+    const resolvedPath = path.join(basePath, defaultPath);
+    logger.debug('Resolving default path', {
+      filename: 'paths.js',
+      context: 'file',
+      message: 'Using default path for resolution',
+      params: `base=${basePath} • default=${defaultPath} • resolved=${resolvedPath}`,
+    });
+    return resolvedPath;
   }
-  return path.isAbsolute(targetPath)
-    ? targetPath
-    : path.join(basePath, targetPath);
+
+  // If target path is absolute, use it directly
+  if (path.isAbsolute(targetPath)) {
+    logger.debug('Using absolute path', {
+      filename: 'paths.js',
+      context: 'file',
+      message: 'Path is absolute, using directly',
+      params: `path=${targetPath}`,
+    });
+    return targetPath;
+  }
+
+  // For relative paths, join with base path
+  const resolvedPath = path.join(basePath, targetPath);
+  logger.debug('Resolving relative path', {
+    filename: 'paths.js',
+    context: 'file',
+    message: 'Joining relative path with base',
+    params: `base=${basePath} • target=${targetPath} • resolved=${resolvedPath}`,
+  });
+  return resolvedPath;
 }
 
 /**
@@ -137,27 +181,93 @@ function resolvePath(basePath, targetPath, defaultPath) {
  * Combines default paths with environment-specific overrides
  * to create the final path configuration used by the application.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string} base - Application base directory
  * @property {string} output - Output files directory
  * @property {string} templates - Templates directory
  * @property {string} css - CSS files directory
  * @property {string} csv - CSV data directory
  * @property {string} images - Images directory
- * @property {Object} logs - Log file paths
+ * @property {object} logs - Log file paths
  */
 const PATHS = {
   // Base application paths
   base: BASE_DIR,
-  output: resolvePath(BASE_DIR, process.env.DIR_OUTPUT, DEFAULT_PATHS.output),
-  templates: resolvePath(
-    BASE_DIR,
-    process.env.DIR_TEMPLATES,
-    DEFAULT_PATHS.templates
-  ),
-  css: resolvePath(BASE_DIR, process.env.DIR_CSS, DEFAULT_PATHS.css),
-  csv: resolvePath(BASE_DIR, process.env.DIR_CSV, DEFAULT_PATHS.csv),
-  images: resolvePath(BASE_DIR, process.env.DIR_IMAGES, DEFAULT_PATHS.images),
+
+  // Output directory - can be overridden by DIR_OUTPUT env var
+  output: (() => {
+    const envPath = process.env.DIR_OUTPUT;
+    if (envPath && path.isAbsolute(envPath)) {
+      logger.debug('Output directory configuration', {
+        filename: 'paths.js',
+        context: 'config',
+        message: 'Using absolute output path from environment',
+        params: `path=${envPath}`,
+      });
+      return envPath;
+    }
+    return resolvePath(BASE_DIR, envPath, DEFAULT_PATHS.output);
+  })(),
+
+  // Templates directory - can be overridden by DIR_TEMPLATES env var
+  templates: (() => {
+    const envPath = process.env.DIR_TEMPLATES;
+    if (envPath && path.isAbsolute(envPath)) {
+      logger.debug('Templates directory configuration', {
+        filename: 'paths.js',
+        context: 'config',
+        message: 'Using absolute templates path from environment',
+        params: `path=${envPath}`,
+      });
+      return envPath;
+    }
+    return resolvePath(BASE_DIR, envPath, DEFAULT_PATHS.templates);
+  })(),
+
+  // CSS directory - can be overridden by DIR_CSS env var
+  css: (() => {
+    const envPath = process.env.DIR_CSS;
+    if (envPath && path.isAbsolute(envPath)) {
+      logger.debug('CSS directory configuration', {
+        filename: 'paths.js',
+        context: 'config',
+        message: 'Using absolute CSS path from environment',
+        params: `path=${envPath}`,
+      });
+      return envPath;
+    }
+    return resolvePath(BASE_DIR, envPath, DEFAULT_PATHS.css);
+  })(),
+
+  // CSV directory - can be overridden by DIR_CSV env var
+  csv: (() => {
+    const envPath = process.env.DIR_CSV;
+    if (envPath && path.isAbsolute(envPath)) {
+      logger.debug('CSV directory configuration', {
+        filename: 'paths.js',
+        context: 'config',
+        message: 'Using absolute CSV path from environment',
+        params: `path=${envPath}`,
+      });
+      return envPath;
+    }
+    return resolvePath(BASE_DIR, envPath, DEFAULT_PATHS.csv);
+  })(),
+
+  // Images directory - can be overridden by DIR_IMAGES env var
+  images: (() => {
+    const envPath = process.env.DIR_IMAGES;
+    if (envPath && path.isAbsolute(envPath)) {
+      logger.debug('Images directory configuration', {
+        filename: 'paths.js',
+        context: 'config',
+        message: 'Using absolute images path from environment',
+        params: `path=${envPath}`,
+      });
+      return envPath;
+    }
+    return resolvePath(BASE_DIR, envPath, DEFAULT_PATHS.images);
+  })(),
 
   // Logging paths
   logs: {
@@ -175,13 +285,21 @@ const PATHS = {
   },
 };
 
+// Log all resolved paths for debugging
+logger.debug('Application paths configuration', {
+  filename: 'paths.js',
+  context: 'config',
+  message: 'All application paths have been resolved',
+  params: `base=${PATHS.base} • output=${PATHS.output} • templates=${PATHS.templates} • css=${PATHS.css} • csv=${PATHS.csv} • images=${PATHS.images} • logs_dir=${PATHS.logs.dir} • logs_latest=${PATHS.logs.latest} • logs_history=${PATHS.logs.history}`,
+});
+
 /**
  * Maps file types to their corresponding directories
  *
  * Used to determine the appropriate directory for each file type
  * when processing templates and generating outputs.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string} template - Templates directory
  * @property {string} csv - CSV data directory
  * @property {string} css - CSS styles directory
@@ -215,11 +333,11 @@ const TYPE_TO_PATH_MAP = {
 async function validateDirectory(dirPath, createIfMissing = false) {
   try {
     // Check if directory exists and is accessible
-    await fs.access(dirPath);
+    await fsPromises.access(dirPath);
   } catch (error) {
     if (error.code === 'ENOENT' && createIfMissing) {
       // Create directory with parent directories if needed
-      await fs.mkdir(dirPath, { recursive: true });
+      await fsPromises.mkdir(dirPath, { recursive: true });
     } else {
       throw error;
     }
@@ -240,7 +358,12 @@ if (process.env.NODE_ENV !== 'test') {
         validateDirectory(PATHS.logs.dir, true),
       ]);
     } catch (error) {
-      console.error('Failed to initialize directories:', error);
+      logger.error('Directory initialization failed', {
+        filename: 'paths.js',
+        context: 'system',
+        message: 'Failed to initialize required application directories',
+        params: `error=${error.message} • stack=${error.stack}`,
+      });
       process.exit(1);
     }
   })();

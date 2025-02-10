@@ -1,5 +1,5 @@
 /**
- * @fileoverview Logical AND helper for Handlebars
+ * @file Logical AND helper for Handlebars
  *
  * Provides a logical AND operation helper that:
  * - Handles multiple arguments
@@ -37,27 +37,30 @@ const { HANDLEBARS_CONFIG } = require('@/config/handlebars-config');
 const { extractValue } = require('../value/extract');
 
 /**
- * Performs a logical AND operation on all provided arguments
+ * Performs logical AND operation on all arguments.
+ * Takes a variable number of arguments where all except the last one are values to evaluate,
+ * and the last argument is the Handlebars options object.
  *
- * @param {...*} args - Arguments to evaluate
- * @returns {boolean} True if all arguments are truthy, false otherwise
+ * @param {*} firstValue - First value to evaluate (additional values are handled internally)
+ * @returns {boolean|string} Result of AND operation or HTML string for block helpers
  */
-function and() {
+function and(firstValue) {
   try {
     // Extract all arguments except the last one (options)
-    const args = Array.prototype.slice.call(arguments, 0, -1);
+    const values = Array.prototype.slice.call(arguments, 0, -1);
     const options = arguments[arguments.length - 1];
 
     logger.debug('and helper - raw values:', {
-      args,
-      argsLength: args.length,
+      firstValue,
+      values,
+      argsLength: values.length,
       options: options ? 'has options' : 'no options',
       fn: options?.fn ? 'has fn' : 'no fn',
       inverse: options?.inverse ? 'has inverse' : 'no inverse',
     });
 
     // Process each argument
-    const results = args.map((arg) => {
+    const results = values.map((arg) => {
       const extracted = extractValue(arg);
       logger.debug('and helper - extracted value:', {
         original: arg,
@@ -70,6 +73,7 @@ function and() {
     const result = results.every(Boolean);
 
     logger.debug('and helper - result:', {
+      firstValue,
       results,
       finalResult: result,
     });
@@ -83,6 +87,7 @@ function and() {
   } catch (error) {
     logger.error('Error in and helper:', {
       error,
+      firstValue,
       args: Array.prototype.slice.call(arguments),
       stack: error.stack,
     });

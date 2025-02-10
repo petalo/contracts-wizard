@@ -1,5 +1,5 @@
 /**
- * @fileoverview Application Metadata Configuration
+ * @file Application Metadata Configuration
  *
  * Defines core application information:
  * - Application name and version
@@ -26,7 +26,7 @@
  * - Metadata access validation
  *
  * @module @/config/appMetadata
- * @exports {Object} APP_METADATA - Application metadata configuration
+ * @exports APP_METADATA Application metadata configuration
  *
  * @example
  * // Import metadata
@@ -52,7 +52,7 @@
  * during runtime, ensuring consistent metadata across
  * the application.
  *
- * @constant {Object}
+ * @constant {object}
  * @property {string} name - Package name
  * @property {string} description - Application purpose
  * @property {string} version - Semantic version number
@@ -65,9 +65,15 @@ const APP_METADATA = {
   version: '1.0.0',
   generator: 'Contracts Wizard',
   organization: 'petalo',
+  author: 'petalo',
+  license: 'MIT',
 };
 
 // Prevent runtime modifications to ensure consistency
 Object.freeze(APP_METADATA);
 
+/**
+ * Application metadata configuration object
+ * @exports appMetadata Application metadata configuration
+ */
 module.exports = { APP_METADATA };

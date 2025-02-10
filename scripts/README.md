@@ -6,6 +6,7 @@ This directory contains utility scripts for managing the project lifecycle. Each
   - [`clean.js`](#cleanjs)
   - [`release.js`](#releasejs)
   - [`setup.js`](#setupjs)
+  - [`update-docs.js`](#update-docsjs)
   - [`update-versions.js`](#update-versionsjs)
 - [Common Features](#common-features)
 - [Error Handling](#error-handling)
@@ -72,6 +73,43 @@ Sets up the project environment and structure.
   - Preview changes: `npm run setup --dry-run`
   - Detailed output: `npm run setup --verbose`
   - Combined options: `npm run setup --dry-run --verbose`
+
+---
+
+### `update-docs.js`
+
+Updates JSDoc documentation across the project.
+
+- Automatically updates file headers and documentation
+- Ensures consistent documentation format
+- Adds missing documentation sections
+- Standardizes type annotations
+- Validates JSDoc syntax
+- Features:
+  - Updates file headers with required sections
+  - Converts type annotations to project standards
+  - Adds missing documentation templates
+  - Processes all JavaScript files in src/
+  - Parallel file processing for performance
+- Usage: `npm run docs:update`
+
+Options:
+- No flags required
+- Processes all .js files in src/ directory
+- Provides progress feedback
+- Reports errors without stopping
+
+Example output:
+```bash
+$ npm run docs:update
+
+Processing src/cli/prompts.js
+Updated src/cli/prompts.js
+Processing src/config/paths.js
+Updated src/config/paths.js
+...
+Documentation update complete
+```
 
 ---
 

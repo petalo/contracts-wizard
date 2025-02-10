@@ -1,5 +1,5 @@
 /**
- * @fileoverview File Size Management System
+ * @file File Size Management System
  *
  * Provides utilities for file size calculation and formatting:
  * - Asynchronous file size retrieval
@@ -27,16 +27,16 @@
  * - Size calculation errors
  * - Unit conversion errors
  *
- * @module @/utils/common/getFileSize
+ * @module @/utils/file-management/get-file-size
  * @requires fs/promises - File system promises
  * @requires path - Path manipulation
  * @requires @/utils/common/errors - Error handling
- * @exports {Function} getFileSizeKB - Size retrieval in KB
- * @exports {Function} formatFileSize - Human-readable formatter
+ * @exports getFileSizeKB - Size retrieval in KB
+ * @exports formatFileSize - Human-readable formatter
  *
  * @example
  * // Get file size in KB
- * const { getFileSizeKB } = require('@/utils/common/getFileSize');
+ * const { getFileSizeKB } = require('@/utils/file-management/get-file-size');
  *
  * try {
  *   const size = await getFileSizeKB('document.pdf');
@@ -71,7 +71,7 @@ const { AppError } = require('@/utils/common/errors');
  * - Size limit validation
  * - Display formatting
  *
- * @constant {Object}
+ * @constant {object}
  * @property {number} KB_FACTOR - Kilobyte conversion factor (1024)
  * @property {number} PRECISION - Decimal places for formatting (2)
  *

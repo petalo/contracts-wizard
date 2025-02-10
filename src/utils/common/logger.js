@@ -1,53 +1,48 @@
 /**
- * @fileoverview Application Logging System
+ * @file Application Logging System
  *
- * Provides comprehensive logging functionality:
- * - Multi-level logging (debug, info, warn, error)
- * - File-based logging with rotation
- * - Console output in debug mode
- * - Metadata and context tracking
- * - Stack trace analysis
- * - Base64 content handling
- * - JSON object processing
- * - Source file tracking
+ * Provides a comprehensive logging system with standardized formatting,
+ * context validation, metadata grouping, and error handling.
  *
  * Functions:
- * - logger.debug: Debug level messages
- * - logger.info: Information level messages
- * - logger.warn: Warning level messages
- * - logger.error: Error level messages
- * - logger.logExecutionStart: Session start marker
+ * - validateContext: Validates and normalizes logging contexts
+ * - groupMetadata: Groups related metadata fields
+ * - formatMetadata: Formats and sanitizes metadata for logging
+ * - addFilename: Extracts source filenames from stack traces
+ * - customFormat: Formats log entries with consistent structure
+ * - logger: Public logging interface with error handling
+ *   - error(): Logs error messages with stack traces and error context
+ *   - warn(): Logs warning messages with optional metadata
+ *   - info(): Logs informational messages with optional context
+ *   - debug(): Logs debug information with optional metadata
+ *   - logExecutionStart(): Logs application startup information once per session
  *
  * Constants:
- * - BASE_DIR: Application root directory
- * - LOG_DIR: Log files directory
- * - LATEST_LOG_PATH: Current log file path
- * - FULL_LOG_PATH: Historical log file path
+ * - VALID_CONTEXTS: Set of allowed logging contexts
+ * - BASE_DIR: Root directory for application
+ * - LOG_DIR: Directory for log files
  *
  * Flow:
- * 1. Initialize logging system
- * 2. Configure log formats
- * 3. Set up file transports
- * 4. Process log messages
- * 5. Write to appropriate outputs
- * 6. Rotate log files
+ * 1. Initialize logging system and ensure directories
+ * 2. Validate and clean incoming log data
+ * 3. Format log entries with consistent structure
+ * 4. Write to appropriate outputs (file/console)
+ * 5. Handle errors and provide fallbacks
  *
  * Error Handling:
  * - Directory creation failures
- * - File write permissions
- * - Format processing errors
- * - Transport failures
- * - Metadata sanitization
- * - Stack trace parsing
- * - Base64 truncation
+ * - Invalid contexts
+ * - Metadata formatting errors
+ * - Stack trace parsing issues
+ * - Event logging failures
  *
  * @module @/utils/common/logger
- * @requires winston - Logging framework
- * @requires winston-daily-rotate-file - Log rotation
- * @requires path - Path manipulation
- * @requires fs/promises - File operations
- * @requires dotenv - Environment config
- * @exports {Object} logger - Logger instance
+ * @requires winston
+ * @requires winston-daily-rotate-file
+ * @requires path
+ * @requires dotenv
+ * @requires @/config/env
+ * @exports logger - Logging interface
  *
  * @example
  * // Import logger
@@ -85,427 +80,635 @@
  * // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  */
 
-/**
- * Custom log message formatter
- *
- * Creates formatted log entries with:
- * - Timestamp
- * - Log level
- * - Source filename
- * - Message content
- * - Sanitized metadata
- *
- * Handles special cases:
- * - Base64 content truncation
- * - JSON string parsing
- * - Nested object processing
- * - Circular references
- * - Error object formatting
- * - Buffer data handling
- *
- * @type {winston.Logform.Format}
- *
- * @example
- * // Basic message
- * logger.info('User logged in');
- * // 2024-03-15T14:30:22Z [INFO] [auth.js]: User logged in
- *
- * // With metadata
- * logger.debug('Request received', {
- *   method: 'POST',
- *   path: '/api/data',
- *   body: { id: 123 }
- * });
- * // 2024-03-15T14:30:22Z [DEBUG] [api.js]: Request received {"method":"POST","path":"/api/data","body":{"id":123}}
- *
- * // With base64 content
- * logger.debug('Image processed', {
- *   data: 'data:image/png;base64,iVBORw0KGgoAAAANSU...'
- * });
- * // 2024-03-15T14:30:22Z [DEBUG] [image.js]: Image processed {"data":"data:image/png;base64,[BASE64_CONTENT_TRUNCATED]"}
- */
-
-/**
- * Filename extraction formatter
- *
- * Extracts source filename from error stack:
- * 1. Analyzes stack trace
- * 2. Filters internal calls
- * 3. Extracts relevant file info
- * 4. Handles special cases
- *
- * Features:
- * - Project path detection
- * - Multiple extension support
- * - Internal call filtering
- * - Anonymous function handling
- * - Module path resolution
- * - Directory fallback
- *
- * @type {winston.Logform.Format}
- *
- * @example
- * // Named function
- * function processData() {
- *   logger.info('Processing');
- *   // [INFO] [data-processor.js]: Processing
- * }
- *
- * // Anonymous function
- * const handler = () => {
- *   logger.info('Handling');
- *   // [INFO] [api-module]: Handling
- * }
- *
- * // Class method
- * class Service {
- *   execute() {
- *     logger.info('Executing');
- *     // [INFO] [service.js]: Executing
- *   }
- * }
- */
-
 const winston = require('winston');
 require('winston-daily-rotate-file');
 const path = require('path');
 const dotenv = require('dotenv');
-const { LOCALE_CONFIG } = require('@/config/locale');
-const { PATHS } = require('@/config/paths');
+const { getLogLevel, isDebugEnabled } = require('@/config/env');
+const fs = require('fs');
 
 // Load environment configuration
 dotenv.config();
 
+// Base directory for logs
+const BASE_DIR = process.cwd();
+const LOG_DIR = path.join(BASE_DIR, process.env.LOG_DIR || 'logs');
+
 /**
- * Custom log message formatter
+ * Valid logging contexts as defined in logging.mdc
+ * @constant {Set<string>}
+ */
+const VALID_CONTEXTS = new Set([
+  'api', // API interactions, requests, responses
+  'audit', // Audit trail, compliance events
+  'auth', // Authentication specific events
+  'cache', // Cache operations, hits, misses
+  'cleanup', // Cleanup operations, maintenance
+  'config', // Configuration changes, env vars
+  'data', // Data processing, transformations
+  'db', // Database operations, queries
+  'email', // Email sending, templates
+  'error', // Error handling, exceptions
+  'export', // Export operations, data dumps
+  'file', // File system operations, I/O
+  'format', // Data formatting, transformations
+  'health', // Health checks, system status
+  'helper', // Helper functions
+  'import', // Import operations, data loading
+  'metrics', // Application metrics, stats
+  'migration', // Data migrations, schema updates
+  'network', // Network operations, connections
+  'perf', // Performance metrics, timings
+  'queue', // Message queue operations
+  'security', // Security events, authorization
+  'session', // Session management
+  'storage', // Storage operations (S3, etc)
+  'sync', // Synchronization operations
+  'system', // System operations, startup
+  'task', // Background tasks, jobs
+  'template', // Template processing
+  'test', // Test execution, setup
+  'ui', // User interface events
+  'user', // User-specific actions and events
+  'user-pref', // User preferences and settings
+  'user-profile', // User profile operations
+  'user-activity', // User activity tracking
+  'user-content', // User-generated content
+  'validation', // Input validation, schemas
+]);
+
+// Ensure logs directory exists BEFORE configuring winston
+const ensureLogDir = () => {
+  try {
+    if (!fs.existsSync(LOG_DIR)) {
+      fs.mkdirSync(LOG_DIR, { recursive: true });
+      console.error('Forced to create logs directory:', LOG_DIR);
+    }
+  } catch (error) {
+    console.error('Error creating logs directory:', error);
+  }
+};
+
+// Ensure directory exists before configuring logger
+ensureLogDir();
+
+// Store original emit for event handling
+const originalEmit = process.emit;
+
+/**
+ * Validates and formats logging context
  *
- * Creates formatted log entries with:
- * - Timestamp
- * - Log level
- * - Source filename
- * - Message content
- * - Sanitized metadata
+ * Ensures that the provided context is valid according to logging standards.
+ * Handles context normalization and provides fallback to system context.
  *
- * Handles special cases:
- * - Base64 content truncation
- * - JSON string parsing
- * - Nested object processing
- * - Circular references
- * - Error object formatting
- * - Buffer data handling
+ * @param {string|object} context - The context to validate
+ * @returns {string} Validated and normalized context
+ */
+const validateContext = (context) => {
+  // Si el contexto es undefined o null, retornar 'system'
+  if (!context) return 'system';
+
+  // Si el contexto es un objeto, intentar obtener una propiedad válida
+  if (typeof context === 'object') {
+    // Si tiene una propiedad 'context', usarla
+    if (context.context) {
+      return validateContext(context.context.toString().replace(/[\s]/g, ''));
+    }
+    // Si tiene una propiedad 'name', usarla
+    if (context.name) {
+      return validateContext(context.name.toString().replace(/[\s]/g, ''));
+    }
+
+    // Si no tiene propiedades útiles, usar 'system'
+    return 'system';
+  }
+
+  // Convertir a string y limpiar
+  const ctx = String(context).toLowerCase().trim();
+
+  // Remove brackets if present
+  const cleanContext = ctx.replace(/^\[|\]$/g, '');
+
+  if (!VALID_CONTEXTS.has(cleanContext)) {
+    console.warn(`Invalid context [${context}] used, defaulting to [system]`);
+    return 'system';
+  }
+  return cleanContext;
+};
+
+/**
+ * Groups related metadata fields into logical categories
  *
- * @type {winston.Logform.Format}
+ * Organizes metadata fields into predefined groups for better readability
+ * and analysis. Fields that don't match any group remain ungrouped.
  *
+ * @param {object} metadata - The metadata to group
+ * @returns {object} Grouped metadata object
  * @example
- * // Basic message
- * logger.info('User logged in');
- * // 2024-03-15T14:30:22Z [INFO] [auth.js]: User logged in
+ * // Groups related fields
+ * groupMetadata({
+ *   duration: '1s',
+ *   memory: '100MB',
+ *   userId: '123'
+ * })
+ * // Returns: { perf: { duration: '1s', memory: '100MB' }, userId: '123' }
+ */
+const groupMetadata = (metadata) => {
+  if (!metadata || Object.keys(metadata).length === 0) {
+    return {};
+  }
+
+  const groups = {
+    error: ['error', 'stack', 'code', 'details'],
+    perf: ['duration', 'memory', 'cpu', 'latency', 'time'],
+    batch: ['total', 'success', 'failed', 'processed', 'items'],
+    request: ['method', 'url', 'status', 'endpoint'],
+    resource: ['size', 'count', 'limit', 'offset', 'rows'],
+  };
+
+  const grouped = {};
+  const ungrouped = {};
+
+  Object.entries(metadata).forEach(([key, value]) => {
+    // Skip context as it's handled separately
+    if (key === 'context') return;
+
+    let assigned = false;
+    for (const [group, fields] of Object.entries(groups)) {
+      if (fields.includes(key)) {
+        grouped[group] = grouped[group] || {};
+        grouped[group][key] = value;
+        assigned = true;
+        break;
+      }
+    }
+    if (!assigned) {
+      ungrouped[key] = value;
+    }
+  });
+
+  return {
+    ...ungrouped,
+    ...grouped,
+  };
+};
+
+/**
+ * Formats metadata for logging output
  *
- * // With metadata
- * logger.debug('Request received', {
- *   method: 'POST',
- *   path: '/api/data',
- *   body: { id: 123 }
- * });
- * // 2024-03-15T14:30:22Z [DEBUG] [api.js]: Request received {"method":"POST","path":"/api/data","body":{"id":123}}
+ * Processes and formats metadata object for logging, handling special cases
+ * and providing consistent output format.
  *
- * // With base64 content
- * logger.debug('Image processed', {
- *   data: 'data:image/png;base64,iVBORw0KGgoAAAANSU...'
- * });
- * // 2024-03-15T14:30:22Z [DEBUG] [image.js]: Image processed {"data":"data:image/png;base64,[BASE64_CONTENT_TRUNCATED]"}
+ * @param {object} metadata - The metadata to format
+ * @returns {string} Formatted metadata string
+ * @throws {Error} If metadata processing fails
+ * @example
+ * // Basic metadata formatting
+ * formatMetadata({ user: 'john', count: 5 })
+ * // Returns: ' ┃ user=john • count=5'
+ *
+ * // Handling errors
+ * formatMetadata({ error: new Error('Failed') })
+ * // Returns: ' ┃ error={"message":"Failed","stack":"..."}'
+ */
+const formatMetadata = (metadata) => {
+  if (!metadata || Object.keys(metadata).length === 0) return '';
+
+  const processValue = (value) => {
+    if (value instanceof Error) {
+      return {
+        message: value.message,
+        code: value.code,
+        stack: value.stack,
+      };
+    }
+    if (value && typeof value === 'object' && value.error) {
+      return {
+        ...value,
+        error: processValue(value.error),
+      };
+    }
+    if (typeof value === 'string' && value.includes('base64')) {
+      return '[BASE64_CONTENT]';
+    }
+    if (value && typeof value === 'object') {
+      const processed = {};
+      for (const [k, v] of Object.entries(value)) {
+        if (v !== undefined && v !== null && v !== '') {
+          processed[k] = processValue(v);
+        }
+      }
+      return Object.keys(processed).length > 0 ? processed : undefined;
+    }
+    return value;
+  };
+
+  // Process and clean metadata
+  const cleanMetadata = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    // Skip context and filename as they're handled separately
+    if (key === 'context' || key === 'filename') continue;
+
+    // If it's the params field, use it directly
+    if (key === 'params') {
+      return ` ┃ ${value}`; // Return params directly with bullet points
+    }
+
+    const processed = processValue(value);
+    if (processed !== undefined) {
+      cleanMetadata[key] = processed;
+    }
+  }
+
+  // Group related metadata if no params field was found
+  const groupedMetadata = groupMetadata(cleanMetadata);
+
+  // Format metadata as key=value pairs for better readability
+  if (Object.keys(groupedMetadata).length > 0) {
+    const pairs = Object.entries(groupedMetadata).map(([key, value]) => {
+      if (typeof value === 'object') {
+        return `${key}=${JSON.stringify(value)}`;
+      }
+      return `${key}=${value}`;
+    });
+    return ` ┃ ${pairs.join(' • ')}`;
+  }
+
+  return '';
+};
+
+/**
+ * Extracts source filename from error stack
+ *
+ * Analyzes stack trace to determine the original source file
+ * of the log call, filtering out internal and library calls.
+ *
+ * @param {object} info - Winston log information object
+ * @returns {object} Modified info object with filename
+ * @example
+ * // Adds filename to log info
+ * addFilename({ message: 'test' })
+ * // Returns: { message: 'test', filename: 'user-service.js' }
+ */
+const addFilename = winston.format((info) => {
+  const stackInfo = Error().stack;
+  if (!stackInfo) return info;
+
+  const stackLines = stackInfo.split('\n').map((line) => line.trim());
+  for (const line of stackLines) {
+    if (line.includes('logger.js') || line.includes('node_modules')) continue;
+    const match = line.match(/\((.+?):\d+:\d+\)$/);
+    if (match) {
+      info.filename = path.basename(match[1]);
+      break;
+    }
+  }
+  return info;
+});
+
+/**
+ * Formats log entries with consistent structure
+ *
+ * Creates standardized log entries with timestamp, level,
+ * filename, context, message, and formatted metadata.
+ *
+ * @param {object} params - Format parameters
+ * @param {string} params.level - Log level
+ * @param {string} params.message - Log message
+ * @param {string} params.timestamp - ISO timestamp
+ * @param {string} [params.filename] - Source file
+ * @param {string} [params.context] - Log context
+ * @param {object} [params.metadata] - Additional data
+ * @returns {string} Formatted log entry
+ * @example
+ * // Basic log formatting
+ * customFormat({
+ *   level: 'info',
+ *   message: 'Test',
+ *   timestamp: '2024-01-01T00:00:00Z'
+ * })
+ * // Returns: '2024-01-01T00:00:00Z ┃ [INFO] ┃ [system] ┃ Test'
  */
 const customFormat = winston.format.printf(
-  ({ level, message, timestamp, filename, ...metadata }) => {
-    // Start with timestamp and level
-    let log = `${timestamp} [${level.toUpperCase()}]`;
+  // prettier-ignore
+  ({
+    level,
+    message,
+    timestamp,
+    filename,
+    context,
+    ...metadata
+  }) => {
+    try {
+      // Format the base log message with padding for alignment
+      let log = `${timestamp || new Date().toISOString()}`;
 
-    // Add filename if available, otherwise add empty brackets to maintain format
-    if (filename) {
-      log += ` [${filename}]`;
-    }
+      // Add level with color and padding (siempre requerido)
+      const levelPad = 7; // Longitud máxima de los niveles (ERROR, INFO, etc)
+      const levelStr = (level || 'info').toUpperCase();
+      const levelFormatted = levelStr.padEnd(levelPad);
+      log += ` ┃ [${levelFormatted}]`;
 
-    // Add message with single colon
-    log += `: ${message}`;
+      // Add validated context with padding
+      const contextPad = 10; // Ajusta según necesidad
+      context = context.replace(/[\s]/g, '');
+      const validContext = validateContext(context);
+      const contextFormatted = validContext.padEnd(contextPad);
+      log += ` ┃ [${contextFormatted}]`;
 
-    const processValue = (value) => {
-      if (typeof value === 'string') {
-        if (value.startsWith('{') || value.startsWith('[')) {
-          try {
-            return processValue(JSON.parse(value));
-          } catch (e) {
-            // If parsing fails, return the string as is
-          }
-        }
-        if (value.includes('base64')) {
-          return value.replace(
-            /(data:image\/[^;]+;base64,)[^"'\\}\s]+/g,
-            '$1[BASE64_CONTENT_TRUNCATED]'
-          );
-        }
-        return value;
+      // Add filename if available with padding
+      if (filename) {
+        filename = filename.replace(/[\s]/g, '');
+        const filenamePad = 20; // Ajusta según necesidad
+        const filenameFormatted = filename.padEnd(filenamePad);
+        log += ` ┃ [${filenameFormatted}]`;
       }
-      if (typeof value !== 'object' || value === null) {
-        return value;
-      }
-      if (value.constructor !== Object && value.constructor !== Array) {
-        if (value.toString && typeof value.toString === 'function') {
-          return value.toString();
-        }
-        return `[${value.constructor?.name || 'Unknown'}]`;
-      }
-      const processed = Array.isArray(value) ? [] : {};
-      for (const [key, val] of Object.entries(value)) {
-        processed[key] = processValue(val);
-      }
-      return processed;
-    };
 
-    if (Object.keys(metadata).length > 0 && metadata.constructor === Object) {
+      // Add message
+      log += ` ┃ ${message || 'No message provided'}`;
+
+      // Add formatted metadata
       try {
-        const cleanMetadata = processValue(metadata);
-        log += ` ${JSON.stringify(cleanMetadata)}`;
+        const metadataStr = formatMetadata(metadata);
+        if (metadataStr) {
+          log += metadataStr;
+        }
       } catch (error) {
-        /* eslint-disable-next-line no-console */
-        console.error('Error processing metadata:', error);
-        log += ` ${JSON.stringify(metadata)}`;
+        console.error('Error formatting metadata:', error);
       }
+
+      return log;
+    } catch (error) {
+      // If something fails, return a minimal but functional log message
+      const timestamp = new Date().toISOString();
+      const lvl = (level || 'info').toUpperCase();
+      const msg = message || 'Error formatting log message';
+      return `${timestamp} ┃ [${lvl}] ┃ [system] ┃ ${msg}`;
     }
-    return log;
   }
 );
 
 /**
- * Filename extraction formatter
+ * Winston logger configuration
  *
- * Extracts source filename from error stack:
- * 1. Analyzes stack trace
- * 2. Filters internal calls
- * 3. Extracts relevant file info
- * 4. Handles special cases
+ * Configures the Winston logger with appropriate transports
+ * and formatting based on environment settings.
  *
- * @type {winston.Logform.Format}
+ * @type {winston.Logger}
  */
-const addFilename = winston.format((info) => {
-  try {
-    const stackInfo = Error().stack;
-    if (!stackInfo) return info;
+const winstonLogger = winston.createLogger({
+  level: getLogLevel(),
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    addFilename(),
+    customFormat
+  ),
+  transports: [
+    new winston.transports.DailyRotateFile({
+      dirname: LOG_DIR,
+      filename: 'history-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      maxSize: process.env.LOG_MAX_SIZE || '10m',
+      maxFiles: process.env.LOG_MAX_FILES || '7d',
+      createSymlink: true,
+      symlinkName: 'latest.log',
+      auditFile: path.join(LOG_DIR, '.audit.json'),
+      tailable: true,
+      zippedArchive: false,
+      handleExceptions: true,
+      handleRejections: true,
+      json: false,
+      options: { flags: 'w' }, // Open in write mode, truncating file
+    }),
+  ],
+});
 
-    // Split stack lines and get the caller line
-    const stackLines = stackInfo.split('\n').map((line) => line.trim());
+// Ensure latest.log is recreated on each execution
+try {
+  const latestLogPath = path.join(LOG_DIR, 'latest.log');
+  if (fs.existsSync(latestLogPath)) {
+    fs.unlinkSync(latestLogPath);
+  }
+} catch (error) {
+  console.error('Error recreating latest.log:', error);
+}
 
-    // Find the first relevant line
-    let callerLine = null;
-    let callerFile = null;
+// Add console transport in development
+if (isDebugEnabled()) {
+  // Configure Winston colors for console output
+  winston.addColors({
+    error: 'red',
+    warn: 'yellow',
+    info: 'green',
+    debug: 'cyan',
+  });
 
-    // Skip first line (Error constructor) and logger.js calls
-    for (let i = 1; i < stackLines.length && !callerFile; i++) {
-      const line = stackLines[i];
+  winstonLogger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize({
+          all: false,
+          level: true,
+          message: false,
+          colors: {
+            error: 'red',
+            warn: 'yellow',
+            info: 'green',
+            debug: 'cyan',
+          },
+        }),
+        winston.format.timestamp(),
+        addFilename(),
+        customFormat
+      ),
+    })
+  );
+}
 
-      // Skip internal calls
-      if (
-        line.includes('logger.js') ||
-        line.includes('node_modules') ||
-        line.includes('internal/') ||
-        line.includes('<anonymous>') ||
-        line.includes('new Promise')
-      ) {
-        continue;
-      }
-
-      callerLine = line;
-
-      // Try to get the project path
-      const projectPath = line.includes(process.cwd())
-        ? line.split(process.cwd())[1]
-        : line;
-
-      if (!projectPath) continue;
-
-      // Common extensions in the project
-      const extensions = '\\.(?:js|mjs|cjs|ts|md|json|csv|css|html)';
-
-      // Try all patterns in order of specificity
-      const patterns = [
-        // Full project path with file
-        new RegExp(
-          `\\/(src|utils|core|generators|templates|data-csv)\\/(?:[^/]+\\/)*([^/\\s:]+${extensions})`
-        ),
-        // Direct file reference in project path
-        new RegExp(`\\/([^/\\s:]+${extensions})`),
-        // Function call pattern
-        new RegExp(`at (?:.*? \\()?([^/\\s:]+${extensions})`),
-        // Basic filename pattern
-        new RegExp(`([^/\\s:]+${extensions})`),
-      ];
-
-      // Try each pattern
-      for (const pattern of patterns) {
-        const match = projectPath.match(pattern);
-        if (match) {
-          callerFile = match[match.length - 1];
-          break;
-        }
-      }
-
-      // If we still don't have a file but have a directory, use it
-      if (!callerFile && projectPath.includes('/src/')) {
-        const dirMatch = projectPath.match(/\/src\/([^/]+)\//);
-        if (dirMatch) {
-          callerFile = `${dirMatch[1]}-module`;
-        }
-      }
-    }
-
-    // If we found a file, use it
-    if (callerFile) {
-      info.filename = callerFile;
-    } else if (callerLine) {
-      // Last resort: try to extract any meaningful identifier
-      const functionMatch = callerLine.match(/at ([^(\s]+)/);
-      if (functionMatch) {
-        info.filename = `${functionMatch[1]}-function`;
-      }
-    }
-
-    return info;
-  } catch (error) {
-    /* eslint-disable-next-line no-console */
-    console.error('Error in addFilename format:', error);
-    return info;
+// Watch logs directory for deletion
+fs.watch(path.dirname(LOG_DIR), (eventType, filename) => {
+  if (eventType === 'rename' && filename === path.basename(LOG_DIR)) {
+    ensureLogDir();
   }
 });
 
-// Create a basic logger that writes to console until the full logger is initialized
+/**
+ * Public logging interface
+ *
+ * Provides standardized logging methods with automatic context handling,
+ * error processing, and metadata formatting.
+ *
+ * @type {object}
+ * @property {Function} error - Logs error messages with stack traces
+ * @property {Function} warn - Logs warning messages
+ * @property {Function} info - Logs informational messages
+ * @property {Function} debug - Logs debug information
+ * @property {Function} logExecutionStart - Logs application startup
+ *
+ * @example
+ * // Basic logging
+ * logger.info('Operation completed', { context: 'task', duration: '5s' });
+ *
+ * // Error logging
+ * try {
+ *   doSomething();
+ * } catch (error) {
+ *   logger.error(error);
+ * }
+ *
+ * // Debug with context
+ * logger.debug('Processing data', {
+ *   context: 'data',
+ *   items: 100,
+ *   type: 'users'
+ * });
+ */
 const logger = {
-  /* eslint-disable-next-line no-console */
-  error: console.error.bind(console),
-  /* eslint-disable-next-line no-console */
-  warn: console.warn.bind(console),
-  /* eslint-disable-next-line no-console */
-  info: console.info.bind(console),
-  /* eslint-disable-next-line no-console */
-  debug: process.env.DEBUG === 'true' ? console.debug.bind(console) : () => {},
+  /**
+   * Logs error messages with stack traces
+   *
+   * @param {string|Error} message - Error message or Error object
+   * @param {object} [metadata={}] - Additional error context
+   * @returns {void}
+   * @example
+   * logger.error(new Error('Database connection failed'));
+   * logger.error('Operation failed', { context: 'db', code: 'CONN_ERROR' });
+   */
+  error: (message, metadata = {}) => {
+    if (message instanceof Error) {
+      return winstonLogger.error(message.message, {
+        context: 'error',
+        error: message,
+        stack: message.stack,
+        code: message.code,
+      });
+    }
+    if (!metadata.context) {
+      metadata.context = 'system';
+    }
+    return winstonLogger.error(message, metadata);
+  },
+
+  /**
+   * Logs warning messages
+   *
+   * @param {string} message - Warning message
+   * @param {object} [metadata={}] - Additional warning context
+   * @returns {void}
+   * @example
+   * logger.warn('High memory usage', { context: 'perf', usage: '85%' });
+   */
+  warn: (message, metadata = {}) => {
+    if (!metadata.context) {
+      metadata.context = 'system';
+    }
+    return winstonLogger.warn(message, metadata);
+  },
+
+  /**
+   * Logs informational messages
+   *
+   * @param {string} message - Info message
+   * @param {object} [metadata={}] - Additional information context
+   * @returns {void}
+   * @example
+   * logger.info('User logged in', { context: 'auth', userId: '123' });
+   */
+  info: (message, metadata = {}) => {
+    if (!metadata.context) {
+      metadata.context = 'system';
+    }
+    return winstonLogger.info(message, metadata);
+  },
+
+  /**
+   * Logs debug information
+   *
+   * @param {string} message - Debug message
+   * @param {object} [metadata={}] - Additional debug context
+   * @returns {void}
+   * @example
+   * logger.debug('Processing batch', { context: 'task', items: 50 });
+   */
+  debug: (message, metadata = {}) => {
+    if (!metadata.context) {
+      metadata.context = 'system';
+    }
+    return winstonLogger.debug(message, metadata);
+  },
+
+  _executionStarted: false,
+
+  /**
+   * Logs application startup information
+   *
+   * Records the start of a new execution with environment details
+   * and system information. Ensures only one startup log per session.
+   *
+   * @returns {void}
+   * @example
+   * logger.logExecutionStart();
+   * // Logs: New execution started | env=development | time=... | pid=... | nodeVersion=...
+   */
   logExecutionStart: () => {
-    const separator = '━'.repeat(100);
-    /* eslint-disable no-console */
-    console.info(separator);
-    console.info('▶ New Execution Started --- env: ' + process.env.NODE_ENV);
-    console.info(`▶ ${new Date().toLocaleString()}`);
-    console.info(separator);
-    /* eslint-enable no-console */
+    if (logger._executionStarted) return;
+    logger._executionStarted = true;
+
+    const env = process.env.NODE_ENV || 'development';
+    const date = new Date().toLocaleString();
+
+    logger.info('New execution started', {
+      context: 'system',
+      env,
+      time: date,
+      pid: process.pid,
+      nodeVersion: process.version,
+    });
   },
 };
 
-// Ensure debug method is always available
-if (!logger.debug) {
-  logger.debug = () => {};
-}
+/**
+ * Node.js event capture for logging
+ *
+ * Intercepts Node.js events and routes them through the logging system
+ * with appropriate context and error handling.
+ *
+ * @param {string} event - Event name
+ * @param {...*} args - Event arguments
+ * @returns {boolean} Event emission result
+ * @example
+ * process.emit('events', {
+ *   level: 'info',
+ *   message: 'Custom event',
+ *   data: { context: 'system' }
+ * });
+ */
+process.emit = function (event, ...args) {
+  if (event === 'events') {
+    const [eventData] = args;
+    const level = eventData.level || 'debug';
+    const logMethod = logger[level] || logger.debug;
+    const message = eventData.message.replace(/\[\d+m/g, '');
 
-// Base directory for logs
-const BASE_DIR = process.cwd();
-const LOG_DIR = path.join(BASE_DIR, PATHS.logs.dir);
+    // Ensure event data has a context
+    const eventMetadata = {
+      context: eventData.context || 'system',
+      ...eventData.data,
+      timestamp: new Date().toISOString(),
+    };
 
-// Get log paths from environment or use defaults with .log extension
-const LATEST_LOG_PATH = process.env.LATEST_LOG_PATH
-  ? path.resolve(BASE_DIR, process.env.LATEST_LOG_PATH)
-  : path.join(LOG_DIR, path.basename(PATHS.logs.latest) + '.log');
-
-const FULL_LOG_PATH = process.env.FULL_LOG_PATH
-  ? path.resolve(BASE_DIR, process.env.FULL_LOG_PATH)
-  : path.join(LOG_DIR, path.basename(PATHS.logs.history) + '.log');
-
-// Create log directories synchronously
-try {
-  const latestLogDir = path.dirname(LATEST_LOG_PATH);
-  const fullLogDir = path.dirname(FULL_LOG_PATH);
-
-  // Create directories if they don't exist
-  for (const dir of [latestLogDir, fullLogDir]) {
-    if (!require('fs').existsSync(dir)) {
-      require('fs').mkdirSync(dir, {
-        recursive: true,
-        mode: 0o755,
-      });
+    try {
+      logMethod.call(logger, message, eventMetadata);
+      // Fallback to console.log if logger fails
+    } catch (error) {
+      console.error('Error in event logging:', error);
+      // eslint-disable-next-line no-console
+      console.log(
+        `${new Date().toISOString()} [${level.toUpperCase()}]: ${message}`
+      );
     }
   }
-
-  // Initialize Winston logger
-  const winstonLogger = winston.createLogger({
-    level: process.env.LOG_LEVEL || 'info',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      addFilename(),
-      customFormat
-    ),
-    silent: process.env.LOG_ENABLED === 'false',
-    transports: [
-      new winston.transports.DailyRotateFile({
-        filename: FULL_LOG_PATH,
-        datePattern: 'YYYY-MM-DD',
-        zippedArchive: true,
-        maxSize: process.env.LOG_MAX_SIZE || '20m',
-        maxFiles: process.env.LOG_MAX_FILES || '14d',
-        level: process.env.LOG_LEVEL || 'info',
-      }),
-      new winston.transports.File({
-        filename: LATEST_LOG_PATH,
-        level: process.env.LOG_LEVEL || 'info',
-        options: { flags: 'w' },
-        tailable: true,
-        maxsize: process.env.LATEST_LOG_MAX_SIZE || '5m',
-        maxFiles: 1,
-      }),
-    ],
-  });
-
-  // Add console transport in debug mode
-  if (process.env.DEBUG && process.env.DEBUG !== 'false') {
-    winstonLogger.add(
-      new winston.transports.Console({
-        format: winston.format.combine(
-          winston.format.colorize(),
-          winston.format.timestamp(),
-          addFilename(),
-          customFormat
-        ),
-      })
-    );
-  }
-
-  // Update logger methods to use Winston, but keep fallbacks
-  const originalLogger = { ...logger };
-  try {
-    logger.error = winstonLogger.error.bind(winstonLogger);
-    logger.warn = winstonLogger.warn.bind(winstonLogger);
-    logger.info = winstonLogger.info.bind(winstonLogger);
-    logger.debug = winstonLogger.debug.bind(winstonLogger);
-    logger.logExecutionStart = () => {
-      const separator = '━'.repeat(100);
-      const date = new Date().toLocaleString(LOCALE_CONFIG.fullLocale, {
-        timeZone: LOCALE_CONFIG.timezone,
-      });
-
-      logger.info(separator);
-      logger.info('▶ New Execution Started --- env: ' + process.env.NODE_ENV);
-      logger.info(`▶ ${date}`);
-      logger.info(separator);
-    };
-  } catch (error) {
-    // Restore original console logger if Winston binding fails
-    Object.assign(logger, originalLogger);
-    /* eslint-disable-next-line no-console */
-    console.error('Error binding Winston methods:', error);
-  }
-} catch (error) {
-  /* eslint-disable-next-line no-console */
-  console.error('Error initializing Winston logger:', error);
-  // Keep using console logger if Winston initialization fails
-}
-
-// Final check to ensure debug method exists
-if (!logger.debug) {
-  logger.debug = () => {};
-}
+  return originalEmit.apply(process, [event, ...args]);
+};
 
 module.exports = { logger };
