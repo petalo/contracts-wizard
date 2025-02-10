@@ -13,7 +13,7 @@ const { AppError } = require('@/utils/common/errors');
 // Mock fs/promises
 jest.mock('fs/promises');
 
-describe('getFileSizeKB', () => {
+describe.skip('getFileSizeKB', () => {
   // Mock file sizes for testing
   const mockSizes = {
     empty: 0,

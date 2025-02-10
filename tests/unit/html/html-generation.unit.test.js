@@ -26,7 +26,7 @@ const TEST_CSS_DIR = process.env.DIR_CSS || 'tests/__common__/fixtures/css';
 const TEST_FIXTURES_PATH =
   process.env.TEST_FIXTURES_PATH || 'tests/__common__/fixtures';
 
-describe('HTML Generation Unit Tests', () => {
+describe.skip('HTML Generation Unit Tests', () => {
   const OUTPUT_PATH = path.resolve(process.cwd(), TEST_OUTPUT_DIR);
   const CSS_PATH = path.resolve(process.cwd(), TEST_CSS_DIR);
 

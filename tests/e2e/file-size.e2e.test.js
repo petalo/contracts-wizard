@@ -246,6 +246,7 @@ const generateAndValidateFiles = async () => {
 };
 
 describe.skip('File Size Validation', () => {
+
   // Skip entire test suite in CI environments
   if (process.env.CI === 'true') {
     test.skip('Skipped in CI environment', () => {

@@ -29,6 +29,7 @@ jest.mock('@/utils/common/logger', () => ({
   },
 }));
 
+
 // Register our custom each helper before tests
 handlebars.registerHelper('each', function (context, options) {
   // Handle empty or null context

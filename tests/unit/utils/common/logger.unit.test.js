@@ -1,7 +1,6 @@
-/**
+/*
  * @file Unit tests for logger functionality
  */
-
 const mockLogger = {
   info: jest.fn((message, metadata = {}) => {
     if (metadata && metadata.context) {

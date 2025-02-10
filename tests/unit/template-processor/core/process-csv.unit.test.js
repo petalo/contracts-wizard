@@ -1,0 +1,266 @@
+/**
+ * @jest-environment node
+ */
+
+const fs = require('fs/promises');
+const {
+  processCsvData,
+  validateCsvStructure,
+  processDataLines,
+  convertValueType,
+  initializeDataFromFields,
+} = require('@/utils/template-processor/core/process-csv');
+const { AppError } = require('@/utils/common/errors');
+
+// Mock dependencies
+jest.mock('fs/promises');
+jest.mock('@/utils/common/logger');
+
+describe('CSV Processing', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('processCsvData', () => {
+    it('should process CSV with comments and blank lines', async () => {
+      const csvContent = `# This is a header comment
+key,value
+
+# Personal information section
+person.name,John Doe
+
+# Address section with blank line above
+
+address.street,Main St
+address.city,New York
+
+# Items with comments between them
+items.0,First Item
+# Comment between items
+items.1,Second Item
+
+# Footer comment`;
+
+      fs.readFile.mockResolvedValueOnce(csvContent);
+
+      const result = await processCsvData('test.csv');
+
+      expect(result).toEqual({
+        person: {
+          name: 'John Doe',
+        },
+        address: {
+          street: 'Main St',
+          city: 'New York',
+        },
+        items: ['First Item', 'Second Item'],
+      });
+    });
+
+    it('should handle multiple consecutive blank lines', async () => {
+      const csvContent = `key,value
+person.name,John Doe
+
+
+address.street,Main St
+
+`;
+
+      fs.readFile.mockResolvedValueOnce(csvContent);
+
+      const result = await processCsvData('test.csv');
+
+      expect(result).toEqual({
+        person: {
+          name: 'John Doe',
+        },
+        address: {
+          street: 'Main St',
+        },
+      });
+    });
+
+    it('should handle comments with special characters', async () => {
+      const csvContent = `# CSV with special chars: áéíóú
+# Lines with symbols: !@#$%^&*()
+key,value
+person.name,John Doe
+# Comment with UTF-8: 你好,世界
+address.street,Main St`;
+
+      fs.readFile.mockResolvedValueOnce(csvContent);
+
+      const result = await processCsvData('test.csv');
+
+      expect(result).toEqual({
+        person: {
+          name: 'John Doe',
+        },
+        address: {
+          street: 'Main St',
+        },
+      });
+    });
+
+    it('should handle inline comments and preserve values', async () => {
+      const csvContent = `key,value
+# Comment about name
+person.name,John Doe # This comment should be part of the value
+address.street,Main St # 123`;
+
+      fs.readFile.mockResolvedValueOnce(csvContent);
+
+      const result = await processCsvData('test.csv');
+
+      expect(result).toEqual({
+        person: {
+          name: 'John Doe # This comment should be part of the value',
+        },
+        address: {
+          street: 'Main St # 123',
+        },
+      });
+    });
+
+    it('should handle empty values between comments', async () => {
+      const csvContent = `key,value
+# Comment before empty value
+person.name,
+# Comment between empty values
+address.street,
+# Comment after empty value`;
+
+      fs.readFile.mockResolvedValueOnce(csvContent);
+
+      const result = await processCsvData('test.csv');
+
+      expect(result).toEqual({
+        person: {
+          name: '',
+        },
+        address: {
+          street: '',
+        },
+      });
+    });
+  });
+
+  describe('validateCsvStructure', () => {
+    it('should validate CSV structure with empty lines filtered', () => {
+      const data = [
+        { key: 'person.name', value: 'John' },
+        { key: 'person.age', value: '30' },
+      ];
+
+      expect(validateCsvStructure(data)).toBe(true);
+    });
+
+    it('should reject invalid CSV structure', () => {
+      const data = [{ key: '', value: 'John' }, { value: '30' }];
+
+      expect(validateCsvStructure(data)).toBe(false);
+    });
+  });
+
+  describe('processDataLines', () => {
+    it('should process data lines and ignore empty keys', () => {
+      const data = [
+        { key: 'person.name', value: 'John' },
+        { key: '', value: 'ignored' },
+        { key: 'person.age', value: '30' },
+      ];
+
+      const result = processDataLines(data);
+
+      expect(result).toEqual({
+        person: {
+          name: 'John',
+          age: 30,
+        },
+      });
+    });
+
+    it('should handle array indices in keys', () => {
+      const data = [
+        { key: 'items[0]', value: 'first' },
+        { key: 'items.1', value: 'second' },
+      ];
+
+      const result = processDataLines(data);
+
+      expect(result).toEqual({
+        items: ['first', 'second'],
+      });
+    });
+  });
+
+  describe('convertValueType', () => {
+    it('should convert numeric strings to numbers', () => {
+      expect(convertValueType('123')).toBe(123);
+      expect(convertValueType('123.45')).toBe(123.45);
+    });
+
+    it('should convert boolean strings', () => {
+      expect(convertValueType('true')).toBe(true);
+      expect(convertValueType('false')).toBe(false);
+    });
+
+    it('should keep original value for non-convertible strings', () => {
+      expect(convertValueType('abc')).toBe('abc');
+      expect(convertValueType('123abc')).toBe('123abc');
+    });
+
+    it('should preserve strings with comments', () => {
+      expect(convertValueType('value # with comment')).toBe(
+        'value # with comment'
+      );
+      expect(convertValueType('123 # numeric comment')).toBe(
+        '123 # numeric comment'
+      );
+    });
+  });
+
+  describe('initializeDataFromFields', () => {
+    it('should initialize missing template fields', () => {
+      const data = {
+        person: {
+          name: 'John',
+        },
+      };
+
+      const templateFields = ['person.name', 'person.age', 'address.street'];
+
+      const result = initializeDataFromFields(data, templateFields);
+
+      expect(result).toEqual({
+        person: {
+          name: 'John',
+          age: '',
+        },
+        address: {
+          street: '',
+        },
+      });
+    });
+
+    it('should not overwrite existing values', () => {
+      const data = {
+        person: {
+          name: 'John',
+          age: 30,
+        },
+      };
+
+      const templateFields = ['person.name', 'person.age'];
+
+      const result = initializeDataFromFields(data, templateFields);
+
+      expect(result).toEqual({
+        person: {
+          name: 'John',
+          age: 30,
+        },
+      });
+    });
+  });
+});

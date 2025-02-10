@@ -6,7 +6,7 @@ const {
   extractFields,
 } = require('@/utils/templateProcessor/core/extractFields');
 
-describe.skip('Field Extraction', () => {
+describe.skip('Extract Fields Utility', () => {
   test('should extract simple fields', () => {
     const template = 'Hello {{name}}, your age is {{age}}';
     const fields = extractFields(template);

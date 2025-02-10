@@ -5,6 +5,7 @@
 const { ASSETS_CONFIG } = require('@/config/assets');
 const path = require('path');
 
+
 describe('Assets Configuration', () => {
   test('should have valid logo configuration', () => {
     expect(ASSETS_CONFIG.logo).toBeDefined();

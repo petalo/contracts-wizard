@@ -1,5 +1,4 @@
-/**
- * @file Unit tests for HTML generation options
+/* @file Unit tests for HTML generation options
  *
  * Tests the HTML configuration object and its components:
  * - Prettier configuration

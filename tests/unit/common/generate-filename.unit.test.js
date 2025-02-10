@@ -17,6 +17,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+
 const {
   getRelativePath,
 } = require('@/utils/file-management/get-relative-path');
@@ -25,12 +26,14 @@ const {
   generateRevisionedFilename,
   generateFileName,
   FILENAME_CONFIG,
+
 } = require('@/utils/common/generate-filename');
 const { AppError } = require('@/utils/common/errors');
 const moment = require('moment-timezone');
 
 // Mock fs/promises
 jest.mock('fs/promises');
+
 
 // Mock logger
 jest.mock('@/utils/common/logger', () => ({
@@ -122,6 +125,7 @@ describe('Filename Generation', () => {
   });
 
   describe('Multi-format Filename Generation', () => {
+
     test('should generate HTML, PDF and Markdown paths', async () => {
       // Mock fs.access to simulate no existing files
       fs.access.mockRejectedValue(new Error('ENOENT'));
@@ -232,12 +236,51 @@ describe('Filename Generation', () => {
     });
 
     test('should handle unicode characters in filenames', () => {
+      // Arrange
       const templates = ['文档.md', 'документ.md', 'αρχείο.md'];
+
+      // Act & Assert
       templates.forEach((template) => {
-        const baseName = template.split('.')[0];
         const filename = generateTimestampedFilename(template);
-        expect(filename).toBe(`${baseName}-2024-01-01-150000`);
+        const baseName = template.split('.')[0];
+        expect(filename).toBe(`${baseName}-${fixedTimestamp}`);
       });
+    });
+  });
+
+  describe('Error Handling', () => {
+    test('should handle empty filename', async () => {
+      // Act & Assert
+      await expect(generateFileName('', 'output', ['pdf'])).rejects.toThrow(
+        'Base name is required'
+      );
+    });
+
+    test('should handle invalid output directory', async () => {
+      // Arrange
+      fs.access.mockRejectedValue(new Error('ENOENT: Directory not found'));
+
+      // Act & Assert
+      await expect(
+        generateFileName('test.md', '/invalid/dir', ['pdf'])
+      ).rejects.toThrow(/Directory not found/);
+    });
+
+    test('should handle invalid format specifications', async () => {
+      // Act & Assert
+      await expect(
+        generateFileName('test.md', 'output', ['invalid'])
+      ).rejects.toThrow(/Invalid format/);
+    });
+
+    test('should handle file system errors gracefully', async () => {
+      // Arrange
+      fs.access.mockRejectedValue(new Error('Permission denied'));
+
+      // Act & Assert
+      await expect(
+        generateFileName('test.md', 'output', ['pdf'])
+      ).rejects.toThrow(/Permission denied/);
     });
   });
 });
