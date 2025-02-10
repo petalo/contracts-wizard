@@ -1,0 +1,24 @@
+# Este es un comentario al inicio del archivo
+key,value
+
+# Sección de información personal
+person.name,John Doe
+person.age,30
+
+# Sección de direcciones
+# Cada dirección tiene calle y ciudad
+
+addresses.0.street,Main St
+addresses.0.city,New York
+
+# Segunda dirección
+addresses.1.street,Second St
+addresses.1.city,Los Angeles
+
+# Línea en blanco arriba y abajo
+
+items.0,First item
+# Comentario en medio de items
+items.1,Second item
+
+# Comentario al final del archivo 
