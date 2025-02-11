@@ -1,6 +1,7 @@
 /**
  * @file Integration tests for template path resolution functionality
- * @fileoverview Tests the template path resolution system to ensure proper handling of file paths,
+ *
+ * Tests the template path resolution system to ensure proper handling of file paths,
  * template processing, and error cases in the template processing workflow.
  *
  * Functions:
@@ -27,20 +28,20 @@
  * @module tests/integration/template/path-resolution
  * @requires path
  * @requires fs/promises
- * @requires ../../../src/utils/template-processor/core/process-template
- * @requires ../../../src/config/paths
- * @requires ../../../src/utils/common/errors
+ * @requires @/utils/template-processor/core/process-template
+ * @requires @/config/paths
+ * @requires @/utils/common/errors
  */
 
 const path = require('path');
 const fs = require('fs/promises');
 const {
   processMarkdownTemplate,
-} = require('../../../src/utils/template-processor/core/process-template');
-const { PATHS } = require('../../../src/config/paths');
-const { AppError } = require('../../../src/utils/common/errors');
+} = require('@/utils/template-processor/core/process-template');
+const { PATHS } = require('@/config/paths');
+const { AppError } = require('@/utils/common/errors');
 
-describe.skip('Template Path Resolution', () => {
+describe('Template Path Resolution', () => {
   // Setup test fixtures
   const fixturesDir = path.join(__dirname, '../../__common__/fixtures');
   const templatesDir = path.join(fixturesDir, 'markdown');
