@@ -4,7 +4,7 @@
 
 const {
   templateUtils,
-} = require('@/utils/templateProcessor/core/templateUtils');
+} = require('@/utils/template-processor/core/template-utils');
 
 describe.skip('Template Utils', () => {
   test('should validate template path', () => {

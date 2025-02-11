@@ -1,18 +1,42 @@
 /**
- * @fileoverview Integration tests for template path resolution
+ * @file Integration tests for template path resolution functionality
+ * @fileoverview Tests the template path resolution system to ensure proper handling of file paths,
+ * template processing, and error cases in the template processing workflow.
  *
- * Tests cover:
- * 1. Template path resolution
- * 2. Subdirectory handling
- * 3. CSV file matching
- * 4. Path normalization
+ * Functions:
+ * - processMarkdownTemplate: Tests the main template processing function
+ *
+ * Constants:
+ * - fixturesDir: string - Path to test fixtures directory
+ * - templatesDir: string - Path to templates directory
+ * - csvDir: string - Path to CSV files directory
+ * - cssDir: string - Path to CSS files directory
+ * - outputDir: string - Path to test output directory
+ *
+ * Flow:
+ * 1. Set up test directories and paths
+ * 2. Run template resolution tests with various path configurations
+ * 3. Verify error handling for invalid paths and missing files
+ * 4. Clean up test output files
+ *
+ * Error Handling:
+ * - Missing template file: Throws AppError
+ * - Invalid template paths: Throws AppError
+ * - File system errors: Logged with console.warn
+ *
+ * @module tests/integration/template/path-resolution
+ * @requires path
+ * @requires fs/promises
+ * @requires ../../../src/utils/template-processor/core/process-template
+ * @requires ../../../src/config/paths
+ * @requires ../../../src/utils/common/errors
  */
 
 const path = require('path');
 const fs = require('fs/promises');
 const {
   processMarkdownTemplate,
-} = require('../../../src/utils/templateProcessor/core/processTemplate');
+} = require('../../../src/utils/template-processor/core/process-template');
 const { PATHS } = require('../../../src/config/paths');
 const { AppError } = require('../../../src/utils/common/errors');
 

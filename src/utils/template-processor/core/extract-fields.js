@@ -121,9 +121,11 @@ const NODE_TYPES = {
  *
  * @param {object} node - AST node to process
  * @param {Set} fields - Field collection set
+ * @param {string} [prefix] - Path prefix for nested fields
+ * @param {object} [context] - Current context for path resolution
  * @throws {AppError} On invalid node structure
  */
-function processNode(node, fields) {
+function processNode(node, fields, prefix = '', context = {}) {
   try {
     // Handle different node types
     switch (node.type) {
@@ -144,17 +146,23 @@ function processNode(node, fields) {
           ].includes(node.path.parts[0]);
 
           if (!isHelper) {
-            fields.add(node.path.original);
+            const fieldPath = prefix
+              ? `${prefix}.${node.path.original}`
+              : node.path.original;
+            fields.add(fieldPath);
           }
         }
         // Always process params regardless of helper
         if (node.params) {
           node.params.forEach((param) => {
             if (param.type === NODE_TYPES.PATH && !param.data) {
-              fields.add(param.original);
+              const fieldPath = prefix
+                ? `${prefix}.${param.original}`
+                : param.original;
+              fields.add(fieldPath);
             } else if (param.type === NODE_TYPES.SUB_EXPRESSION) {
               // Process subexpressions (e.g., (eq field "value"))
-              processNode(param, fields);
+              processNode(param, fields, prefix, context);
             }
           });
         }
@@ -165,9 +173,12 @@ function processNode(node, fields) {
         if (node.params) {
           node.params.forEach((param) => {
             if (param.type === NODE_TYPES.PATH && !param.data) {
-              fields.add(param.original);
+              const fieldPath = prefix
+                ? `${prefix}.${param.original}`
+                : param.original;
+              fields.add(fieldPath);
             } else if (param.type === NODE_TYPES.SUB_EXPRESSION) {
-              processNode(param, fields);
+              processNode(param, fields, prefix, context);
             }
           });
         }
@@ -179,7 +190,44 @@ function processNode(node, fields) {
           if (node.path.original === 'each') {
             // Extract collection path from each blocks
             if (node.params[0] && node.params[0].type === NODE_TYPES.PATH) {
-              fields.add(node.params[0].original);
+              const fieldPath = prefix
+                ? `${prefix}.${node.params[0].original}`
+                : node.params[0].original;
+              fields.add(fieldPath);
+              // Process block contents with updated prefix
+              const newContext = {
+                ...context,
+                each: fieldPath,
+              };
+              node.program.body.forEach((child) => {
+                if (
+                  child.type === NODE_TYPES.MUSTACHE &&
+                  child.path.type === NODE_TYPES.PATH &&
+                  child.path.original === 'this'
+                ) {
+                  // Skip 'this' references in each blocks
+                  return;
+                }
+                processNode(child, fields, fieldPath, newContext);
+              });
+              return;
+            }
+          } else if (node.path.original === 'with') {
+            // Extract scope path from with blocks
+            if (node.params[0] && node.params[0].type === NODE_TYPES.PATH) {
+              const fieldPath = prefix
+                ? `${prefix}.${node.params[0].original}`
+                : node.params[0].original;
+              fields.add(fieldPath);
+              // Process block contents with updated prefix
+              const newContext = {
+                ...context,
+                with: fieldPath,
+              };
+              node.program.body.forEach((child) => {
+                processNode(child, fields, fieldPath, newContext);
+              });
+              return;
             }
           }
         }
@@ -188,37 +236,34 @@ function processNode(node, fields) {
         if (node.params) {
           node.params.forEach((param) => {
             if (param.type === NODE_TYPES.PATH && !param.data) {
-              fields.add(param.original);
+              const fieldPath = prefix
+                ? `${prefix}.${param.original}`
+                : param.original;
+              fields.add(fieldPath);
             } else if (param.type === NODE_TYPES.SUB_EXPRESSION) {
-              processNode(param, fields);
+              processNode(param, fields, prefix, context);
             }
           });
         }
 
         // Process block contents
         node.program.body.forEach((child) => {
-          if (node.path.original === 'each') {
-            // Skip 'this' references in each blocks
-            if (
-              child.type === NODE_TYPES.MUSTACHE &&
-              child.path.type === NODE_TYPES.PATH &&
-              child.path.original === 'this'
-            ) {
-              return;
-            }
-          }
-          processNode(child, fields);
+          processNode(child, fields, prefix, context);
         });
 
         // Process else block if present
         if (node.inverse) {
-          node.inverse.body.forEach((child) => processNode(child, fields));
+          node.inverse.body.forEach((child) =>
+            processNode(child, fields, prefix, context)
+          );
         }
         break;
 
       case NODE_TYPES.PROGRAM:
         // Process all child nodes
-        node.body.forEach((child) => processNode(child, fields));
+        node.body.forEach((child) =>
+          processNode(child, fields, prefix, context)
+        );
         break;
 
       default:
@@ -242,63 +287,48 @@ function processNode(node, fields) {
  * Extracts fields from template using AST
  *
  * Processes template through:
- * 1. File content loading
+ * 1. File content loading or direct string parsing
  * 2. AST generation
  * 3. Node traversal
  * 4. Field collection
  * 5. Result sorting
  *
- * @async
- * @param {string} templatePath - Template file path
- * @returns {Promise<string[]>} Extracted field names
- * @throws {AppError} On template or parsing errors
- *
- * @example
- * try {
- *   const fields = await extractTemplateFields('template.md');
- *   console.log('Fields:', fields);
- *   // ['address', 'user.name', 'items.0.price']
- * } catch (error) {
- *   console.error('Extraction failed:', error);
- * }
+ * @param {string} input - Template file path or template string
+ * @returns {Promise<string[]>} Array of extracted fields
+ * @throws {AppError} On template processing failure
  */
-async function extractTemplateFields(templatePath) {
+async function extractTemplateFields(input) {
   try {
-    logger.debug('Starting template field extraction', {
-      path: templatePath,
-    });
+    let templateContent = input;
 
-    // Load template content
-    const content = await fs.readFile(templatePath, ENCODING_CONFIG.default);
+    // If input looks like a file path, try to read it
+    if (input.includes('/') || input.includes('\\')) {
+      try {
+        templateContent = await fs.readFile(input, ENCODING_CONFIG.encoding);
+      } catch (error) {
+        // If file read fails, assume input is a template string
+        logger.debug('Input is not a file path, treating as template string', {
+          input,
+          error: error.message,
+        });
+      }
+    }
 
-    // Generate AST from template
-    const ast = handlebars.parse(content);
+    // Parse template and extract fields
+    const ast = handlebars.parse(templateContent);
     const fields = new Set();
-
-    // Process AST nodes
     processNode(ast, fields);
 
-    // Sort and return unique fields
-    const uniqueFields = Array.from(fields).sort();
-    logger.debug('Template field extraction complete', {
-      count: uniqueFields.length,
-      fields: uniqueFields,
-    });
-
-    logger.debug('Extracted fields from template:', { fields: uniqueFields });
-
-    return uniqueFields;
+    // Convert Set to sorted array
+    return Array.from(fields).sort();
   } catch (error) {
     logger.error('Template field extraction failed', {
       error,
-      path: templatePath,
-      message: error.message,
-      stack: error.stack,
+      input,
     });
-
     throw new AppError('Failed to extract template fields', 'TEMPLATE_ERROR', {
       originalError: error,
-      path: templatePath,
+      input,
     });
   }
 }

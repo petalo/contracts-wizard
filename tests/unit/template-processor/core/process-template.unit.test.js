@@ -1,74 +1,54 @@
 /**
- * @jest-environment node
+ * @file Test suite for template processing functionality
+ *
+ * Tests the core template processing functions including:
+ * - Template validation
+ * - Data injection
+ * - Error handling
+ * - Edge cases
+ *
+ * @module tests/unit/template-processor/core/process-template.unit.test
  */
 
-// Mock @prettier/plugin-xml
-jest.mock('@prettier/plugin-xml', () => ({
-  languages: [],
-  parsers: {},
-  printers: {},
-}));
+const fs = require('fs').promises;
+const path = require('path');
+const {
+  processMarkdownTemplate,
+  validateTemplateFile,
+  injectData,
+  removeFrontmatter,
+} = require('@/utils/template-processor/core/process-template');
+const { AppError } = require('@/utils/common/errors');
+const { PATHS } = require('@/config/paths');
+const testUtils = require('../../../__common__/helpers/test-utils');
 
-// Mock prettier
-jest.mock('prettier', () => ({
-  format: jest.fn((content) => content),
-  resolveConfig: jest.fn().mockResolvedValue({}),
-}));
-
-// Mock logger
-jest.mock('@/utils/common/logger', () => ({
-  logger: {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
+// Mock fs
+jest.mock('fs', () => ({
+  promises: {
+    readFile: jest.fn(),
+    writeFile: jest.fn(),
+    access: jest.fn(),
+    mkdir: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
-// Mock paths configuration
-jest.mock('@/config/paths', () => ({
-  PATHS: {
-    output: 'tests/output',
-    logs: {
-      dir: 'tests/logs',
-      latest: 'tests/logs/latest.log',
-      history: 'tests/logs/history-%DATE%.log',
-    },
-  },
+// Mock path
+jest.mock('path', () => ({
+  join: jest.fn((base, ...parts) => parts.join('/')),
+  resolve: jest.fn((base, ...parts) => parts.join('/')),
+  dirname: jest.fn((p) => p.split('/').slice(0, -1).join('/')),
+  basename: jest.fn((p) => p.split('/').pop()),
 }));
 
-// Mock file size utility
-jest.mock('@/utils/file-management/get-file-size', () => ({
-  getFileSizeKB: jest.fn().mockResolvedValue(1),
+jest.mock('@/utils/template-processor/generators/html', () => ({
+  generateHtml: jest.fn().mockImplementation(async (content, options) => {
+    return {
+      filepath: options.filepath,
+      content: content,
+    };
+  }),
 }));
 
-// Mock HTML generator
-jest.mock('@/utils/template-processor/generators/html', () => {
-  const fs = require('fs').promises;
-  return {
-    generateHtml: jest.fn().mockImplementation(async (content, options) => {
-      let htmlContent = content;
-      if (options.cssPath) {
-        const css = await fs.readFile(options.cssPath, 'utf-8');
-        htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-<style>${css}</style>
-</head>
-<body>
-${content}
-</body>
-</html>`;
-      }
-      return {
-        filepath: options.filepath,
-        content: htmlContent,
-      };
-    }),
-  };
-});
-
-// Mock markdown generator
 jest.mock('@/utils/template-processor/generators/md', () => ({
   generateMarkdown: jest.fn().mockImplementation(async (content, options) => {
     return {
@@ -78,7 +58,6 @@ jest.mock('@/utils/template-processor/generators/md', () => ({
   }),
 }));
 
-// Mock PDF generator
 jest.mock('@/utils/template-processor/generators/pdf', () => ({
   generatePdf: jest.fn().mockImplementation(async (content, options) => {
     if (content.includes('Invalid Document')) {
@@ -92,66 +71,55 @@ jest.mock('@/utils/template-processor/generators/pdf', () => ({
   }),
 }));
 
-/**
- * @fileoverview Unit tests for template processing functionality
- *
- * Tests cover:
- * 1. Basic template processing
- * 2. Frontmatter handling
- * 3. Missing value handling
- * 4. Array value processing
- * 5. Error cases
- *
- * @module tests/unit/template-processor/core
- * @requires fs
- * @requires path
- * @requires @/utils/template-processor/core/process-template
- */
-
-const fs = require('fs').promises;
-const path = require('path');
-const {
-  processMarkdownTemplate,
-  removeFrontmatter,
-} = require('@/utils/template-processor/core/process-template');
-const testUtils = require('@/utils/test-utils');
-
-describe.skip('Template Processor', () => {
+describe('Template Processor', () => {
   const TEST_FILES_DIR = path.join(__dirname, 'test-files');
   const TEST_OUTPUT_DIR = path.join(__dirname, 'output');
+  const SIMPLE_TEMPLATE_PATH = path.join(TEST_FILES_DIR, 'simple.md');
+  const SIMPLE_DATA_PATH = path.join(TEST_FILES_DIR, 'simple.csv');
+  const CSS_PATH = path.join(TEST_FILES_DIR, 'style.css');
 
-  // Setup test environment
-  beforeAll(async () => {
-    // Create test directories if they don't exist
-    await fs.mkdir(TEST_FILES_DIR, { recursive: true });
-    await fs.mkdir(TEST_OUTPUT_DIR, { recursive: true });
-  });
+  beforeEach(() => {
+    // Reset all mocks
+    jest.clearAllMocks();
 
-  // Cleanup after tests
-  afterAll(async () => {
-    try {
-      await fs.rm(TEST_FILES_DIR, {
-        recursive: true,
-        force: true,
-      });
-      await fs.rm(TEST_OUTPUT_DIR, {
-        recursive: true,
-        force: true,
-      });
-    } catch (error) {
-      console.warn('Error cleaning up test files:', error);
-    }
+    // Mock successful file access
+    fs.access.mockResolvedValue(undefined);
+
+    // Mock successful file reads
+    fs.readFile.mockImplementation((filePath) => {
+      if (filePath.includes('simple.md')) {
+        return Promise.resolve('# Test Template\n\nHello {{name}}!');
+      }
+      if (filePath.includes('simple.csv')) {
+        return Promise.resolve('key,value\nname,World');
+      }
+      if (filePath.includes('style.css')) {
+        return Promise.resolve('body { font-family: Arial; }');
+      }
+      if (filePath.includes('missing.md')) {
+        return Promise.resolve('Name: {{name}}, Age: {{age}}');
+      }
+      if (filePath.includes('missing.csv')) {
+        return Promise.resolve('key,value\nname,John');
+      }
+      if (filePath.includes('array.md')) {
+        return Promise.resolve(`{{#each items}}
+          - {{this}}
+        {{/each}}`);
+      }
+      if (filePath.includes('array.csv')) {
+        return Promise.resolve(
+          'key,value\nitems.0,First\nitems.1,Second\nitems.2,Third'
+        );
+      }
+      return Promise.reject(new Error('File not found'));
+    });
+
+    // Mock successful file writes
+    fs.writeFile.mockResolvedValue(undefined);
   });
 
   describe('Basic Template Processing', () => {
-    const SIMPLE_TEMPLATE_PATH = path.join(TEST_FILES_DIR, 'simple.md');
-    const SIMPLE_DATA_PATH = path.join(TEST_FILES_DIR, 'simple.csv');
-
-    beforeEach(async () => {
-      await fs.writeFile(SIMPLE_TEMPLATE_PATH, 'Hello {{name}}!');
-      await fs.writeFile(SIMPLE_DATA_PATH, 'key,value\nname,World');
-    });
-
     test('should process simple template with data', async () => {
       const result = await processMarkdownTemplate(
         SIMPLE_TEMPLATE_PATH,
@@ -177,16 +145,13 @@ describe.skip('Template Processor', () => {
     });
 
     test('should apply CSS styling when provided', async () => {
-      const CSS_PATH = path.join(TEST_FILES_DIR, 'style.css');
-      await fs.writeFile(CSS_PATH, 'body { color: red; }');
-
       const result = await processMarkdownTemplate(
         SIMPLE_TEMPLATE_PATH,
         SIMPLE_DATA_PATH,
         CSS_PATH
       );
 
-      // Verificar que el CSS se incluya en el documento
+      // Verify that CSS is included in the document
       const {
         generateHtml,
       } = require('@/utils/template-processor/generators/html');
@@ -195,25 +160,13 @@ describe.skip('Template Processor', () => {
       const lastCall = mockCalls[mockCalls.length - 1];
       expect(lastCall[1].cssPath).toBe(CSS_PATH);
 
-      expect(result.files).toEqual(
-        expect.objectContaining({
-          md: expect.stringContaining('.md'),
-          html: expect.stringContaining('.html'),
-          pdf: expect.stringContaining('.pdf'),
-        })
-      );
+      expect(result.content).toContain('font-family: Arial');
     });
   });
 
   describe('Missing Value Handling', () => {
     const MISSING_TEMPLATE_PATH = path.join(TEST_FILES_DIR, 'missing.md');
     const MISSING_DATA_PATH = path.join(TEST_FILES_DIR, 'missing.csv');
-
-    beforeEach(async () => {
-      // Arrange
-      await fs.writeFile(MISSING_TEMPLATE_PATH, 'Name: {{name}}, Age: {{age}}');
-      await fs.writeFile(MISSING_DATA_PATH, 'key,value\nname,John');
-    });
 
     test('should handle missing values gracefully', async () => {
       // Act
@@ -237,11 +190,17 @@ describe.skip('Template Processor', () => {
 
     test('should handle nested missing values with full path', async () => {
       // Arrange
-      await fs.writeFile(
-        MISSING_TEMPLATE_PATH,
-        '{{#with user}}Name: {{name}}, Email: {{contact.email}}{{/with}}'
-      );
-      await fs.writeFile(MISSING_DATA_PATH, 'key,value\nuser.name,John');
+      fs.readFile.mockImplementation((filePath) => {
+        if (filePath.includes('missing.md')) {
+          return Promise.resolve(
+            '{{#with user}}Name: {{name}}, Email: {{contact.email}}{{/with}}'
+          );
+        }
+        if (filePath.includes('missing.csv')) {
+          return Promise.resolve('key,value\nuser.name,John');
+        }
+        return Promise.reject(new Error('File not found'));
+      });
 
       // Act
       const result = await processMarkdownTemplate(
@@ -257,23 +216,26 @@ describe.skip('Template Processor', () => {
 
     test('should handle deeply nested contexts with missing values', async () => {
       // Arrange
-      await fs.writeFile(
-        MISSING_TEMPLATE_PATH,
-        `{{#with user}}
-          {{#with profile}}
-            {{#with contact}}
-              Name: {{../name}}, 
-              Email: {{email}}, 
-              Phone: {{phone}},
-              Address: {{address.street}}
+      fs.readFile.mockImplementation((filePath) => {
+        if (filePath.includes('missing.md')) {
+          return Promise.resolve(`{{#with user}}
+            {{#with profile}}
+              {{#with contact}}
+                Name: {{../name}}, 
+                Email: {{email}}, 
+                Phone: {{phone}},
+                Address: {{address.street}}
+              {{/with}}
             {{/with}}
-          {{/with}}
-        {{/with}}`
-      );
-      await fs.writeFile(
-        MISSING_DATA_PATH,
-        'key,value\nuser.profile.name,John\nuser.profile.contact.email,john@example.com'
-      );
+          {{/with}}`);
+        }
+        if (filePath.includes('missing.csv')) {
+          return Promise.resolve(
+            'key,value\nuser.profile.name,John\nuser.profile.contact.email,john@example.com'
+          );
+        }
+        return Promise.reject(new Error('File not found'));
+      });
 
       // Act
       const result = await processMarkdownTemplate(
@@ -301,18 +263,6 @@ describe.skip('Template Processor', () => {
     const ARRAY_TEMPLATE_PATH = path.join(TEST_FILES_DIR, 'array.md');
     const ARRAY_DATA_PATH = path.join(TEST_FILES_DIR, 'array.csv');
 
-    beforeEach(async () => {
-      // Arrange
-      await fs.writeFile(
-        ARRAY_TEMPLATE_PATH,
-        '{{#each items}}{{name}}\n{{/each}}'
-      );
-      await fs.writeFile(
-        ARRAY_DATA_PATH,
-        'key,value\nitems.0.name,Item 1\nitems.1.name,Item 2'
-      );
-    });
-
     test('should process array values correctly', async () => {
       // Act
       const result = await processMarkdownTemplate(
@@ -321,45 +271,39 @@ describe.skip('Template Processor', () => {
       );
 
       // Assert
+      expect(result.content).toMatch(/First.*Second.*Third/s);
       expect(result.content).toMatch(
-        /<p><span class="imported-value" data-field="items\.0\.name">Item 1<\/span><br><span class="imported-value" data-field="items\.1\.name">Item 2<\/span><\/p>/
+        /<span class="imported-value" data-field="items\.0">First<\/span>/
       );
-      expect(result.files).toEqual(
-        expect.objectContaining({
-          md: expect.stringContaining('.md'),
-          html: expect.stringContaining('.html'),
-          pdf: expect.stringContaining('.pdf'),
-        })
+      expect(result.content).toMatch(
+        /<span class="imported-value" data-field="items\.1">Second<\/span>/
+      );
+      expect(result.content).toMatch(
+        /<span class="imported-value" data-field="items\.2">Third<\/span>/
       );
     });
   });
 
   describe('Frontmatter Handling', () => {
-    const FRONTMATTER_TEMPLATE_PATH = path.join(
-      TEST_FILES_DIR,
-      'frontmatter.md'
-    );
-
-    beforeEach(async () => {
+    test('should remove frontmatter correctly', () => {
       // Arrange
-      await fs.writeFile(
-        FRONTMATTER_TEMPLATE_PATH,
-        '---\ntitle: Test Document\nversion: 1.0\n---\n# Hello {{name}}!'
-      );
-    });
+      const contentWithFrontmatter = `---
+title: Test Document
+author: John Doe
+---
+# Main Content
+Hello World!`;
 
-    test('should remove frontmatter correctly', async () => {
       // Act
-      const content = await fs.readFile(FRONTMATTER_TEMPLATE_PATH, 'utf-8');
-      const result = removeFrontmatter(content);
+      const result = removeFrontmatter(contentWithFrontmatter);
 
       // Assert
-      expect(result).toBe('# Hello {{name}}!');
+      expect(result).toBe('# Main Content\nHello World!');
     });
 
-    test('should preserve content without frontmatter', async () => {
+    test('should preserve content without frontmatter', () => {
       // Arrange
-      const contentWithoutFrontmatter = '# Hello {{name}}!';
+      const contentWithoutFrontmatter = '# Main Content\nHello World!';
 
       // Act
       const result = removeFrontmatter(contentWithoutFrontmatter);
@@ -370,82 +314,56 @@ describe.skip('Template Processor', () => {
   });
 
   describe('Image and Link Processing', () => {
-    const IMAGE_TEMPLATE_PATH = path.join(TEST_FILES_DIR, 'image.md');
-    const LINK_TEMPLATE_PATH = path.join(TEST_FILES_DIR, 'link.md');
-
-    beforeEach(async () => {
-      await fs.writeFile(IMAGE_TEMPLATE_PATH, '![Test]({{imagePath}})');
-      await fs.writeFile(LINK_TEMPLATE_PATH, '[Link]({{url}})');
-    });
-
     test('should handle images with proper alt text', async () => {
-      // Crear una imagen de prueba
-      const IMAGE_PATH = path.join(TEST_FILES_DIR, 'test.png');
-      await fs.writeFile(IMAGE_PATH, Buffer.from('fake-image-data'));
+      // Arrange
+      fs.readFile.mockImplementation((filePath) => {
+        if (filePath.includes('simple.md')) {
+          return Promise.resolve('![{{alt}}]({{url}})');
+        }
+        if (filePath.includes('simple.csv')) {
+          return Promise.resolve(
+            'key,value\nalt,Test Image\nurl,/path/to/image.jpg'
+          );
+        }
+        return Promise.reject(new Error('File not found'));
+      });
 
-      const DATA_PATH = path.join(TEST_FILES_DIR, 'image.csv');
-      await fs.writeFile(DATA_PATH, `key,value\nimagePath,${IMAGE_PATH}`);
-
+      // Act
       const result = await processMarkdownTemplate(
-        IMAGE_TEMPLATE_PATH,
-        DATA_PATH
+        SIMPLE_TEMPLATE_PATH,
+        SIMPLE_DATA_PATH
       );
 
-      // Verificar que la imagen se procese en formato Markdown
+      // Assert
       expect(result.content).toMatch(
-        /<p>!\[Test\]\(<span class="imported-value" data-field="imagePath">[^<]+<\/span>\)<\/p>/
+        /<img src="\/path\/to\/image\.jpg" alt="Test Image"/
       );
     });
 
     test('should process links correctly', async () => {
-      const DATA_PATH = path.join(TEST_FILES_DIR, 'link.csv');
-      await fs.writeFile(DATA_PATH, 'key,value\nurl,https://example.com');
-
-      const result = await processMarkdownTemplate(
-        LINK_TEMPLATE_PATH,
-        DATA_PATH
-      );
-
-      // Verificar que el enlace se procese correctamente
-      expect(result.content).toMatch(
-        /<p>\[Link\]\(<span class="imported-value" data-field="url"><a href="">[^<]*<\/a><\/span>\)<\/p>/
-      );
-    });
-  });
-
-  describe('PDF Generation', () => {
-    test('should generate PDF with correct metadata', async () => {
-      const TEMPLATE_PATH = path.join(TEST_FILES_DIR, 'meta.md');
-      await fs.writeFile(TEMPLATE_PATH, '# {{title}}');
-
-      const DATA_PATH = path.join(TEST_FILES_DIR, 'meta.csv');
-      await fs.writeFile(DATA_PATH, 'key,value\ntitle,Test Document');
-
-      const result = await testUtils.pdf.queuePdfGeneration(async () => {
-        return await processMarkdownTemplate(TEMPLATE_PATH, DATA_PATH);
+      // Arrange
+      fs.readFile.mockImplementation((filePath) => {
+        if (filePath.includes('simple.md')) {
+          return Promise.resolve('[{{text}}]({{url}})');
+        }
+        if (filePath.includes('simple.csv')) {
+          return Promise.resolve(
+            'key,value\ntext,Click Here\nurl,https://example.com'
+          );
+        }
+        return Promise.reject(new Error('File not found'));
       });
 
-      expect(result.files.pdf).toBeTruthy();
-      expect(typeof result.files.pdf).toBe('string');
-      expect(result.files.pdf.endsWith('.pdf')).toBe(true);
-    });
+      // Act
+      const result = await processMarkdownTemplate(
+        SIMPLE_TEMPLATE_PATH,
+        SIMPLE_DATA_PATH
+      );
 
-    test('should handle PDF generation errors gracefully', async () => {
-      const TEMPLATE_PATH = path.join(TEST_FILES_DIR, 'invalid.md');
-      await fs.writeFile(TEMPLATE_PATH, '# {{title}}');
-
-      const DATA_PATH = path.join(TEST_FILES_DIR, 'meta.csv');
-      await fs.writeFile(DATA_PATH, 'key,value\ntitle,Invalid Document');
-
-      await expect(
-        testUtils.pdf.queuePdfGeneration(async () => {
-          return await processMarkdownTemplate(TEMPLATE_PATH, DATA_PATH);
-        })
-      ).rejects.toThrow();
-    });
-
-    afterEach(async () => {
-      await testUtils.pdf.cleanupPdfFiles(TEST_OUTPUT_DIR);
+      // Assert
+      expect(result.content).toMatch(
+        /<a href="https:\/\/example\.com">Click Here<\/a>/
+      );
     });
   });
 
@@ -453,7 +371,10 @@ describe.skip('Template Processor', () => {
     test('should handle non-existent template file', async () => {
       // Arrange
       const nonExistentPath = path.join(TEST_FILES_DIR, 'non-existent.md');
-      const dataPath = path.join(TEST_FILES_DIR, 'simple.csv');
+      const dataPath = SIMPLE_DATA_PATH;
+
+      // Mock file access to fail
+      fs.access.mockRejectedValue(new Error('File not found'));
 
       // Act & Assert
       await expect(
@@ -463,8 +384,16 @@ describe.skip('Template Processor', () => {
 
     test('should handle non-existent data file', async () => {
       // Arrange
-      const templatePath = path.join(TEST_FILES_DIR, 'simple.md');
+      const templatePath = SIMPLE_TEMPLATE_PATH;
       const nonExistentPath = path.join(TEST_FILES_DIR, 'non-existent.csv');
+
+      // Mock file access to fail for data file only
+      fs.access.mockImplementation((filePath) => {
+        if (filePath.includes('non-existent.csv')) {
+          return Promise.reject(new Error('File not found'));
+        }
+        return Promise.resolve();
+      });
 
       // Act & Assert
       await expect(
@@ -474,14 +403,20 @@ describe.skip('Template Processor', () => {
 
     test('should handle invalid CSV data', async () => {
       // Arrange
-      const templatePath = path.join(TEST_FILES_DIR, 'simple.md');
-      const invalidDataPath = path.join(TEST_FILES_DIR, 'invalid.csv');
-      await fs.writeFile(invalidDataPath, 'invalid,csv,format\nno,key,column');
+      fs.readFile.mockImplementation((filePath) => {
+        if (filePath.includes('simple.md')) {
+          return Promise.resolve('Hello {{name}}!');
+        }
+        if (filePath.includes('simple.csv')) {
+          return Promise.resolve('invalid,csv,data\nwithout,proper,structure');
+        }
+        return Promise.reject(new Error('File not found'));
+      });
 
       // Act & Assert
       await expect(
-        processMarkdownTemplate(templatePath, invalidDataPath)
-      ).rejects.toThrow();
+        processMarkdownTemplate(SIMPLE_TEMPLATE_PATH, SIMPLE_DATA_PATH)
+      ).rejects.toThrow('Invalid CSV structure');
     });
   });
 });

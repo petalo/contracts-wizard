@@ -122,4 +122,7 @@ module.exports = {
   // Environment setup
   setupFiles: ['<rootDir>/tests/config/env-setup.js'],
   setupFilesAfterEnv: ['<rootDir>/tests/config/test-setup.js'],
+
+  // Module paths
+  modulePaths: ['<rootDir>/src', '<rootDir>/tests'],
 };

@@ -330,6 +330,15 @@ Compares two values for equality with type coercion:
 - Boolean values and their string representations
 - Proper handling of null/undefined values with configurable error messages
 
+Example:
+```handlebars
+{{#if (eq user.age 18)}}
+  User is 18 years old
+{{else}}
+  {{! Will show configured error message if age is missing }}
+{{/if}}
+```
+
 #### Object Lookup
 
 ```handlebars
@@ -620,7 +629,7 @@ Address: {{user.address.street}}, {{user.address.city}}
    {{/with}}
    ```
 
-## �� Configuration
+## 🛠 Configuration
 
 ### Project Structure
 
@@ -830,4 +839,4 @@ Enable debug mode for detailed logging:
 DEBUG=true contracts-wizard generate -t template.md
 ```
 
-Check logs at `logs/logging-latest.log` for detailed error information.
+Check logs at `logs/latest.log` for detailed error information.

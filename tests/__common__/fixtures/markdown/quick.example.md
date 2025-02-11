@@ -30,22 +30,9 @@ Demonstration of handling nested arrays with missing values at different levels
 
 <div class="explanation">Group {{@index}}: some children might be missing</div>
 
-{{#with child}}
-
-- Child 0: {{lookup this "0"}}
-- Child 1: {{lookup this "1"}}
-- Child 2: {{lookup this "2"}}
-{{/with}}
-
-### Dynamic Array Test
-
-<div class="explanation">Testing dynamic array iteration without hardcoded indices</div>
-
-{{#with child}}
-{{#each this}}
-Child {{@index}}: {{this}}
+{{#each child}}
+- Child {{@index}}: {{this}}
 {{/each}}
-{{/with}}
 
 {{/each}}
 

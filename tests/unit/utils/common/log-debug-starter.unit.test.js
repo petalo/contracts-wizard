@@ -2,7 +2,7 @@
  * @fileoverview Unit tests for debug logging initialization
  */
 
-const { initializeDebugger } = require('@/utils/common/logDebugStarter');
+const { initializeDebugger } = require('@/utils/common/log-debug-starter');
 
 describe.skip('Log Debug Starter', () => {
   let originalEnv;

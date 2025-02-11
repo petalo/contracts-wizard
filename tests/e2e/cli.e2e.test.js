@@ -18,7 +18,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { exec } = require('child_process');
 const util = require('util');
-const testUtils = require('../utils/testUtils');
+const testUtils = require('../__common__/helpers/test-utils');
 
 const execAsync = util.promisify(exec);
 

@@ -45,11 +45,11 @@ const {
   now,
   eq,
   lookup,
-  formatNumber,
+  currency,
   emptyValue,
   objectToArray,
   HELPER_CONFIG,
-} = require('../../../src/utils/templateProcessor/core/handlebarHelpers');
+} = require('../../../src/utils/template-processor/handlebars/helpers');
 const { LOCALE_CONFIG } = require('../../../src/config/locale');
 
 // Mock logger for testing
@@ -211,7 +211,7 @@ afterAll(() => {
   });
 });
 
-describe.skip('Handlebars Date Helpers', () => {
+describe('Handlebars Date Helpers', () => {
   describe('formatDate helper', () => {
     it('should format date with Spanish locale', () => {
       const date = '2024-01-29';
@@ -336,7 +336,7 @@ describe.skip('Handlebars Date Helpers', () => {
   });
 });
 
-describe.skip('Handlebars Value Comparison Helpers', () => {
+describe('Handlebars Value Comparison Helpers', () => {
   describe('eq helper', () => {
     it('should compare numbers correctly', () => {
       expect(eq(5, 5)).toBe(true);
@@ -383,7 +383,7 @@ describe.skip('Handlebars Value Comparison Helpers', () => {
   });
 });
 
-describe.skip('Handlebars Object Helpers', () => {
+describe('Handlebars Object Helpers', () => {
   describe('lookup helper', () => {
     it('should handle direct property access', () => {
       const obj = {
@@ -455,7 +455,7 @@ describe.skip('Handlebars Object Helpers', () => {
   });
 });
 
-describe.skip('Handlebars Number Formatting', () => {
+describe('Handlebars Number Formatting', () => {
   describe('formatNumber helper', () => {
     it('should format numbers according to Spanish locale', () => {
       expect(formatNumber(1234.56)).toBe('1.234,56');
@@ -529,7 +529,7 @@ describe.skip('Handlebars Number Formatting', () => {
   });
 });
 
-describe.skip('Template Integration Tests', () => {
+describe('Template Integration Tests', () => {
   it('should handle date chain operations', () => {
     const template = handlebars.compile(
       '{{formatDate (addYears now 1) "D [de] MMMM [de] YYYY"}}'

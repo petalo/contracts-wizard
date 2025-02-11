@@ -34,7 +34,7 @@
 const handlebars = require('handlebars');
 const { logger } = require('@/utils/common/logger');
 const { HANDLEBARS_CONFIG } = require('@/config/handlebars-config');
-const { extractValue } = require('../value/extract');
+const { extractValue } = require('../value/extract-handlebars-values');
 
 /**
  * Performs logical AND operation on all arguments.

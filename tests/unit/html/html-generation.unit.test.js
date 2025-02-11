@@ -17,7 +17,7 @@ const {
   validateHtml,
   validateHtmlOptions,
   createHtmlFromMarkdown,
-} = require('../../../src/utils/templateProcessor/generators/html');
+} = require('../../../src/utils/template-processor/generators/html');
 const resourceManager = require('../../../tests/__common__/helpers/resource-manager');
 
 // Use environment variables for test directories
