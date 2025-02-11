@@ -4,7 +4,7 @@
 
 const { VERSION } = require('../../../src/config/version');
 
-describe.skip('Version Configuration', () => {
+describe('Version Configuration', () => {
   it('should have valid version information', () => {
     expect(VERSION).toBeDefined();
     expect(VERSION.current).toMatch(/^\d+\.\d+\.\d+$/);
