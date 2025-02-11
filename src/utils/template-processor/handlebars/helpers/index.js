@@ -24,7 +24,6 @@
 const handlebars = require('handlebars');
 const helpers = require('handlebars-helpers')();
 const { extractValue } = require('./value/extract-handlebars-values');
-const moment = require('moment-timezone');
 const { logger } = require('@/utils/common/logger');
 const { HANDLEBARS_CONFIG } = require('@/config/handlebars-config');
 
@@ -32,6 +31,12 @@ const { HANDLEBARS_CONFIG } = require('@/config/handlebars-config');
 const { formatEmail } = require('./value/format-email');
 const { and } = require('./logic/and');
 const { not } = require('./logic/not');
+// prettier-ignore
+const {
+  formatDate,
+  addYears,
+  now,
+} = require('./date');
 
 // Register eq helper with proper type handling
 handlebars.registerHelper('eq', function (value1, value2, options) {
@@ -149,136 +154,6 @@ handlebars.registerHelper('if', function (value, options) {
   return isFalsy ? options.inverse(this) : options.fn(this);
 });
 
-// Register date helpers
-handlebars.registerHelper('formatDate', function (date, format, options) {
-  logger.debug('formatDate helper called:', {
-    date,
-    format,
-    hasOptions: !!options,
-  });
-
-  try {
-    if (!date) {
-      return new handlebars.SafeString(
-        `<span class="missing-value" data-field="date">[[Invalid date]]</span>`
-      );
-    }
-
-    // Extract date value from HTML if needed
-    let dateValue = extractValue(date);
-    let formatValue = extractValue(format);
-
-    // Check if format is a predefined format
-    if (HANDLEBARS_CONFIG.dateFormats[formatValue]) {
-      formatValue = HANDLEBARS_CONFIG.dateFormats[formatValue];
-    }
-
-    const momentDate = moment(dateValue);
-    if (!momentDate.isValid()) {
-      return new handlebars.SafeString(
-        `<span class="missing-value" data-field="date">[[Invalid date]]</span>`
-      );
-    }
-
-    const formattedDate = momentDate.format(formatValue || 'DD/MM/YYYY');
-    return new handlebars.SafeString(
-      `<span class="imported-value" data-field="date">${formattedDate}</span>`
-    );
-  } catch (error) {
-    logger.error('Error in formatDate helper:', error);
-    return new handlebars.SafeString(
-      `<span class="missing-value" data-field="date">[[Error formatting date]]</span>`
-    );
-  }
-});
-
-handlebars.registerHelper('now', function (format) {
-  logger.debug('now helper called:', { format });
-  try {
-    const formatValue = extractValue(format);
-    const currentDate = moment();
-    return new handlebars.SafeString(
-      `<span class="imported-value" data-field="date">${currentDate.format(formatValue || 'DD/MM/YYYY')}</span>`
-    );
-  } catch (error) {
-    logger.error('Error in now helper:', error);
-    return new handlebars.SafeString(
-      `<span class="missing-value" data-field="date">[[Error getting current date]]</span>`
-    );
-  }
-});
-
-handlebars.registerHelper('addYears', function (date, years) {
-  logger.debug('addYears helper called:', {
-    date,
-    years,
-  });
-  try {
-    if (!date || years === undefined) {
-      return new handlebars.SafeString(
-        `<span class="missing-value" data-field="date">[[Invalid date]]</span>`
-      );
-    }
-    const dateValue = extractValue(date);
-    const yearsValue = extractValue(years);
-    const resultDate = moment(dateValue).add(yearsValue, 'years');
-    if (!resultDate.isValid()) {
-      return new handlebars.SafeString(
-        `<span class="missing-value" data-field="date">[[Invalid date]]</span>`
-      );
-    }
-    return new handlebars.SafeString(
-      `<span class="imported-value" data-field="date">${resultDate.format('D [de] MMMM [de] YYYY')}</span>`
-    );
-  } catch (error) {
-    logger.error('Error in addYears helper:', {
-      error,
-      date,
-      years,
-    });
-    return new handlebars.SafeString(
-      `<span class="missing-value" data-field="date">[[Error adding years to date]]</span>`
-    );
-  }
-});
-
-// Register currency helper
-handlebars.registerHelper('currency', function (value, currency, options) {
-  logger.debug('currency helper called:', {
-    value,
-    currency,
-    hasOptions: !!options,
-  });
-
-  try {
-    const numValue = Number(extractValue(value));
-    const currencyCode = extractValue(currency);
-
-    if (isNaN(numValue)) {
-      return new handlebars.SafeString(
-        `<span class="missing-value" data-field="currency">[[Invalid number]]</span>`
-      );
-    }
-
-    const formatter = new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: currencyCode,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-
-    const formatted = formatter.format(numValue);
-    return new handlebars.SafeString(
-      `<span class="imported-value" data-field="currency">${formatted}</span>`
-    );
-  } catch (error) {
-    logger.error('Error in currency helper:', error);
-    return new handlebars.SafeString(
-      `<span class="missing-value" data-field="currency">[[Error formatting currency]]</span>`
-    );
-  }
-});
-
 // Register lookup helper
 handlebars.registerHelper('lookup', function (obj, field, options) {
   logger.debug('lookup helper called:', {
@@ -346,11 +221,7 @@ handlebars.registerHelper('not', not);
 // Register other helpers from handlebars-helpers with logging
 logger.debug('Registering other handlebars-helpers');
 Object.entries(helpers).forEach(([name, helper]) => {
-  if (
-    !['if', 'eq', 'formatDate', 'now', 'number', 'lookup', 'currency'].includes(
-      name
-    )
-  ) {
+  if (!['if', 'eq', 'formatDate', 'now', 'number', 'lookup'].includes(name)) {
     try {
       handlebars.registerHelper(name, helper);
       logger.debug('Registered helper:', { name });
@@ -363,6 +234,77 @@ Object.entries(helpers).forEach(([name, helper]) => {
   }
 });
 
+// Register currency helper explicitly
+handlebars.registerHelper('currency', function (value, currency, options) {
+  logger.debug('currency helper called:', {
+    value,
+    currency,
+    options,
+    context: '[template]',
+    operation: 'format-currency',
+  });
+
+  try {
+    if (!value && value !== 0) {
+      return new handlebars.SafeString(
+        `<span class="missing-value" data-field="currency">[[currency]]</span>`
+      );
+    }
+
+    // Extract the actual value
+    let extractedValue = extractValue(value);
+    let extractedCurrency = extractValue(currency);
+
+    // Handle nested currency values
+    if (typeof extractedValue === 'object' && extractedValue !== null) {
+      if (extractedCurrency && extractedValue[extractedCurrency]) {
+        extractedValue = extractedValue[extractedCurrency];
+      } else if (extractedValue.decimal) {
+        extractedValue = extractedValue.decimal;
+      } else if (extractedValue.EUR) {
+        extractedValue = extractedValue.EUR;
+        extractedCurrency = 'EUR';
+      } else if (extractedValue.USD) {
+        extractedValue = extractedValue.USD;
+        extractedCurrency = 'USD';
+      } else {
+        extractedValue = Object.values(extractedValue)[0];
+      }
+    }
+
+    const number = Number(extractedValue);
+    if (isNaN(number)) {
+      return new handlebars.SafeString(
+        `<span class="missing-value" data-field="currency">[[Invalid number]]</span>`
+      );
+    }
+
+    const formatter = new Intl.NumberFormat(
+      HANDLEBARS_CONFIG.numberFormat.locale,
+      {
+        style: 'currency',
+        currency: extractedCurrency || HANDLEBARS_CONFIG.numberFormat.currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+        useGrouping: true,
+      }
+    );
+
+    return new handlebars.SafeString(
+      `<span class="imported-value" data-field="currency">${formatter.format(number)}</span>`
+    );
+  } catch (error) {
+    logger.error('Error in currency helper:', {
+      error: error.message,
+      context: '[template]',
+      operation: 'format-currency',
+    });
+    return new handlebars.SafeString(
+      `<span class="missing-value" data-field="currency">[[Error formatting currency]]</span>`
+    );
+  }
+});
+
 // Register custom helpers
 logger.debug('Registering custom helpers');
 handlebars.registerHelper({
@@ -370,6 +312,9 @@ handlebars.registerHelper({
   and,
   not,
   formatNumber: formatNumberHelper,
+  formatDate,
+  addYears,
+  now,
 });
 
 /**
@@ -432,9 +377,9 @@ module.exports = {
   formatNumber: formatNumberHelper,
   // Re-export handlebars-helpers for convenience
   helpers,
-  formatDate: handlebars.helpers.formatDate,
-  addYears: handlebars.helpers.addYears,
-  now: handlebars.helpers.now,
+  formatDate,
+  addYears,
+  now,
   eq: handlebars.helpers.eq,
   lookup: handlebars.helpers.lookup,
   currency: handlebars.helpers.currency,

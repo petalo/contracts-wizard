@@ -63,6 +63,7 @@ const HANDLEBARS_CONFIG = {
   dateFormats: {
     DEFAULT: 'D [de] MMMM [de] YYYY',
     ISO: 'YYYY-MM-DD',
+    ISO8601: 'YYYY-MM-DD HH:mm:ss',
     FULL: 'D [de] MMMM [de] YYYY',
     SHORT: 'DD/MM/YYYY',
     TIME: 'HH:mm:ss',
