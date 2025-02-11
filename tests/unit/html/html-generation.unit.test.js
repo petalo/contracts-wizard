@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for HTML generation from markdown content
+ * @file Unit tests for HTML generation from markdown content
  *
  * Tests cover:
  * 1. Basic markdown to HTML conversion
@@ -26,7 +26,7 @@ const TEST_CSS_DIR = process.env.DIR_CSS || 'tests/__common__/fixtures/css';
 const TEST_FIXTURES_PATH =
   process.env.TEST_FIXTURES_PATH || 'tests/__common__/fixtures';
 
-describe.skip('HTML Generation Unit Tests', () => {
+describe('HTML Generation Unit Tests', () => {
   const OUTPUT_PATH = path.resolve(process.cwd(), TEST_OUTPUT_DIR);
   const CSS_PATH = path.resolve(process.cwd(), TEST_CSS_DIR);
 
@@ -455,8 +455,4 @@ describe.skip('HTML Generation Unit Tests', () => {
       expect(() => validateHtmlOptions(null)).toThrow('Invalid options object');
     });
   });
-});
-
-describe.skip('HTML Generation', () => {
-  // ... existing code ...
 });
