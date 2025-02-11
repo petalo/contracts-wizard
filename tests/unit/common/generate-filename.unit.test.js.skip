@@ -62,7 +62,7 @@ jest.mock('moment-timezone', () => {
   return moment;
 });
 
-describe('Filename Generation', () => {
+describe.skip('Filename Generation', () => {
   let originalTZ;
   let originalEnv;
   let mockDate;

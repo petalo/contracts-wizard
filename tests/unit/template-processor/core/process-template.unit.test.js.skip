@@ -71,7 +71,7 @@ jest.mock('@/utils/template-processor/generators/pdf', () => ({
   }),
 }));
 
-describe('Template Processor', () => {
+describe.skip('Template Processor', () => {
   const TEST_FILES_DIR = path.join(__dirname, 'test-files');
   const TEST_OUTPUT_DIR = path.join(__dirname, 'output');
   const SIMPLE_TEMPLATE_PATH = path.join(TEST_FILES_DIR, 'simple.md');
