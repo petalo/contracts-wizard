@@ -5,6 +5,7 @@ body {
   color: #333;
   margin: 0 auto;
   padding: 12px;
+  background-color: #fff;
 }
 
 /* Explanatory comments */
@@ -136,6 +137,10 @@ blockquote {
   border-radius: 2px;
   border: 1px dashed #ffeeba;
   font-size: 0.85em;
+  display: inline;
+  line-height: 1.2;
+  vertical-align: baseline;
+  white-space: normal;
 }
 
 /* Imported values highlight */
@@ -146,7 +151,18 @@ blockquote {
   background-color: #f8f9fc;
   color: #004085;
   font-size: 0.85em;
-  display: inline-block;
+  display: inline;
+  line-height: 1.2;
+  vertical-align: baseline;
+  white-space: normal;
+}
+
+/* Nested elements in imported values */
+.imported-value a {
+  display: inline;
+  white-space: normal;
+  line-height: inherit;
+  vertical-align: baseline;
 }
 
 @media print {

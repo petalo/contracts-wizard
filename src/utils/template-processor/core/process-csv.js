@@ -1,28 +1,30 @@
 /**
  * @file CSV Data Processing System
  *
- * @fileoverview Provides a streamlined CSV processing system using modern libraries:
- * - PapaParse for CSV parsing
- * - Lodash for data manipulation
- * - Joi for validation and type conversion
+ * Processes CSV files into structured data objects.
+ * Handles validation, type conversion, and template field initialization.
+ * Supports nested objects, arrays, and mixed data types.
  *
  * Functions:
- * - processCsvData: Process CSV data and validate against template fields
- * - validateCsvStructure: Validate CSV file structure
- * - processDataLines: Transform CSV data into structured object
+ * - processCsvData: Main entry point for CSV processing
+ * - validateCsvStructure: Validates CSV file structure
+ * - processDataLines: Converts CSV lines to structured object
+ * - convertValueType: Type conversion for CSV values
+ * - initializeDataFromFields: Template field initialization
  *
  * Flow:
- * 1. CSV file reading and validation
- * 2. Data parsing with PapaParse
- * 3. Structure transformation with Lodash
- * 4. Type validation with Joi
- * 5. Template field validation
+ * 1. Validate CSV structure
+ * 2. Parse CSV data
+ * 3. Convert values to appropriate types
+ * 4. Initialize template fields
+ * 5. Return processed data object
  *
  * Error Handling:
  * - Invalid CSV structure
  * - File access errors
  * - Type conversion errors
  * - Missing required fields
+ * - Template field validation
  *
  * @module @/utils/template-processor/core/processCsv
  * @requires papaparse - CSV parsing library
@@ -51,24 +53,15 @@ const csvStructureSchema = Joi.array()
     Joi.object({
       key: Joi.string().required(),
       value: Joi.string().allow('').optional(),
+      comment: Joi.string().allow('').optional(),
     })
   )
   .min(1);
 
 /**
- * Schema for validating individual values
- * Handles type conversion for common data types
- */
-const valueSchema = Joi.alternatives().try(
-  Joi.number(),
-  Joi.boolean(),
-  Joi.string().allow('')
-);
-
-/**
  * Validates CSV file structure
  *
- * @param {Array<Object>} parsedData - Parsed CSV data
+ * @param {Array<{key: string, value: string, comment?: string}>} parsedData - Parsed CSV data
  * @returns {boolean} True if structure is valid
  * @throws {AppError} On validation failure
  */
@@ -82,7 +75,36 @@ function validateCsvStructure(parsedData) {
   });
 
   try {
-    const { error } = csvStructureSchema.validate(parsedData);
+    // Transform data to match schema format if needed
+    const transformedData = parsedData.map((row) => {
+      // If row is already in correct format, return as is
+      if (row.key !== undefined) {
+        return {
+          key: row.key,
+          value: row.value || '',
+          comment: row.comment || '',
+        };
+      }
+
+      // Extract key and value from row object
+      const entries = Object.entries(row);
+      if (entries.length === 0) {
+        return {
+          key: '',
+          value: '',
+          comment: '',
+        };
+      }
+
+      // Handle case where first column is the key
+      return {
+        key: entries[0][0],
+        value: entries[0][1] || '',
+        comment: entries[2] ? entries[2][1] : '',
+      };
+    });
+
+    const { error } = csvStructureSchema.validate(transformedData);
     if (error) {
       logger.warn('Invalid CSV structure', {
         context: '[validation]',
@@ -90,6 +112,7 @@ function validateCsvStructure(parsedData) {
         error: error.message,
         details: error.details,
         type: 'structure-validation',
+        data: transformedData,
       });
       return false;
     }
@@ -97,6 +120,7 @@ function validateCsvStructure(parsedData) {
       context: '[validation]',
       filename: 'process-csv.js',
       type: 'structure-validation',
+      data: transformedData,
     });
     return true;
   } catch (error) {
@@ -112,11 +136,10 @@ function validateCsvStructure(parsedData) {
 }
 
 /**
- * Converts string values to appropriate types
+ * Convert string value to appropriate type
  *
  * @param {string} value - Value to convert
  * @returns {*} Converted value
-
  */
 function convertValueType(value) {
   logger.debug('Converting value type', {
@@ -127,36 +150,8 @@ function convertValueType(value) {
     operation: 'type-conversion',
   });
 
-
-/**
- * Process CSV data and validate against template fields
- *
- * Creates a structured object from CSV data while ensuring all template fields exist.
- * Maintains all CSV fields even if not in template fields and initializes missing template fields.
- * Handles nested objects, arrays with gaps, and mixed data types.
- *
- * @async
- * @function processCsvData
- * @param {string} csvPath - Path to CSV file
- * @param {string[]} templateFields - Array of fields from template
- * @returns {Record<string,*>} Processed data object with all fields
- * @throws {AppError} If CSV is invalid or processing fails
- * @example
- * // Basic usage with simple fields
- * const data = await processCsvData('data.csv', ['name', 'age']);
- * // returns: { name: 'John', age: '30' }
- *
- * // Complex nested structure
- * const data = await processCsvData('data.csv', ['user.name', 'user.addresses.0.city']);
- * // returns: { user: { name: 'John', addresses: [{ city: 'NY' }] } }
- *
- * // Array with gaps
- * const data = await processCsvData('data.csv', ['items.0', 'items.2']);
- * // returns: { items: ['first', '', 'third'] }
- */
-async function processCsvData(csvPath, templateFields = []) {
   try {
-    // Si el valor está vacío, mantenerlo como string vacío
+    // If value is empty or undefined/null, return empty string
     if (value === '' || value === undefined || value === null) {
       logger.debug('Empty value detected', {
         context: '[data]',
@@ -167,7 +162,7 @@ async function processCsvData(csvPath, templateFields = []) {
       return '';
     }
 
-    // Si el valor contiene #, lo mantenemos como string
+    // If value contains #, keep as string
     if (typeof value === 'string' && value.includes('#')) {
       logger.debug('Comment detected in value', {
         context: '[data]',
@@ -179,8 +174,12 @@ async function processCsvData(csvPath, templateFields = []) {
       return value;
     }
 
-    // Intentar convertir a número primero
-    if (typeof value === 'string' && !isNaN(value) && value.trim() !== '') {
+    // If value is a "pure" numeric string (no spaces or other characters)
+    if (
+      typeof value === 'string' &&
+      /^-?\d+(\.\d+)?$/.test(value.trim()) &&
+      !value.includes(' ')
+    ) {
       const num = Number(value);
       if (Number.isFinite(num)) {
         logger.debug('Value converted to number', {
@@ -195,7 +194,7 @@ async function processCsvData(csvPath, templateFields = []) {
       }
     }
 
-    // Intentar convertir a booleano
+    // If value is a "pure" boolean (exactly 'true' or 'false')
     if (value === 'true' || value === 'false') {
       const bool = value === 'true';
       logger.debug('Value converted to boolean', {
@@ -209,7 +208,7 @@ async function processCsvData(csvPath, templateFields = []) {
       return bool;
     }
 
-    // Si no se pudo convertir, mantener como string
+    // For any other case, keep as string
     logger.debug('Value kept as string', {
       context: '[data]',
       filename: 'process-csv.js',
@@ -232,67 +231,123 @@ async function processCsvData(csvPath, templateFields = []) {
 }
 
 /**
- * Process CSV data into structured object
+ * Process data lines from CSV into a structured object
  *
- * @param {Array<Object>} parsedData - Parsed CSV data
- * @returns {Object} Processed data object
-
+ * @param {Array<{key: string, value: string}>} lines - Array of key-value pairs from CSV
+ * @returns {object} - Processed data structure
  */
-function processDataLines(parsedData) {
-  logger.debug('Processing CSV data lines', {
+function processDataLines(lines) {
+  const result = {};
+  const paths = new Set();
+
+  logger.debug('Processing CSV lines:', {
     context: '[data]',
     filename: 'process-csv.js',
-    rowCount: parsedData.length,
-    firstRow: parsedData[0],
-    type: 'csv-processing',
+    lines: JSON.stringify(lines),
+    type: 'process-start',
   });
 
-  const result = parsedData.reduce((result, { key, value }) => {
-    if (!key) {
-      logger.debug('Empty key found', {
-        context: '[data]',
-        filename: 'process-csv.js',
-        value,
-        type: 'empty-key',
-        operation: 'data-processing',
-      });
-      return result;
+  // First pass: collect all paths
+  lines.forEach((line) => {
+    if (line.key) {
+      paths.add(line.key);
     }
+  });
 
-    logger.debug('Processing data line', {
-      context: '[data]',
-      filename: 'process-csv.js',
-      key,
-      value,
-      type: 'line-processing',
-      operation: 'data-processing',
-    });
-
-    // Convert the value to appropriate type
-    const processedValue = convertValueType(value);
-
-    // Handle array notation in keys
-    const normalizedKey = key.replace(/\[(\d+)\]/g, '.$1');
-    logger.debug('Key normalized', {
-      context: '[data]',
-      filename: 'process-csv.js',
-      originalKey: key,
-      normalizedKey,
-      processedValue,
-      type: 'key-normalization',
-      operation: 'data-processing',
-    });
-
-    _.set(result, normalizedKey, processedValue);
-    return result;
-  }, {});
-
-  logger.debug('Data processing complete', {
+  logger.debug('Collected paths:', {
     context: '[data]',
     filename: 'process-csv.js',
-    resultKeys: Object.keys(result),
-    resultStructure: JSON.stringify(result),
-    type: 'processing-complete',
+    paths: Array.from(paths),
+    type: 'process-paths',
+  });
+
+  // Second pass: process each line
+  lines.forEach((line) => {
+    if (!line.key) return;
+
+    const parts = line.key.split('.');
+    let current = result;
+    const lastIndex = parts.length - 1;
+
+    // Process each part of the path
+    parts.forEach((part, index) => {
+      // If this is a numeric index, ensure parent is an array
+      if (/^\d+$/.test(part)) {
+        const arrayIndex = parseInt(part, 10);
+        if (!Array.isArray(current)) {
+          current = [];
+        }
+        // Ensure the array has enough elements
+        while (current.length <= arrayIndex) {
+          current.push({});
+        }
+      }
+
+      // If this is the last part, set the value
+      if (index === lastIndex) {
+        current[part] = line.value;
+      }
+      // Otherwise, create nested object/array if needed
+      else {
+        if (!current[part]) {
+          // If next part is numeric, initialize as array
+          const nextPart = parts[index + 1];
+          current[part] = /^\d+$/.test(nextPart) ? [] : {};
+        }
+        current = current[part];
+      }
+    });
+
+    logger.debug('Processed line:', {
+      context: '[data]',
+      filename: 'process-csv.js',
+      key: line.key,
+      value: line.value,
+      currentResult: JSON.stringify(result),
+      type: 'process-line',
+    });
+  });
+
+  // Post-process to handle parent.N.child.M structure
+  if (result.parent) {
+    // First, ensure all parent entries exist
+    const maxParentIndex = Math.max(
+      ...Object.keys(result.parent)
+        .map(Number)
+        .filter((n) => !isNaN(n))
+    );
+    while (result.parent.length <= maxParentIndex) {
+      result.parent.push({});
+    }
+
+    // Then process each parent's child array
+    result.parent.forEach((parent) => {
+      if (!parent.child) {
+        parent.child = [];
+      }
+
+      // Convert object with numeric keys to array
+      const maxChildIndex = Math.max(
+        ...Object.keys(parent.child)
+          .map(Number)
+          .filter((n) => !isNaN(n))
+      );
+      const childArray = new Array(maxChildIndex + 1).fill(undefined);
+
+      // Fill in the values we have
+      Object.entries(parent.child).forEach(([idx, value]) => {
+        childArray[Number(idx)] = value;
+      });
+
+      parent.child = childArray;
+    });
+  }
+
+  logger.debug('Final processed result:', {
+    context: '[data]',
+    filename: 'process-csv.js',
+    result: JSON.stringify(result),
+    type: 'process-complete',
   });
 
   return result;
@@ -301,9 +356,9 @@ function processDataLines(parsedData) {
 /**
  * Initialize data structure with template fields
  *
- * @param {Object} data - Existing data object
+ * @param {object} data - Existing data object
  * @param {Array<string>} templateFields - Template field paths
- * @returns {Object} Initialized data object
+ * @returns {object} Initialized data object
  */
 function initializeDataFromFields(data, templateFields = []) {
   logger.debug('Initializing template fields', {
@@ -343,7 +398,7 @@ function initializeDataFromFields(data, templateFields = []) {
  *
  * @param {string} csvPath - Path to CSV file
  * @param {Array<string>} templateFields - Template field paths
- * @returns {Promise<Object>} Processed data object
+ * @returns {Promise<{ [key: string]: any }>} Processed data object
  * @throws {AppError} If processing fails
  */
 async function processCsvData(csvPath, templateFields = []) {
@@ -376,7 +431,7 @@ async function processCsvData(csvPath, templateFields = []) {
       skipEmptyLines: 'greedy',
       comments: '#',
       delimiter: ',',
-      transformHeader: (h) => h.toLowerCase(),
+      transformHeader: (h) => h.toLowerCase().trim(),
     });
 
     if (errors.length > 0) {
@@ -464,7 +519,6 @@ module.exports = {
   processCsvData,
   validateCsvStructure,
   processDataLines,
-  // Exported for testing
   convertValueType,
   initializeDataFromFields,
 };

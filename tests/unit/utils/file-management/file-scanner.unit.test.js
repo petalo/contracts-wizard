@@ -8,7 +8,7 @@
  * 4. Error handling
  * 5. Edge cases
  *
- * @module tests/unit/utils/fileScanner
+ * @module tests/unit/utils/file-scanner
  * @requires fs
  * @requires path
  */
@@ -18,7 +18,7 @@ const path = require('path');
 const {
   scanFiles,
   validatePath,
-} = require('@/utils/fileManagement/fileScanner');
+} = require('@/utils/file-management/file-scanner');
 
 // Mock fs promises
 jest.mock('fs', () => ({

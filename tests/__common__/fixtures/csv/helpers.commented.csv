@@ -1,0 +1,61 @@
+# Este archivo CSV contiene datos de prueba para validar los helpers de Handlebars
+# Formato: key,value,type donde:
+# - key: nombre de la variable a usar en el template
+# - value: valor a probar (puede estar vacío, ser null, o contener cualquier tipo de dato)
+# - type: tipo de dato (string, number, boolean, array, object, null, undefined)
+#
+# TIPOS DE PRUEBAS:
+# 1. Valores Booleanos:
+#    - true/false explícitos
+#    - valores que deberían evaluarse como truthy/falsy
+#
+# 2. Valores Especiales:
+#    - null
+#    - undefined (valor vacío)
+#    - strings vacíos
+#    - números (incluyendo 0)
+#
+# 3. Estructuras de Datos:
+#    - Arrays con valores mixtos
+#    - Objetos con propiedades anidadas
+#
+# 4. Casos Especiales:
+#    - Strings con espacios
+#    - Caracteres especiales
+#    - Valores con formato específico   
+key,value,comment
+# Pruebas básicas de condiciones
+showBasic,true,boolean
+emptyString,,
+nullValue,null,null
+
+# Pruebas de igualdad con diferentes tipos
+stringTest,hello,string
+numberTest,42,number
+booleanTest,true,boolean
+
+# Pruebas de condiciones anidadas
+outerCondition,true,boolean
+innerCondition,false,boolean
+
+# Pruebas de combinaciones complejas
+complexTest,true,boolean
+complexValue,special,string
+firstValue,first,string
+secondValue,second,string
+
+# Pruebas de arrays y objetos
+arrayTest,[true,false,"",0,null],array
+objectTest.status1,valid,string
+objectTest.status2,invalid,string
+
+# Pruebas de casos límite
+undefined,,undefined
+zero,0,number
+trueBool,true,boolean
+falseBool,false,boolean
+
+# Pruebas de caracteres especiales y espacios
+specialChar,!@#$%^&*(),string
+spacedValue,true,boolean
+spacedString,  trimmed,string

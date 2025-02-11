@@ -2,7 +2,7 @@
  * @fileoverview Unit tests for PDF generation
  */
 
-const { generatePDF } = require('@/utils/templateProcessor/generators/pdf');
+const { generatePDF } = require('@/utils/template-processor/generators/pdf');
 const puppeteer = require('puppeteer');
 const fs = require('fs').promises;
 

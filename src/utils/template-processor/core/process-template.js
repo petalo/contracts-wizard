@@ -121,22 +121,14 @@ function createMissingValueSpan(path) {
 }
 
 /**
- * Creates a SafeString for a non-empty value, wrapping it in a span.
- * @param {string} value - The value to display.
- * @param {string} path - The complete field path.
- * @returns {handlebars.SafeString} The formatted value.
+ * Create an HTML span for an imported value
+ *
+ * @param {string} value - The value to wrap
+ * @param {string} path - The path of the value in the data structure
+ * @returns {string} HTML span with the value
  */
 function createImportedValueSpan(value, path) {
-  // Handle email values
-  if (typeof value === 'string' && value.includes('@') && value.includes('.')) {
-    return new handlebars.SafeString(
-      `<span class="imported-value" data-field="${path}"><a href="mailto:${handlebars.escapeExpression(value)}">${handlebars.escapeExpression(value)}</a></span>`
-    );
-  }
-
-  return new handlebars.SafeString(
-    `<span class="imported-value" data-field="${path}">${handlebars.escapeExpression(value)}</span>`
-  );
+  return `<span class="imported-value" data-field="${path}">${value}</span>`;
 }
 
 // Configure undefined variables to use helperMissing
@@ -323,32 +315,39 @@ function processEmptyValues(value, path) {
     isNull: value === null,
     isUndefined: value === undefined,
     isEmpty: value === '',
-    isEmptyString: typeof value === 'string' && value.trim() === '',
+    isEmptyString: typeof value === 'string' && value === '',
     actualValue: value,
     isObject: typeof value === 'object' && value !== null,
     isArray: Array.isArray(value),
+    valueLength: value ? String(value).length : 0,
+    valueSpaces:
+      typeof value === 'string' ? value.match(/\s/g)?.length || 0 : 0,
+    valueEncoded: value ? encodeURIComponent(String(value)) : '',
+    valueCharCodes: value
+      ? Array.from(String(value)).map((c) => c.charCodeAt(0))
+      : [],
   });
 
-  // If the value is null, undefined or an empty string (after trimming)
+  // If the value is null, undefined, "null" string, or an empty object
   if (
     value === null ||
     value === undefined ||
-    value === '' ||
-    (typeof value === 'string' && value.trim() === '')
+    value === 'null' ||
+    (typeof value === 'object' &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === 0)
   ) {
     const placeholder = createMissingValueSpan(path || 'value');
-    logger.debug('Empty value found - creating placeholder:', {
+    logger.debug('Empty/null value found - creating placeholder:', {
       path,
       originalValue: value,
       originalType: typeof value,
       reason:
-        value === ''
-          ? 'empty string'
-          : value === undefined
-            ? 'undefined'
-            : value === null
-              ? 'null'
-              : 'empty trimmed string',
+        value === undefined
+          ? 'undefined'
+          : value === null
+            ? 'null'
+            : 'empty_object',
       generatedHtml: placeholder.toString(),
     });
     return new handlebars.SafeString(placeholder);
@@ -359,31 +358,69 @@ function processEmptyValues(value, path) {
     logger.debug('Processing array:', {
       path,
       length: value.length,
-      indices: Array.from({ length: value.length }, (_, i) => i),
+      values: value,
     });
-
-    return value.map((item, index) =>
-      processEmptyValues(item, path ? `${path}.${index}` : String(index))
-    );
+    // Create a new array with the same length and fill empty slots
+    return Array.from({ length: value.length }, (_, index) => {
+      const item = value[index];
+      // If the slot is empty (undefined or empty object), it will be processed as a missing value
+      return processEmptyValues(item, `${path}[${index}]`);
+    });
   }
 
-  // If it's an object, process each property
-  if (typeof value === 'object') {
+  // If it's an object (but not a SafeString), process each property recursively
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    !(value instanceof handlebars.SafeString)
+  ) {
     logger.debug('Processing object:', {
       path,
       keys: Object.keys(value),
     });
-
-    const result = {};
-    Object.keys(value).forEach((key) => {
-      const nestedPath = path ? `${path}.${key}` : key;
-      result[key] = processEmptyValues(value[key], nestedPath);
-    });
-    return result;
+    const processed = {};
+    for (const [key, val] of Object.entries(value)) {
+      processed[key] = processEmptyValues(val, path ? `${path}.${key}` : key);
+    }
+    return processed;
   }
 
-  // If it's a non-empty value, wrap it with the imported-value span
-  const wrappedValue = createImportedValueSpan(value, path || 'value');
+  // For strings, preserve all whitespace
+  if (typeof value === 'string') {
+    // If it's an empty string, return a missing value span
+    if (value === '') {
+      const placeholder = createMissingValueSpan(path || 'value');
+      logger.debug('Empty string found - creating placeholder:', {
+        path,
+        generatedHtml: placeholder.toString(),
+      });
+      return new handlebars.SafeString(placeholder);
+    }
+
+    // For non-empty strings, wrap in imported value span preserving spaces
+    const escapedValue = handlebars.escapeExpression(value);
+    const wrappedValue = createImportedValueSpan(escapedValue, path || 'value');
+    logger.debug('String value processed:', {
+      path,
+      originalValue: value,
+      escapedValue,
+      wrappedValue: wrappedValue.toString(),
+    });
+    return new handlebars.SafeString(wrappedValue);
+  }
+
+  // For other types (numbers, booleans), convert to string and wrap
+  const stringValue = String(value);
+  const escapedValue = handlebars.escapeExpression(stringValue);
+  const wrappedValue = createImportedValueSpan(escapedValue, path || 'value');
+  logger.debug('Non-string value processed:', {
+    path,
+    originalValue: value,
+    originalType: typeof value,
+    stringValue,
+    escapedValue,
+    wrappedValue: wrappedValue.toString(),
+  });
   return new handlebars.SafeString(wrappedValue);
 }
 
@@ -549,27 +586,41 @@ async function processDataFile(dataPath, templateFields) {
       templateFieldCount: templateFields?.length,
     });
 
-    // Crear estructura base con campos del template
-    const baseData = {};
-    if (templateFields) {
-      templateFields.forEach((field) => {
-        // Ignorar helpers especiales de Handlebars
-        if (['if', 'unless', 'each', 'with'].includes(field)) return;
+    // Convert all fields to strings first
+    const stringFields = templateFields
+      ? Array.isArray(templateFields)
+        ? templateFields.map(String)
+        : Array.isArray(Object.values(templateFields))
+          ? Object.values(templateFields).map(String)
+          : Object.values(templateFields || {}).map(String)
+      : [];
 
-        // Construir estructura anidada para campos con puntos
-        const parts = field.split('.');
-        let current = baseData;
-        parts.slice(0, -1).forEach((part) => {
-          current[part] = current[part] || {};
-          current = current[part];
-        });
-        // Initialize field as empty
-        const lastPart = parts[parts.length - 1];
-        if (!(lastPart in current)) {
-          current[lastPart] = '';
-        }
+    // Filter out special helpers
+    const filteredFields = stringFields.filter(
+      (field) => !['if', 'unless', 'each', 'with'].includes(field)
+    );
+
+    logger.debug('Processing template fields:', {
+      originalFields: templateFields,
+      stringFields,
+      processedFields: filteredFields,
+    });
+
+    // Create base structure with template fields
+    const baseData = {};
+    filteredFields.forEach((field) => {
+      const parts = String(field).split('.');
+      let current = baseData;
+      parts.slice(0, -1).forEach((part) => {
+        current[part] = current[part] || {};
+        current = current[part];
       });
-    }
+      // Initialize field as empty
+      const lastPart = parts[parts.length - 1];
+      if (!(lastPart in current)) {
+        current[lastPart] = '';
+      }
+    });
 
     if (!dataPath) {
       logger.debug('No data file provided, returning template structure', {
@@ -578,19 +629,19 @@ async function processDataFile(dataPath, templateFields) {
       return {
         data: baseData,
         stats: {
-          totalFields: templateFields?.length || 0,
+          totalFields: filteredFields.length || 0,
           processedFields: 0,
         },
       };
     }
 
     // Process CSV data with template fields
-    const csvData = await processCsvData(dataPath, templateFields);
+    const csvData = await processCsvData(dataPath, filteredFields);
 
     // Merge CSV data with base structure
     const mergedData = { ...baseData };
     Object.entries(csvData).forEach(([key, value]) => {
-      const parts = key.split('.');
+      const parts = String(key).split('.');
       let current = mergedData;
       parts.slice(0, -1).forEach((part) => {
         current[part] = current[part] || {};
@@ -600,10 +651,9 @@ async function processDataFile(dataPath, templateFields) {
       current[lastPart] = value;
     });
 
-    // Log the processed data structure
     logger.debug('Data processed successfully', {
       dataKeys: Object.keys(mergedData),
-      templateFields,
+      templateFields: filteredFields,
       baseStructure: baseData,
       csvData: csvData,
       finalStructure: mergedData,
@@ -612,7 +662,7 @@ async function processDataFile(dataPath, templateFields) {
     return {
       data: mergedData,
       stats: {
-        totalFields: templateFields?.length || 0,
+        totalFields: filteredFields.length || 0,
         processedFields: Object.keys(csvData).length,
       },
     };
@@ -839,37 +889,83 @@ async function preprocessImages(content, basePath) {
  * @returns {string[]} Array of field names found in the template
  */
 function extractTemplateFields(template) {
-  const ast = handlebars.parse(template);
-  const fields = new Set();
+  try {
+    const ast = handlebars.parse(template);
+    const fields = new Set();
 
-  /**
-   * Recursively traverses the AST to find all variable references
-   *
-   * Processes MustacheStatement and BlockStatement nodes to extract
-   * variable names and helper references.
-   *
-   * @param {object} node - Current AST node being processed
-   */
-  function traverse(node) {
-    if (node.type === 'MustacheStatement') {
-      // Capturar variables simples
-      fields.add(node.path.original);
-    } else if (node.type === 'BlockStatement') {
-      // Capturar bloques (with, each, etc)
-      fields.add(node.path.original);
+    /**
+     * Recursively traverses the AST to find all variable references
+     *
+     * Processes MustacheStatement and BlockStatement nodes to extract
+     * variable names and helper references.
+     *
+     * @param {object} node - Current AST node being processed
+     */
+    function traverse(node) {
+      if (!node) return;
+
+      if (node.type === 'MustacheStatement') {
+        // Capturar variables simples
+        if (node.path && node.path.original) {
+          fields.add(node.path.original);
+        }
+      } else if (node.type === 'BlockStatement') {
+        // Capturar bloques (with, each, etc)
+        if (node.path && node.path.original) {
+          fields.add(node.path.original);
+        }
+        // También procesar los parámetros del bloque
+        if (node.params) {
+          node.params.forEach((param) => {
+            if (param && param.original) {
+              fields.add(param.original);
+            }
+          });
+        }
+      }
+
+      // Recorrer subexpresiones y programas
+      if (node.program) {
+        node.program.body.forEach(traverse);
+      }
+      if (node.inverse) {
+        node.inverse.body.forEach(traverse);
+      }
     }
 
-    // Recorrer subexpresiones y programas
-    if (node.program) {
-      node.program.body.forEach(traverse);
-    }
-    if (node.inverse) {
-      node.inverse.body.forEach(traverse);
-    }
+    ast.body.forEach(traverse);
+
+    // Filtrar campos especiales y convertir a array
+    const validFields = Array.from(fields).filter((field) => {
+      // Ignorar helpers especiales y variables del sistema
+      const specialHelpers = [
+        'if',
+        'unless',
+        'each',
+        'with',
+        'eq',
+        'and',
+        'not',
+        'log',
+      ];
+      const systemVars = ['@index', '@key', 'this'];
+      return !specialHelpers.includes(field) && !systemVars.includes(field);
+    });
+
+    logger.debug('Template fields extracted:', {
+      totalFields: fields.size,
+      validFields: validFields.length,
+      fields: validFields,
+    });
+
+    return validFields;
+  } catch (error) {
+    logger.error('Error extracting template fields:', {
+      error: error.message,
+      stack: error.stack,
+    });
+    return [];
   }
-
-  ast.body.forEach(traverse);
-  return Array.from(fields);
 }
 
 /**
@@ -893,6 +989,7 @@ async function processMarkdownTemplate(
 
   try {
     logger.debug('Starting template processing', {
+      context: 'template',
       templatePath,
       dataPath,
       cssPath,
@@ -908,6 +1005,9 @@ async function processMarkdownTemplate(
     // Extract fields from template
     const templateFields = extractTemplateFields(templateContent);
     logger.debug('Fields extracted from template:', {
+      context: 'template',
+      operation: 'field-extraction',
+      totalFields: templateFields.length,
       fields: templateFields,
     });
 
@@ -919,6 +1019,7 @@ async function processMarkdownTemplate(
     const processedData = processEmptyValues(rawData, '');
 
     logger.debug('Data structure before template processing:', {
+      context: 'template',
       templateFields,
       dataKeys: Object.keys(processedData),
       dataSample: JSON.stringify(processedData, null, 2).substring(0, 200),
@@ -930,6 +1031,7 @@ async function processMarkdownTemplate(
 
     // Add before template processing
     logger.debug('Template AST:', {
+      context: 'template',
       ast: handlebars.parse(templateContent).body.map((node) => ({
         type: node.type,
         path: node.path && node.path.original,
@@ -944,6 +1046,7 @@ async function processMarkdownTemplate(
     });
 
     logger.debug('Template context:', {
+      context: 'template',
       helpers: Object.keys(handlebars.helpers),
       data: JSON.stringify(rawData, null, 2),
     });
@@ -960,6 +1063,7 @@ async function processMarkdownTemplate(
 
     // Log markdown content before saving
     logger.debug('Generated markdown content:', {
+      context: 'template',
       contentType: typeof markdown,
       isHandlebarsString:
         markdown && typeof markdown === 'object' && 'toString' in markdown,
@@ -987,6 +1091,7 @@ async function processMarkdownTemplate(
 
     // Log paths before writing
     logger.debug('Generated file paths:', {
+      context: 'template',
       htmlPath,
       pdfPath,
       mdPath,
@@ -998,6 +1103,7 @@ async function processMarkdownTemplate(
       filepath: mdPath,
     });
     logger.debug('Markdown file generated', {
+      context: 'template',
       path: mdPath,
       size: await getFileSizeKB(mdPath),
     });
@@ -1007,6 +1113,7 @@ async function processMarkdownTemplate(
 
     // Log markdown and HTML content for debugging
     logger.debug('Markdown to HTML conversion:', {
+      context: 'template',
       markdown: markdown.substring(0, 500),
       html: htmlContent.substring(0, 500),
       imageTag: htmlContent.match(/<img[^>]+>/g),
@@ -1019,6 +1126,7 @@ async function processMarkdownTemplate(
     );
 
     logger.debug('HTML conversion complete', {
+      context: 'template',
       htmlSize: cleanedHtml.length,
       hasHtml: !!cleanedHtml,
       containsMissingValue: cleanedHtml.includes('missing-value'),
@@ -1036,6 +1144,7 @@ async function processMarkdownTemplate(
       cssPath: cssPath,
     });
     logger.debug('HTML file generated', {
+      context: 'template',
       path: htmlPath,
       size: await getFileSizeKB(htmlPath),
     });
@@ -1062,6 +1171,7 @@ async function processMarkdownTemplate(
     }
 
     logger.info('PDF file generated', {
+      context: 'template',
       path: pdfPath,
       size: await getFileSizeKB(pdfPath),
     });
@@ -1077,30 +1187,21 @@ async function processMarkdownTemplate(
         pdf: pdfPath,
       },
       stats: {
+        context: 'template',
         totalFields: processedData.stats?.totalFields || 0,
         processedFields: processedData.stats?.processedFields || 0,
       },
     };
   } catch (error) {
-    logger.error('Template processing failed:', {
-      error: error.message,
-      stack: error.stack,
-      phase: 'outer_catch',
-      templateAST: handlebars.parse(templateContent).body.map((node) => ({
-        type: node.type,
-        path: node.path && node.path.original,
-        params: node.params && node.params.map((p) => p.original),
-        hash:
-          node.hash &&
-          node.hash.pairs.map((p) => ({
-            key: p.key,
-            value: p.value.original,
-          })),
-      })),
-      context: {
-        helpers: Object.keys(handlebars.helpers),
-        data: JSON.stringify(rawData, null, 2),
+    logger.error('Template processing failed', {
+      context: 'template',
+      operation: 'process',
+      error: {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
       },
+      dataFields: error.data ? Object.keys(error.data).length : 0,
     });
     throw error;
   }

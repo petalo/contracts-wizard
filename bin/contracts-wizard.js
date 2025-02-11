@@ -896,7 +896,7 @@ program
       console.error('\nFor detailed error information:');
       console.error('1. Set DEBUG=true in your .env file');
       console.error(
-        `2. Check the log file at: ${process.env.LATEST_LOG_PATH || 'logs/logging-latest.log'}`
+        `2. Check the log file at: ${process.env.LATEST_LOG_PATH || 'logs/latest.log'}`
       );
       process.exit(1);
     }

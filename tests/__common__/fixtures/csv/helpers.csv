@@ -1,0 +1,37 @@
+key,value,comment
+arrayTest.0,true,array first item
+arrayTest.1,false,array second item
+arrayTest.2,,array third item (empty)
+arrayTest.3,0,array fourth item
+arrayTest.4,null,array fifth item
+booleanTest,true,boolean
+complexTest,true,boolean
+complexValue,special,string
+currency,1000,number
+currency.decimal,1000.50,decimal amount
+currency.EUR,1000,EUR amount
+currency.USD,1000,USD amount
+emptyString,,
+falseBool,false,boolean
+firstValue,first,string
+formatDate,"2024-01-01",date
+formatDate.DEFAULT,"2024-01-01",default format
+formatDate.FULL,"2024-01-01",full format
+formatDate.ISO,"2024-01-01",ISO format
+innerCondition,false,boolean
+lookup.testObject.nested.deepProperty,value,nested object property
+lookup.testObject.property,value,test object property
+nullValue,null,null
+numberTest,42,number
+objectTest.status1,valid,string
+objectTest.status2,invalid,string
+outerCondition,true,boolean
+secondValue,second,string
+showBasic,true,boolean
+spacedString,"  trimmed",string
+spacedValue,  true,boolean
+specialChar,!@#$%^&*(),string
+stringTest,hello,string
+trueBool,true,boolean
+undefined,,undefined
+zero,0,number

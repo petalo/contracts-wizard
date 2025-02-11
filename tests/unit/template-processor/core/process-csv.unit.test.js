@@ -1,5 +1,11 @@
 /**
- * @jest-environment node
+ * @file CSV Processing Unit Tests
+ *
+ * Comprehensive test suite for CSV processing functionality including:
+ * - CSV file reading and parsing
+ * - CSV structure validation
+ * - Data conversion and type handling
+ * - Error handling and logging
  */
 
 const fs = require('fs/promises');
