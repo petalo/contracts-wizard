@@ -7,7 +7,7 @@ const {
   getRelativePath,
 } = require('@/utils/file-management/get-relative-path');
 
-describe.skip('getRelativePath', () => {
+describe('getRelativePath', () => {
   const originalCwd = process.cwd;
   const mockProjectRoot = '/mock/project/root';
 
