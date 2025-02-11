@@ -281,7 +281,13 @@ async function startWorkflow(context) {
   const cleanupTasks = [];
 
   try {
-    const { templatePath, dataPath, cssPath, outputDir } = context;
+    //prettier-ignore
+    const {
+      templatePath,
+      dataPath,
+      cssPath,
+      outputDir,
+    } = context;
 
     // Get PATHS after context is loaded to ensure DIR_OUTPUT is set
     const { PATHS } = require('@/config/paths');
