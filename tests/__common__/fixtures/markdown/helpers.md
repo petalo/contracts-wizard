@@ -273,11 +273,18 @@ Would have passed second level!
 <span class="failed">Add years helper failed</span>
 {{/if}}
 
-<span class="explanation"> now.format("YYYY-MM-DD") </span><br>
-{{#if (now "YYYY-MM-DD")}}
-<span class="pass">Now helper working: {{now "YYYY-MM-DD"}}</span>
+<span class="explanation"> now() - current date in YYYY-MM-DD format </span><br>
+{{#if (now)}}
+<span class="pass">Now helper without format: {{now}}</span>
 {{else}}
 <span class="failed">Now helper failed</span>
+{{/if}}
+
+<span class="explanation"> now("YYYY-MM-DD") - formatted date </span><br>
+{{#if (now "YYYY-MM-DD")}}
+<span class="pass">Now helper with format: {{now "YYYY-MM-DD"}}</span>
+{{else}}
+<span class="failed">Now helper with format failed</span>
 {{/if}}
 
 <span class="explanation"> formatDate("2024-01-01", "DEFAULT") </span><br>
@@ -469,22 +476,27 @@ Would have passed second level!
           <tr>
             <td>formatDate</td>
             <td><span class="csv-value">"2024-01-01"</span></td>
-            <td>{{formatDate}}</td>
+            <td>{{formatDate "now" "ISO"}}</td>
           </tr>
           <tr>
             <td>formatDate.DEFAULT</td>
             <td><span class="csv-value">"2024-01-01"</span></td>
-            <td>{{formatDate.DEFAULT}}</td>
+            <td>{{formatDate "2024-12-31" "DEFAULT"}}</td>
           </tr>
           <tr>
             <td>formatDate.ISO</td>
             <td><span class="csv-value">"2024-01-01"</span></td>
-            <td>{{formatDate.ISO}}</td>
+            <td>{{formatDate "2024-12-31" "ISO"}}</td> 
+          </tr>
+           <tr>
+            <td>formatDate.ISO8601</td>
+            <td><span class="csv-value">"2024-01-01"</span></td>
+            <td>{{formatDate "2024-12-31" "ISO8601"}}</td> 
           </tr>
           <tr>
             <td>formatDate.FULL</td>
             <td><span class="csv-value">"2024-01-01"</span></td>
-            <td>{{formatDate.FULL}}</td>
+            <td>{{formatDate "2024-12-31" "FULL"}}</td>
           </tr>
           <tr>
             <td>lookup.testObject.property</td>

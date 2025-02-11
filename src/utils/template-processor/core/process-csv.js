@@ -152,7 +152,13 @@ function convertValueType(value) {
 
   try {
     // If value is empty or undefined/null, return empty string
-    if (value === '' || value === undefined || value === null) {
+    if (
+      value === '' ||
+      value === undefined ||
+      value === null ||
+      value === 'null' ||
+      value === 'undefined'
+    ) {
       logger.debug('Empty value detected', {
         context: '[data]',
         filename: 'process-csv.js',
@@ -206,6 +212,22 @@ function convertValueType(value) {
         operation: 'type-conversion',
       });
       return bool;
+    }
+
+    // If value is a date string in ISO format
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        logger.debug('Value is a valid date', {
+          context: '[data]',
+          filename: 'process-csv.js',
+          originalValue: value,
+          convertedValue: value,
+          type: 'date-string',
+          operation: 'type-conversion',
+        });
+        return value;
+      }
     }
 
     // For any other case, keep as string
