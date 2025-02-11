@@ -19,7 +19,7 @@ beforeAll(async () => {
   await fs.mkdir(FIXTURES_PATH, { recursive: true });
 });
 
-describe.skip('PDF Options Configuration', () => {
+describe('PDF Options Configuration', () => {
   describe('Basic Configuration', () => {
     test('should use A4 format by default', async () => {
       const options = await createPdfOptions();
