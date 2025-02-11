@@ -25,7 +25,7 @@ jest.mock('@/config/file-extensions', () => ({
   },
 }));
 
-describe.skip('List Files', () => {
+describe('List Files', () => {
   beforeEach(() => {
     // Reset all mocks before each test
     jest.clearAllMocks();
