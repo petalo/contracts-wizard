@@ -499,6 +499,36 @@ Would have passed second level!
             <td>{{formatDate "2024-12-31" "FULL"}}</td>
           </tr>
           <tr>
+            <td>formatCurrency</td>
+            <td><span class="csv-value">1000</span></td>
+            <td>{{formatCurrency 1000}}</td>
+          </tr>
+          <tr>
+            <td>formatCurrency.USD</td>
+            <td><span class="csv-value">1000</span></td>
+            <td>{{formatCurrency 1000 "USD"}}</td>
+          </tr>
+          <tr>
+            <td>formatCurrency.decimals</td>
+            <td><span class="csv-value">1000.50</span></td>
+            <td>{{formatCurrency 1000.50 "EUR"}}</td>
+          </tr>
+          <tr>
+            <td>currencySymbol.EUR</td>
+            <td><span class="csv-value">"EUR"</span></td>
+            <td>{{currencySymbol "EUR"}}</td>
+          </tr>
+          <tr>
+            <td>currencySymbol.USD</td>
+            <td><span class="csv-value">"USD"</span></td>
+            <td>{{currencySymbol "USD"}}</td>
+          </tr>
+          <tr>
+            <td>exchangeRate</td>
+            <td><span class="csv-value">1000</span></td>
+            <td>{{exchangeRate 1000 "EUR" "USD"}}</td>
+          </tr>
+          <tr>
             <td>lookup.testObject.property</td>
             <td><span class="csv-value">value</span></td>
             <td>{{lookup.testObject.property}}</td>

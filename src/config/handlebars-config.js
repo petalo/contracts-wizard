@@ -4,6 +4,7 @@
  * Manages Handlebars template engine configuration:
  * - Helper settings and defaults
  * - Date formatting patterns
+ * - Currency formatting options
  * - Empty value handling
  * - Array processing rules
  * - Error message templates
@@ -11,16 +12,18 @@
  * Constants:
  * - HANDLEBARS_CONFIG: Main configuration object
  *   - dateFormats: Standard date patterns
+ *   - numberFormat: Currency and number formatting
  *   - emptyValue: Empty value handling
  *   - arrayConfig: Array processing settings
  *   - errorMessages: Standard error templates
  *
  * Flow:
  * 1. Define date format patterns
- * 2. Configure empty value handling
- * 3. Set array processing rules
- * 4. Define error message templates
- * 5. Freeze configuration
+ * 2. Configure number/currency formatting
+ * 3. Configure empty value handling
+ * 4. Set array processing rules
+ * 5. Define error message templates
+ * 6. Freeze configuration
  *
  * Error Handling:
  * - Invalid format validation
@@ -42,19 +45,19 @@
  * const empty = HANDLEBARS_CONFIG.emptyValue.template.replace('{key}', 'field');
  */
 
-const { LOCALE_CONFIG } = require('@/config/locale');
-
 /**
  * Handlebars configuration object
  *
  * Defines comprehensive settings for Handlebars:
  * - Date format patterns
+ * - Currency format options
  * - Empty value templates
  * - Array processing rules
  * - Error message formats
  *
  * @constant {object}
  * @property {object} dateFormats - Date format patterns
+ * @property {object} numberFormat - Currency and number formatting
  * @property {object} emptyValue - Empty value handling
  * @property {object} arrayConfig - Array processing rules
  * @property {object} errorMessages - Error message templates
@@ -68,6 +71,25 @@ const HANDLEBARS_CONFIG = {
     SHORT: 'DD/MM/YYYY',
     TIME: 'HH:mm:ss',
   },
+  numberFormat: {
+    defaults: {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: true,
+    },
+    currencies: {
+      EUR: {
+        symbol: '€',
+        position: 'suffix',
+        spacing: true,
+      },
+      USD: {
+        symbol: '$',
+        position: 'prefix',
+        spacing: false,
+      },
+    },
+  },
   emptyValue: {
     template: '<span class="missing-value" data-field="{key}">[[{key}]]</span>',
     class: 'missing-value',
@@ -77,17 +99,11 @@ const HANDLEBARS_CONFIG = {
     maxDepth: 10,
     trimEmpty: true,
   },
-  numberFormat: {
-    locale: LOCALE_CONFIG.fullLocale,
-    currency: 'EUR',
-    defaults: {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-      useGrouping: true,
-    },
-  },
   errorMessages: {
     invalidDate: '[[Invalid date]]',
+    invalidAmount: '[[Invalid amount]]',
+    invalidCurrency: '[[Invalid currency]]',
+    invalidConversion: '[[Invalid currency conversion]]',
     missingValue: '(Empty value)',
     processingError: '[Error processing {type}]',
   },
@@ -96,9 +112,11 @@ const HANDLEBARS_CONFIG = {
 // Prevent runtime modifications
 Object.freeze(HANDLEBARS_CONFIG);
 Object.freeze(HANDLEBARS_CONFIG.dateFormats);
+Object.freeze(HANDLEBARS_CONFIG.numberFormat);
+Object.freeze(HANDLEBARS_CONFIG.numberFormat.defaults);
+Object.freeze(HANDLEBARS_CONFIG.numberFormat.currencies);
 Object.freeze(HANDLEBARS_CONFIG.emptyValue);
 Object.freeze(HANDLEBARS_CONFIG.arrayConfig);
-Object.freeze(HANDLEBARS_CONFIG.numberFormat);
 Object.freeze(HANDLEBARS_CONFIG.errorMessages);
 
 module.exports = {

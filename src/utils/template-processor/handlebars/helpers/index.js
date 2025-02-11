@@ -4,6 +4,7 @@
  * This file exports all available Handlebars helpers organized by category:
  * - Logic helpers (if, eq, and, not)
  * - Date helpers (formatDate, addYears, now)
+ * - Currency helpers (formatCurrency, currencySymbol, exchangeRate)
  * - Value helpers (lookup, emptyValue, objectToArray)
  * - Number helpers (formatNumber)
  * - Custom helpers (formatEmail)
@@ -11,6 +12,7 @@
  * The helpers provide template functionality for:
  * - Conditional logic and comparisons
  * - Date formatting and manipulation
+ * - Currency formatting and conversion
  * - Value extraction and formatting
  * - Number formatting with localization
  * - Email formatting
@@ -37,6 +39,12 @@ const {
   addYears,
   now,
 } = require('./date');
+// prettier-ignore
+const {
+  formatCurrency,
+  currencySymbol,
+  exchangeRate,
+} = require('./currency');
 
 // Register eq helper with proper type handling
 handlebars.registerHelper('eq', function (value1, value2, options) {
@@ -304,6 +312,11 @@ handlebars.registerHelper('currency', function (value, currency, options) {
     );
   }
 });
+
+// Register currency helpers
+handlebars.registerHelper('formatCurrency', formatCurrency);
+handlebars.registerHelper('currencySymbol', currencySymbol);
+handlebars.registerHelper('exchangeRate', exchangeRate);
 
 // Register custom helpers
 logger.debug('Registering custom helpers');
