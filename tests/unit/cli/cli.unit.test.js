@@ -69,7 +69,7 @@ jest.mock('@/config/paths', () => ({
   },
 }));
 
-describe.skip('CLI Functionality', () => {
+describe('CLI Functionality', () => {
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
