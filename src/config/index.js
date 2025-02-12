@@ -80,19 +80,20 @@
  */
 
 const { PATHS, validateDirectory } = require('@/config/paths');
-const { FILE_EXTENSIONS } = require('@/config/fileExtensions');
-const { PDF_CONFIG, createPdfOptions } = require('@/config/pdfOptions');
-const { HTML_CONFIG } = require('@/config/htmlOptions');
-const { DEFAULT_PRETTIER_OPTIONS } = require('@/config/prettierRules');
+const { FILE_EXTENSIONS } = require('@/config/file-extensions');
+const { PDF_CONFIG, createPdfOptions } = require('@/config/pdf-options');
+const { HTML_CONFIG } = require('@/config/html-options');
+const { DEFAULT_PRETTIER_OPTIONS } = require('@/config/prettier-rules');
 const { LOCALE_CONFIG } = require('@/config/locale');
-const { CHEERIO_RULES } = require('@/config/cheerioRules');
-const { APP_METADATA } = require('@/config/appMetadata');
+const { CHEERIO_RULES } = require('@/config/cheerio-rules');
+const { APP_METADATA } = require('@/config/app-metadata');
 const { ASSETS_CONFIG } = require('@/config/assets');
 const { VERSION_INFO } = require('@/config/version');
-const { validateEnv } = require('@/config/envValidation');
+const { validateEnv } = require('@/config/env-validation');
 const { configureAliases } = require('@/config/aliases');
 const { ENCODING_CONFIG } = require('@/config/encoding');
-const { HANDLEBARS_CONFIG } = require('@/config/handlebarsConfig');
+const { HANDLEBARS_CONFIG } = require('@/config/handlebars-config');
+const { PAPAPARSE_CONFIG, UNPARSE_CONFIG } = require('@/config/papaparse');
 
 /**
  * Application configuration object
@@ -169,4 +170,8 @@ module.exports = {
 
   // Encoding settings
   ENCODING_CONFIG,
+
+  // PapaParse configuration
+  PAPAPARSE_CONFIG,
+  UNPARSE_CONFIG,
 };
