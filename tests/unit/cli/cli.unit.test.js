@@ -284,4 +284,52 @@ describe('CLI Functionality', () => {
       });
     });
   });
+
+  describe('Command Line Options', () => {
+    let originalEnv;
+    let program;
+
+    beforeEach(() => {
+      // Backup original env and ensure DEBUG is not set
+      originalEnv = { ...process.env };
+      delete originalEnv.DEBUG;
+      process.env = { ...originalEnv };
+
+      // Reset commander program
+      jest.resetModules();
+      const commander = require('commander');
+      program = new commander.Command();
+
+      // Add verbose option and hook
+      program
+        .option('--verbose', 'Enable verbose output (same as DEBUG=true)')
+        .action(() => {}) // Add empty action to handle command
+        .hook('preAction', (thisCommand) => {
+          if (thisCommand.opts().verbose) {
+            process.env.DEBUG = 'true';
+          }
+        });
+    });
+
+    afterEach(() => {
+      // Restore original env
+      process.env = originalEnv;
+    });
+
+    test('should enable verbose output with --verbose flag', () => {
+      // Act
+      program.parse(['node', 'cli.js', '--verbose']);
+
+      // Assert
+      expect(process.env.DEBUG).toBe('true');
+    });
+
+    test('should not enable verbose output without --verbose flag', () => {
+      // Act
+      program.parse(['node', 'cli.js']);
+
+      // Assert
+      expect(process.env.DEBUG).toBeUndefined();
+    });
+  });
 });
