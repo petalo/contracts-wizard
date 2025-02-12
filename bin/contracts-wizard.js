@@ -13,6 +13,7 @@
  * - validateInputs: Validates all input files and their accessibility
  * - createContext: Creates application context object
  * - handleListCommand: Handles the list command to display available resources
+ * - cleanupAndExit: Performs cleanup operations and exits the process
  * - ValidationError: Custom error for validation failures
  * - ConfigurationError: Custom error for configuration issues
  * - FileSystemError: Custom error for file system operations
@@ -25,16 +26,17 @@
  *
  * Flow:
  * 1. Parse command line arguments and environment setup
- * 2. Validate environment configuration
- * 3. Initialize logging and global error handling
- * 4. Parse commands and options using Commander
- * 5. Execute appropriate command handler:
+ * 2. Configure verbose mode if --verbose flag is present
+ * 3. Validate environment configuration
+ * 4. Initialize logging and global error handling
+ * 5. Parse commands and options using Commander
+ * 6. Execute appropriate command handler:
  *    - Interactive mode: Guide user through prompts
  *    - Generate: Process template and create documents
  *    - Init: Create new project structure
  *    - List: Display available resources
- * 6. Handle results and cleanup
- * 7. Global error handling for uncaught exceptions
+ * 7. Handle results and cleanup
+ * 8. Global error handling for uncaught exceptions
  *
  * Error Handling:
  * - ValidationError: Invalid input files or formats
@@ -43,6 +45,8 @@
  * - ProcessingError: Template or data processing failures
  * - NetworkError: External service communication issues
  * - Global handlers for unhandledRejection and uncaughtException
+ * - Cleanup operations before exit
+ * - Resource release on exit
  *
  * @module bin/contracts-wizard
  * @requires commander - Command-line interface
@@ -60,6 +64,7 @@
  * @requires @/config/env-validation - Environment validation
  * @requires @/utils/template-processor/generators/csv - CSV template generation
  * @requires @/utils/template-processor/core/process-template - Template processing
+ * @requires @/cli/verbose - Verbose mode configuration
  *
  * @example
  * // Initialize new project
@@ -73,6 +78,9 @@
  *
  * // List available resources
  * contracts-wizard list templates
+ *
+ * // Enable verbose mode
+ * contracts-wizard --verbose
  */
 
 const path = require('path');
@@ -87,8 +95,17 @@ require('module-alias').addAliases({
   '@config': path.join(__dirname, '../src/config'),
 });
 
+// Load environment variables early
+require('dotenv').config();
+
 const { program } = require('commander');
 const { logger } = require('@/utils/common/logger');
+const { configureVerboseMode } = require('@/cli/verbose');
+
+// Configure console output for verbose mode
+if (process.argv.includes('--verbose')) {
+  configureVerboseMode(logger);
+}
 
 // Add global verbose option
 program
@@ -97,7 +114,8 @@ program
     // Enable debug mode if --verbose is used
     if (thisCommand.opts().verbose) {
       process.env.DEBUG = 'true';
-      logger.debug('Verbose mode enabled via --verbose flag');
+      process.env.LOG_LEVEL = 'debug';
+      process.env.LOG_TO_CONSOLE = 'true';
     }
   });
 
@@ -118,8 +136,6 @@ if (outputIndex !== -1 && outputIndex + 1 < args.length) {
     : path.join(process.cwd(), output);
   process.env.DIR_OUTPUT = outputDir;
 }
-
-require('dotenv').config();
 
 const fs = require('fs').promises;
 const { startWorkflow } = require('@/core/workflow');
@@ -736,6 +752,38 @@ async function generateContract({
 }
 
 // Handle interactive mode
+/**
+ * Interactive mode command handler
+ *
+ * Guides the user through the contract generation process with interactive prompts:
+ * 1. Template selection from available markdown files
+ * 2. Input method selection (CSV file or create new)
+ * 3. Data file selection or generation
+ * 4. CSS theme selection
+ *
+ * The function handles all user interactions and executes the appropriate
+ * workflow based on user choices. Includes proper error handling and
+ * cleanup on exit.
+ *
+ * Flow:
+ * 1. Start interactive mode
+ * 2. Select template file
+ * 3. Choose input method
+ * 4. Select/create data file
+ * 5. Select CSS theme
+ * 6. Generate contract
+ * 7. Clean up and exit
+ *
+ * Error Handling:
+ * - Invalid file selections
+ * - File access issues
+ * - Template generation failures
+ * - Contract generation errors
+ *
+ * @throws {ValidationError} When selected files are invalid
+ * @throws {FileSystemError} When file operations fail
+ * @throws {ProcessingError} When contract generation fails
+ */
 program.description('Generate contracts interactively').action(async () => {
   try {
     logger.debug('=== INTERACTIVE MODE STARTED ===');
@@ -895,6 +943,38 @@ async function cleanupAndExit(code) {
 }
 
 // Handle generate command
+/**
+ * Generate command handler
+ *
+ * Processes contract generation from command line arguments.
+ * Allows specifying template, data, CSS, and output paths directly.
+ *
+ * Options:
+ * - template (-t): Required. Path to markdown template file
+ * - data (-d): Optional. Path to CSV data file
+ * - css (-c): Optional. Path to CSS style file
+ * - output (-o): Optional. Output directory for generated files
+ *
+ * Flow:
+ * 1. Validate command options
+ * 2. Convert paths to absolute
+ * 3. Validate file existence and accessibility
+ * 4. Generate contract documents
+ * 5. Clean up and exit
+ *
+ * Error Handling:
+ * - Missing required template
+ * - Invalid file paths
+ * - File access issues
+ * - Contract generation failures
+ *
+ * @throws {ValidationError} When required files are missing or invalid
+ * @throws {FileSystemError} When file operations fail
+ * @throws {ProcessingError} When contract generation fails
+ *
+ * @example
+ * contracts-wizard generate -t template.md -d data.csv -c style.css -o output/
+ */
 program
   .command('generate')
   .description('Generate contract documents from template and data')
@@ -928,16 +1008,106 @@ program
   });
 
 // Handle list command
+/**
+ * List command handler
+ *
+ * Lists available contract templates and data files.
+ * Displays paths and basic information about each file.
+ *
+ * Options:
+ * - templates (-t): Optional. Show only template files
+ * - data (-d): Optional. Show only data files
+ * - css (-c): Optional. Show only CSS files
+ *
+ * Flow:
+ * 1. Scan configured directories
+ * 2. Filter files by type based on options
+ * 3. Format and display file information
+ * 4. Clean up and exit
+ *
+ * Error Handling:
+ * - Directory access issues
+ * - File read failures
+ * - Invalid file types
+ *
+ * @throws {FileSystemError} When directory or file operations fail
+ *
+ * @example
+ * contracts-wizard list -t  # List only templates
+ * contracts-wizard list     # List all files
+ */
 program
-  .command('list <type>')
-  .description('List available files by type (templates, data, styles)')
-  .action(handleListCommand);
+  .command('list')
+  .description('List available templates and data files')
+  .option('-t, --templates', 'Show only template files')
+  .option('-d, --data', 'Show only data files')
+  .option('-c, --css', 'Show only CSS files')
+  .action(async (options) => {
+    try {
+      if (options.templates) {
+        await handleListCommand('templates');
+      } else if (options.data) {
+        await handleListCommand('data');
+      } else if (options.css) {
+        await handleListCommand('css');
+      } else {
+        // If no option specified, show all
+        await handleListCommand('all');
+      }
+    } catch (error) {
+      logger.error('List command failed:', error);
+      process.exit(1);
+    }
+  });
 
 // Handle init command
+/**
+ * Init command handler
+ *
+ * Initializes a new contracts project with default structure and example files.
+ * Creates necessary directories and configuration files.
+ *
+ * Options:
+ * - force (-f): Optional. Overwrite existing files
+ * - minimal (-m): Optional. Create minimal project structure
+ *
+ * Flow:
+ * 1. Check if directory is empty or force flag is set
+ * 2. Create project structure:
+ *    - templates/
+ *    - data/
+ *    - styles/
+ *    - output/
+ * 3. Copy example files
+ * 4. Generate configuration file
+ * 5. Clean up and exit
+ *
+ * Error Handling:
+ * - Directory already exists and no force flag
+ * - File system permission issues
+ * - Template copy failures
+ *
+ * @throws {FileSystemError} When directory or file operations fail
+ * @throws {ConfigError} When configuration generation fails
+ *
+ * @example
+ * contracts-wizard init      # Normal initialization
+ * contracts-wizard init -f   # Force initialization
+ */
 program
-  .command('init <project-name>')
-  .description('Initialize a new Contracts Wizard project')
-  .action(initProject);
+  .command('init')
+  .description('Initialize a new contracts project')
+  .argument('[project-name]', 'Name of the project directory')
+  .option('-f, --force', 'Overwrite existing files')
+  .option('-m, --minimal', 'Create minimal project structure')
+  .action(async (projectName, options) => {
+    try {
+      await initProject(projectName, options);
+    } catch (error) {
+      logger.error('Project initialization failed:', error);
+      process.exit(1);
+    }
+  });
 
 // Parse command line arguments
 program.parse(process.argv);
