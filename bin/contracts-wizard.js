@@ -707,14 +707,16 @@ async function generateContract({
       correlationId,
     };
 
+    // Log context with sanitized paths
     logger.debug('Starting workflow with context', {
       correlationId,
       context: {
         ...context,
-        // Exclude full paths from logs
+        // Exclude full paths from logs for security
         templatePath: path.basename(templatePath),
         dataPath: dataPath ? path.basename(dataPath) : null,
         cssPath: cssPath ? path.basename(cssPath) : null,
+        outputDir: path.basename(outputDir),
       },
     });
 
@@ -856,7 +858,17 @@ program.description('Generate contracts interactively').action(async () => {
       outputPdf: true,
     };
 
-    logger.debug('Starting workflow with context:', context);
+    // Log context with sanitized paths
+    logger.debug('Starting workflow with context', {
+      context: {
+        ...context,
+        // Exclude full paths from logs for security
+        templatePath: path.basename(templatePath),
+        dataPath: dataPath ? path.basename(dataPath) : null,
+        cssPath: cssPath ? path.basename(cssPath) : null,
+        outputDir: path.basename(outputDir),
+      },
+    });
 
     // Execute workflow with collected information
     await startWorkflow(context);
