@@ -709,8 +709,9 @@ async function generateContract({
 
     // Log context with sanitized paths
     logger.debug('Starting workflow with context', {
+      context: '[system]',
       correlationId,
-      context: {
+      data: {
         ...context,
         // Exclude full paths from logs for security
         templatePath: path.basename(templatePath),
