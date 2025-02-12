@@ -228,10 +228,11 @@ Options for the `generate` command:
 
 Global options:
 
-| Option    | Description  | Example   |
-| --------- | ------------ | --------- |
-| --help    | Show help    | --help    |
-| --version | Show version | --version |
+| Option    | Description                                | Example   |
+| --------- | ------------------------------------------ | --------- |
+| --help    | Show help                                  | --help    |
+| --version | Show version                               | --version |
+| --verbose | Enable verbose output (same as DEBUG=true) | --verbose |
 
 ### Available Commands
 

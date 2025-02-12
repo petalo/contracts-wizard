@@ -90,6 +90,17 @@ require('module-alias').addAliases({
 const { program } = require('commander');
 const { logger } = require('@/utils/common/logger');
 
+// Add global verbose option
+program
+  .option('--verbose', 'Enable verbose output (same as DEBUG=true)')
+  .hook('preAction', (thisCommand) => {
+    // Enable debug mode if --verbose is used
+    if (thisCommand.opts().verbose) {
+      process.env.DEBUG = 'true';
+      logger.debug('Verbose mode enabled via --verbose flag');
+    }
+  });
+
 // Log inicio de ejecución
 logger.logExecutionStart();
 
@@ -587,7 +598,21 @@ function createContext(options = {}) {
  *   console.error('Contract generation failed:', error);
  * }
  */
-async function generateContract({ template, data, css, output }) {
+
+/**
+ * Generates contract documents from template and data files
+ *
+ * Processes the template with optional data and styling to generate
+ * HTML and PDF output files. Implements retry logic for file operations
+ * and proper error handling for all steps of the generation process.
+ */
+// prettier-ignore
+async function generateContract({
+  template,
+  data,
+  css,
+  output,
+}) {
   const correlationId = Date.now().toString(36);
   logger.info('Starting contract generation', {
     correlationId,
