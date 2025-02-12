@@ -56,7 +56,6 @@ data-csv/*.csv
 .classpath
 *.code-workspace
 *.cursorrules
-.cursor
 
 # OS Generated Files
 .DS_Store
@@ -120,3 +119,9 @@ CHANGELOG.preview.md
 *.cert
 *.crt
 .env.*.local
+
+# Git Submodules
+# Prevent any submodule from being committed to maintain project independence
+.gitmodules
+.git/modules/
+**/modules/*/
