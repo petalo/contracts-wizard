@@ -227,12 +227,18 @@ handlebars.registerHelper('and', and);
 handlebars.registerHelper('not', not);
 
 // Register other helpers from handlebars-helpers with logging
-logger.debug('Registering other handlebars-helpers');
+logger.debug('Registering handlebars-helpers:', {
+  context: '[system]',
+  helpers: Object.keys(helpers).filter(
+    (name) =>
+      !['if', 'eq', 'formatDate', 'now', 'number', 'lookup'].includes(name)
+  ),
+});
+
 Object.entries(helpers).forEach(([name, helper]) => {
   if (!['if', 'eq', 'formatDate', 'now', 'number', 'lookup'].includes(name)) {
     try {
       handlebars.registerHelper(name, helper);
-      logger.debug('Registered helper:', { name });
     } catch (error) {
       logger.error('Error registering helper:', {
         name,
