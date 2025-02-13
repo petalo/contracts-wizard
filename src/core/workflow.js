@@ -287,6 +287,7 @@ async function startWorkflow(context) {
       dataPath,
       cssPath,
       outputDir,
+      options = {},
     } = context;
 
     // Get PATHS after context is loaded to ensure DIR_OUTPUT is set
@@ -298,6 +299,7 @@ async function startWorkflow(context) {
       dataPath,
       cssPath,
       outputDir,
+      options,
       PATHS_templates: PATHS.templates,
       PATHS_output: PATHS.output,
       isTemplateAbsolute: path.isAbsolute(templatePath),
@@ -348,29 +350,22 @@ async function startWorkflow(context) {
         logger.debug('Processing CSV data', { dataPath });
         templateData = await processCsvData(dataPath);
         logger.debug('CSV data processed successfully', {
-          fields: Object.keys(templateData),
           dataPath,
+          fields: Object.keys(templateData),
         });
       }
 
-      logger.debug('Starting template processing', {
-        templatePath,
-        dataPath,
-        cssPath,
-        outputDir: finalOutputDir,
-      });
-
+      // Process template with data
       const result = await processMarkdownTemplate(
         templatePath,
         dataPath,
         cssPath,
         finalOutputDir,
-        templateData
+        options
       );
-
-      logger.info('Workflow completed successfully', {
-        correlationId,
-        outputFiles: result.files,
+      logger.info('Template processing completed', {
+        context: 'workflow',
+        filename: 'workflow.js',
       });
 
       return result;

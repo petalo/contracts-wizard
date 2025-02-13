@@ -61,7 +61,7 @@
 
 const handlebars = require('handlebars');
 const MarkdownIt = require('markdown-it');
-const fs = require('fs/promises');
+const fs = require('fs').promises;
 const { logger } = require('@/utils/common/logger');
 const { AppError } = require('@/utils/common/errors');
 const { generateFileName } = require('@/utils/common/generate-filename');
@@ -74,7 +74,6 @@ const {
 const {
   processCsvData,
 } = require('@/utils/template-processor/core/process-csv');
-const { PATHS } = require('@/config/paths');
 const { display } = require('@/cli/display');
 const { ENCODING_CONFIG } = require('@/config/encoding');
 const moment = require('moment-timezone');
@@ -894,27 +893,24 @@ function extractTemplateFields(template) {
     const fields = new Set();
 
     /**
-     * Recursively traverses the AST to find all variable references
-     *
-     * Processes MustacheStatement and BlockStatement nodes to extract
-     * variable names and helper references.
-     *
-     * @param {object} node - Current AST node being processed
+     * Recursively traverses the AST to extract field names
+     * @param {object} node - AST node to process
+     * @param {string} [node.type] - Type of the node (MustacheStatement or BlockStatement)
+     * @param {object} [node.path] - Path information containing the field name
+     * @param {object[]} [node.params] - Parameters for block statements
+     * @param {object} [node.program] - Child program to traverse
+     * @param {object} [node.inverse] - Inverse program to traverse
      */
-    function traverse(node) {
+    const traverse = (node) => {
       if (!node) return;
-
       if (node.type === 'MustacheStatement') {
-        // Capturar variables simples
         if (node.path && node.path.original) {
           fields.add(node.path.original);
         }
       } else if (node.type === 'BlockStatement') {
-        // Capturar bloques (with, each, etc)
         if (node.path && node.path.original) {
           fields.add(node.path.original);
         }
-        // También procesar los parámetros del bloque
         if (node.params) {
           node.params.forEach((param) => {
             if (param && param.original) {
@@ -923,21 +919,19 @@ function extractTemplateFields(template) {
           });
         }
       }
-
-      // Recorrer subexpresiones y programas
       if (node.program) {
         node.program.body.forEach(traverse);
       }
       if (node.inverse) {
         node.inverse.body.forEach(traverse);
       }
-    }
+    };
 
     ast.body.forEach(traverse);
 
-    // Filtrar campos especiales y convertir a array
+    // Filter special fields and convert to array
     const validFields = Array.from(fields).filter((field) => {
-      // Ignorar helpers especiales y variables del sistema
+      // Ignore special helpers and system variables
       const specialHelpers = [
         'if',
         'unless',
@@ -975,6 +969,7 @@ function extractTemplateFields(template) {
  * @param {string} dataPath - Path to the CSV data file
  * @param {string} cssPath - Path to the CSS styles file
  * @param {string} outputDir - Directory path for generated files
+ * @param {object} options - Additional options for file generation
  * @returns {Promise<{content: string, files: {md: string, html: string, pdf: string}, stats: {totalFields: number, processedFields: number}}>} Generated file paths and processing statistics
  * @throws {AppError} When template processing fails
  */
@@ -982,7 +977,8 @@ async function processMarkdownTemplate(
   templatePath,
   dataPath,
   cssPath,
-  outputDir
+  outputDir,
+  options = {}
 ) {
   let templateContent = '';
   let rawData = {};
@@ -994,6 +990,7 @@ async function processMarkdownTemplate(
       dataPath,
       cssPath,
       outputDir,
+      options,
     });
 
     // Validate inputs
@@ -1018,6 +1015,14 @@ async function processMarkdownTemplate(
     // Pre-process the data to handle empty values
     const processedData = processEmptyValues(rawData, '');
 
+    // Generate filenames with options
+    const outputPaths = await generateFileName(
+      templatePath,
+      outputDir,
+      options
+    );
+
+    // Log data structure before template processing
     logger.debug('Data structure before template processing:', {
       context: 'template',
       templateFields,
@@ -1074,38 +1079,14 @@ async function processMarkdownTemplate(
       hasMarkdown: String(markdown || '').includes('#'),
     });
 
-    // Generate filenames
-    const finalOutputDir = outputDir || PATHS.output;
-    const {
-      html: htmlPath,
-      pdf: pdfPath,
-      md: mdPath,
-    } = await generateFileName(dataPath || templatePath, finalOutputDir, [
-      'html',
-      'pdf',
-      'md',
-    ]);
-
-    // Ensure output directory exists
-    await fs.mkdir(finalOutputDir, { recursive: true });
-
-    // Log paths before writing
-    logger.debug('Generated file paths:', {
-      context: 'template',
-      htmlPath,
-      pdfPath,
-      mdPath,
-      outputDir: finalOutputDir,
-    });
-
     // Save processed markdown
     await generateMarkdown(String(markdown || ''), {
-      filepath: mdPath,
+      filepath: outputPaths.md,
     });
     logger.debug('Markdown file generated', {
       context: 'template',
-      path: mdPath,
-      size: await getFileSizeKB(mdPath),
+      path: outputPaths.md,
+      size: await getFileSizeKB(outputPaths.md),
     });
 
     // Convert to HTML (now asynchronous)
@@ -1140,19 +1121,19 @@ async function processMarkdownTemplate(
 
     // Generate outputs
     await generateHtml(cleanedHtml, {
-      filepath: htmlPath,
+      filepath: outputPaths.html,
       cssPath: cssPath,
     });
     logger.debug('HTML file generated', {
       context: 'template',
-      path: htmlPath,
-      size: await getFileSizeKB(htmlPath),
+      path: outputPaths.html,
+      size: await getFileSizeKB(outputPaths.html),
     });
 
     try {
       await generatePdf(cleanedHtml, {
         cssPath: cssPath,
-        outputPath: pdfPath,
+        outputPath: outputPaths.pdf,
         keepHtml: true,
       });
     } catch (error) {
@@ -1172,19 +1153,19 @@ async function processMarkdownTemplate(
 
     logger.info('PDF file generated', {
       context: 'template',
-      path: pdfPath,
-      size: await getFileSizeKB(pdfPath),
+      path: outputPaths.pdf,
+      size: await getFileSizeKB(outputPaths.pdf),
     });
 
     // Verify and display generated files
-    await logGeneratedFiles(htmlPath, pdfPath, mdPath);
+    await logGeneratedFiles(outputPaths.html, outputPaths.pdf, outputPaths.md);
 
     return {
       content: cleanedHtml,
       files: {
-        md: mdPath,
-        html: htmlPath,
-        pdf: pdfPath,
+        md: outputPaths.md,
+        html: outputPaths.html,
+        pdf: outputPaths.pdf,
       },
       stats: {
         context: 'template',

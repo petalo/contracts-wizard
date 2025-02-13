@@ -220,11 +220,13 @@ contracts-wizard
 
 Options for the `generate` command:
 
-| Option     | Short | Description         | Example        |
-| ---------- | ----- | ------------------- | -------------- |
-| --template | -t    | Template file path  | -t contract.md |
-| --data     | -d    | CSV data file path  | -d input.csv   |
-| --css      | -c    | CSS style file path | -c style.css   |
+| Option     | Short | Description                       | Example              |
+| ---------- | ----- | --------------------------------- | -------------------- |
+| --template | -t    | Template file path                | -t contract.md       |
+| --data     | -d    | CSV data file path                | -d input.csv         |
+| --css      | -c    | CSS style file path               | -c style.css         |
+| --output   | -o    | Output directory path             | -o ./output          |
+| --suffix   |       | Add suffix to generated filenames | --suffix client_name |
 
 Global options:
 
@@ -241,7 +243,7 @@ Global options:
 contracts-wizard
 
 # Generate contract (with options)
-contracts-wizard generate -t template.md [-d data.csv] [-c style.css]
+contracts-wizard generate -t template.md [-d data.csv] [-c style.css] [--suffix client]
 
 # List available resources
 contracts-wizard list templates  # List markdown templates
@@ -841,3 +843,44 @@ DEBUG=true contracts-wizard generate -t template.md
 ```
 
 Check logs at `logs/latest.log` for detailed error information.
+
+### File Naming
+
+By default, generated files follow this pattern:
+
+```text
+template.{md,html,pdf}
+```
+
+When files already exist, a revision number is added:
+
+```text
+template.rev.1.{md,html,pdf}
+```
+
+You can add a custom suffix to the filenames using the `--suffix` option:
+
+```text
+template.suffix.{md,html,pdf}
+```
+
+And with revisions:
+
+```text
+template.rev.1.suffix.{md,html,pdf}
+```
+
+This is particularly useful when generating multiple versions of the same template for different clients or purposes:
+
+```bash
+# Generate English version
+contracts-wizard generate -t contract.md -d data_en.csv --suffix EN
+
+# Generate Spanish version
+contracts-wizard generate -t contract.md -d data_es.csv --suffix ES
+
+# Generate client-specific version
+contracts-wizard generate -t contract.md -d client_data.csv --suffix ClientName
+```
+
+The suffix will be added to all generated files (Markdown, HTML, and PDF) just before the file extension

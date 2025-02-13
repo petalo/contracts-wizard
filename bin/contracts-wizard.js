@@ -599,6 +599,7 @@ function createContext(options = {}) {
  * @param {string} [options.data] - Path to CSV data file
  * @param {string} [options.css] - Path to CSS styling file
  * @param {string} [options.output] - Output directory path
+ * @param {string} [options.suffix] - Suffix to add to generated filenames
  * @throws {ValidationError} When input validation fails
  * @throws {FileSystemError} When file operations fail
  * @throws {ProcessingError} When template processing fails
@@ -608,7 +609,8 @@ function createContext(options = {}) {
  *     template: './templates/contract.md',
  *     data: './data/input.csv',
  *     css: './styles/theme.css',
- *     output: './output'
+ *     output: './output',
+ *     suffix: 'EN'
  *   });
  * } catch (error) {
  *   console.error('Contract generation failed:', error);
@@ -628,6 +630,7 @@ async function generateContract({
   data,
   css,
   output,
+  suffix,
 }) {
   const correlationId = Date.now().toString(36);
   logger.info('Starting contract generation', {
@@ -635,6 +638,7 @@ async function generateContract({
     template: path.basename(template),
     hasData: !!data,
     hasCss: !!css,
+    hasSuffix: !!suffix,
   });
 
   try {
@@ -696,7 +700,7 @@ async function generateContract({
 
     display.status.info('Processing template...');
 
-    // Create context with validated paths
+    // Create context with validated paths and options
     const context = {
       templatePath,
       dataPath,
@@ -705,6 +709,9 @@ async function generateContract({
       outputHtml: true,
       outputPdf: true,
       correlationId,
+      options: {
+        suffix, // Add suffix to options
+      },
     };
 
     // Log context with sanitized paths
@@ -718,6 +725,7 @@ async function generateContract({
         dataPath: dataPath ? path.basename(dataPath) : null,
         cssPath: cssPath ? path.basename(cssPath) : null,
         outputDir: path.basename(outputDir),
+        suffix, // Include suffix in logs
       },
     });
 
@@ -995,6 +1003,7 @@ program
   .option('-d, --data <path>', 'Path to CSV data file')
   .option('-c, --css <path>', 'Path to CSS style file')
   .option('-o, --output <dir>', 'Output directory for generated files')
+  .option('--suffix <string>', 'Add a suffix to the generated filenames')
   .action(async (options) => {
     try {
       await generateContract({
@@ -1002,6 +1011,7 @@ program
         data: options.data,
         css: options.css,
         output: options.output,
+        suffix: options.suffix,
       });
       process.exit(0);
     } catch (error) {

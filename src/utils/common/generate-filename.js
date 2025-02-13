@@ -318,6 +318,7 @@ async function generateRevisionedFilename(basePath, extension) {
  * @async
  * @param {string} sourcePath - Source file path
  * @param {string} outputDir - Output directory
+ * @param {object} options - Additional options for filename generation
  * @returns {Promise<{html: string, pdf: string, md: string}>} Format-specific paths
  * @throws {AppError} On invalid input or path error
  *
@@ -347,38 +348,41 @@ async function generateRevisionedFilename(basePath, extension) {
  *   console.error('Generation failed:', error.message);
  * }
  */
-async function generateFileName(sourcePath, outputDir) {
+async function generateFileName(sourcePath, outputDir, options = {}) {
   try {
     // Validate input parameters
     if (!sourcePath) {
-      throw new AppError('Source path is required', 'INVALID_PATH');
+      throw new AppError('Failed to generate filenames', 'FILENAME_ERROR', {
+        reason: 'Source path is required',
+      });
     }
     if (!outputDir) {
-      throw new AppError('Output directory is required', 'INVALID_PATH');
+      throw new AppError('Failed to generate filenames', 'FILENAME_ERROR', {
+        reason: 'Output directory is required',
+      });
     }
 
-    // Convert output directory to absolute path if it's relative
+    // Keep outputDir as relative path if it's relative
+    const workingOutputDir = outputDir;
+
+    // Ensure output directory exists (using absolute path internally)
     const absoluteOutputDir = path.isAbsolute(outputDir)
       ? outputDir
       : path.join(process.cwd(), outputDir);
 
-    // Ensure output directory exists
     try {
       await fs.mkdir(absoluteOutputDir, { recursive: true });
     } catch (error) {
-      throw new AppError(
-        'Failed to create output directory',
-        'DIRECTORY_ERROR',
-        {
-          outputDir: absoluteOutputDir,
-          originalError: error,
-        }
-      );
+      throw new AppError('Failed to generate filenames', 'FILENAME_ERROR', {
+        reason: 'Failed to create output directory',
+        outputDir: absoluteOutputDir,
+        originalError: error,
+      });
     }
 
     // Extract base name from source path, removing any extension
     const baseName = path.basename(sourcePath, path.extname(sourcePath));
-    const basePath = path.join(absoluteOutputDir, baseName);
+    const basePath = path.join(workingOutputDir, baseName);
 
     logger.debug('Multi-format filename generation', {
       filename: 'generate-filename.js',
@@ -391,26 +395,33 @@ async function generateFileName(sourcePath, outputDir) {
     let highestRevision = 0;
     let foundExisting = false;
 
+    // Get suffix from options
+    const suffix = options.suffix ? `.${options.suffix}` : '';
+
     // Check base files first
-    const baseHtmlPath = `${basePath}${FILE_EXTENSIONS.output.html}`;
-    const basePdfPath = `${basePath}${FILE_EXTENSIONS.output.pdf}`;
-    const baseMdPath = `${basePath}${FILE_EXTENSIONS.output.markdown}`;
+    const baseHtmlPath = `${basePath}${suffix}${FILE_EXTENSIONS.output.html}`;
+    const basePdfPath = `${basePath}${suffix}${FILE_EXTENSIONS.output.pdf}`;
+    const baseMdPath = `${basePath}${suffix}${FILE_EXTENSIONS.output.markdown}`;
+
+    // Helper function to check if a file exists
+    const checkFileExists = async (filePath) => {
+      try {
+        await fs.access(filePath);
+        return true;
+      } catch (error) {
+        if (error.code === 'ENOENT' || error.message === 'File not found') {
+          return false;
+        }
+        throw error;
+      }
+    };
 
     try {
       // Check if any of the base files exist
       const baseFilesExist = await Promise.all([
-        fs
-          .access(baseHtmlPath)
-          .then(() => true)
-          .catch(() => false),
-        fs
-          .access(basePdfPath)
-          .then(() => true)
-          .catch(() => false),
-        fs
-          .access(baseMdPath)
-          .then(() => true)
-          .catch(() => false),
+        checkFileExists(baseHtmlPath),
+        checkFileExists(basePdfPath),
+        checkFileExists(baseMdPath),
       ]);
 
       foundExisting = baseFilesExist.some((exists) => exists);
@@ -434,23 +445,14 @@ async function generateFileName(sourcePath, outputDir) {
       // If files exist, find highest revision
       while (highestRevision < FILENAME_CONFIG.MAX_REVISIONS) {
         const currentRevision = highestRevision + 1;
-        const htmlRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${FILE_EXTENSIONS.output.html}`;
-        const pdfRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${FILE_EXTENSIONS.output.pdf}`;
-        const mdRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${FILE_EXTENSIONS.output.markdown}`;
+        const htmlRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${suffix}${FILE_EXTENSIONS.output.html}`;
+        const pdfRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${suffix}${FILE_EXTENSIONS.output.pdf}`;
+        const mdRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${suffix}${FILE_EXTENSIONS.output.markdown}`;
 
         const revisionExists = await Promise.all([
-          fs
-            .access(htmlRevPath)
-            .then(() => true)
-            .catch(() => false),
-          fs
-            .access(pdfRevPath)
-            .then(() => true)
-            .catch(() => false),
-          fs
-            .access(mdRevPath)
-            .then(() => true)
-            .catch(() => false),
+          checkFileExists(htmlRevPath),
+          checkFileExists(pdfRevPath),
+          checkFileExists(mdRevPath),
         ]);
 
         if (!revisionExists.some((exists) => exists)) {
@@ -472,7 +474,8 @@ async function generateFileName(sourcePath, outputDir) {
         highestRevision = currentRevision;
       }
 
-      throw new AppError('Maximum revision limit reached', 'REVISION_LIMIT', {
+      throw new AppError('Failed to generate filenames', 'FILENAME_ERROR', {
+        reason: 'Maximum revision limit reached',
         basePath,
         maxRevisions: FILENAME_CONFIG.MAX_REVISIONS,
       });
@@ -480,26 +483,22 @@ async function generateFileName(sourcePath, outputDir) {
       if (error instanceof AppError) {
         throw error;
       }
-      throw new AppError(
-        'Failed to generate output filenames',
-        'FILENAME_ERROR',
-        {
-          sourcePath,
-          outputDir,
-          originalError: error,
-        }
-      );
-    }
-  } catch (error) {
-    throw new AppError(
-      'Failed to generate output filenames',
-      'FILENAME_ERROR',
-      {
+      throw new AppError('Failed to generate filenames', 'FILENAME_ERROR', {
+        reason: 'File system error',
         sourcePath,
         outputDir,
         originalError: error,
-      }
-    );
+      });
+    }
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError('Failed to generate filenames', 'FILENAME_ERROR', {
+      sourcePath,
+      outputDir,
+      originalError: error,
+    });
   }
 }
 
