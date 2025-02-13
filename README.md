@@ -198,6 +198,12 @@ contracts-wizard generate -t contract.md -d input.csv
 # Use custom styling
 contracts-wizard generate -t contract.md -d input.csv -c style.css
 
+# Use custom styling and highlight missing and imported values
+contracts-wizard generate -t contract.md -d input.csv -c style.css --highlight
+
+# Add a suffix to the generated filenames
+contracts-wizard generate -t contract.md -d input.csv -c style.css --suffix client_name
+
 # List available resources
 contracts-wizard list templates
 contracts-wizard list data
@@ -220,13 +226,14 @@ contracts-wizard
 
 Options for the `generate` command:
 
-| Option     | Short | Description                       | Example              |
-| ---------- | ----- | --------------------------------- | -------------------- |
-| --template | -t    | Template file path                | -t contract.md       |
-| --data     | -d    | CSV data file path                | -d input.csv         |
-| --css      | -c    | CSS style file path               | -c style.css         |
-| --output   | -o    | Output directory path             | -o ./output          |
-| --suffix   |       | Add suffix to generated filenames | --suffix client_name |
+| Option      | Short | Description                       | Example              |
+| ----------- | ----- | --------------------------------- | -------------------- |
+| --template  | -t    | Template file path                | -t contract.md       |
+| --data      | -d    | CSV data file path                | -d input.csv         |
+| --css       | -c    | CSS style file path               | -c style.css         |
+| --output    | -o    | Output directory path             | -o ./output          |
+| --suffix    |       | Add suffix to generated filenames | --suffix client_name |
+| --highlight |       | Enable highlighting styles        | --highlight          |
 
 Global options:
 
@@ -334,6 +341,7 @@ Compares two values for equality with type coercion:
 - Proper handling of null/undefined values with configurable error messages
 
 Example:
+
 ```handlebars
 {{#if (eq user.age 18)}}
   User is 18 years old

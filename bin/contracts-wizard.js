@@ -1040,14 +1040,39 @@ program
   .option('-c, --css <path>', 'Path to CSS style file')
   .option('-o, --output <dir>', 'Output directory for generated files')
   .option('--suffix <string>', 'Add a suffix to the generated filenames')
+  .option('--highlight', 'Enable highlighting styles in the output')
   .action(async (options) => {
     try {
+      // If highlight is enabled, add the highlight CSS to the options
+      let cssFiles = [];
+      if (options.css) {
+        cssFiles.push(options.css);
+      }
+      if (options.highlight) {
+        const highlightCssPath = path.join(
+          __dirname,
+          '../src/config/highlight.css'
+        );
+        cssFiles.push(highlightCssPath);
+      }
+
+      // Construct suffix combining user suffix and HIGHLIGHTED if needed
+      let finalSuffix = '';
+      if (options.suffix) {
+        finalSuffix = options.suffix;
+      }
+      if (options.highlight) {
+        finalSuffix = finalSuffix
+          ? `${finalSuffix}.HIGHLIGHTED`
+          : 'HIGHLIGHTED';
+      }
+
       await generateContract({
         template: options.template,
         data: options.data,
-        css: options.css,
+        css: cssFiles.length > 0 ? cssFiles.join(',') : undefined,
         output: options.output,
-        suffix: options.suffix,
+        suffix: finalSuffix || undefined,
       });
       process.exit(0);
     } catch (error) {
