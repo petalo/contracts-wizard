@@ -348,11 +348,31 @@ async function startWorkflow(context) {
       let templateData;
       if (dataPath) {
         logger.debug('Processing CSV data', { dataPath });
-        templateData = await processCsvData(dataPath);
-        logger.debug('CSV data processed successfully', {
-          dataPath,
-          fields: Object.keys(templateData),
-        });
+        try {
+          templateData = await processCsvData(dataPath);
+          logger.debug('CSV data processed successfully', {
+            dataPath,
+            fields: Object.keys(templateData),
+          });
+        } catch (error) {
+          // Propagate CSV specific errors
+          if (
+            error instanceof AppError &&
+            (error.code === 'CSV_PARSING_ERROR' ||
+              error.code === 'CSV_STRUCTURE_ERROR' ||
+              error.code === 'CSV_PROCESSING_ERROR')
+          ) {
+            throw error;
+          }
+          // Wrap other errors
+          throw new ProcessingError('Failed to process CSV data', {
+            originalError: error.message,
+            stack: error.stack,
+            paths: {
+              dataPath,
+            },
+          });
+        }
       }
 
       // Process template with data
@@ -378,7 +398,13 @@ async function startWorkflow(context) {
         cssPath,
       });
 
-      if (error instanceof ValidationError) {
+      if (
+        error instanceof ValidationError ||
+        (error instanceof AppError &&
+          (error.code === 'CSV_PARSING_ERROR' ||
+            error.code === 'CSV_STRUCTURE_ERROR' ||
+            error.code === 'CSV_PROCESSING_ERROR'))
+      ) {
         throw error;
       }
 

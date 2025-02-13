@@ -472,11 +472,21 @@ async function processCsvData(csvPath, templateFields = []) {
       delimiter: ',',
       transformHeader: (h) => h.toLowerCase().trim(),
       error: (error) => {
-        // Ignorar errores de FieldMismatch
-        if (error.type === 'FieldMismatch') {
-          return;
-        }
-        throw error;
+        logger.error('CSV parsing error', {
+          context: '[error]',
+          filename: 'process-csv.js',
+          correlationId,
+          error: error.message,
+          type: error.type,
+        });
+        throw new AppError('Failed to parse CSV file', 'CSV_PARSING_ERROR', {
+          cause: error,
+          details: {
+            path: csvPath,
+            errorType: error.type,
+            errorMessage: error.message,
+          },
+        });
       },
       // No fallar si faltan campos
       transform: (value) => value || '',
@@ -495,7 +505,12 @@ async function processCsvData(csvPath, templateFields = []) {
         errors: criticalErrors,
         type: 'parse-error',
       });
-      throw new AppError('Failed to parse CSV file', 'CSV_PARSE_ERROR');
+      throw new AppError('Failed to parse CSV file', 'CSV_PARSING_ERROR', {
+        details: {
+          path: csvPath,
+          errors: criticalErrors,
+        },
+      });
     }
 
     logger.debug('CSV parsing complete', {
@@ -515,7 +530,12 @@ async function processCsvData(csvPath, templateFields = []) {
         correlationId,
         type: 'structure-error',
       });
-      throw new AppError('Invalid CSV structure', 'CSV_STRUCTURE_ERROR');
+      throw new AppError('Invalid CSV structure', 'CSV_STRUCTURE_ERROR', {
+        details: {
+          path: csvPath,
+          data: parsedData,
+        },
+      });
     }
 
     // Process data lines into structured object
@@ -552,18 +572,27 @@ async function processCsvData(csvPath, templateFields = []) {
       filename: 'process-csv.js',
       correlationId,
       error: error.message,
-      path: csvPath,
-      templateFields,
+      code: error.code,
+      details: error.details,
       stack: error.stack,
-      type: 'process-error',
     });
 
-    if (error instanceof AppError) {
+    // Re-throw CSV specific errors
+    if (
+      error instanceof AppError &&
+      (error.code === 'CSV_PARSING_ERROR' ||
+        error.code === 'CSV_STRUCTURE_ERROR')
+    ) {
       throw error;
     }
 
-    throw new AppError('Failed to process CSV data', 'CSV_PROCESSING_ERROR', {
-      originalError: error,
+    // Wrap other errors
+    throw new AppError('Failed to process CSV file', 'CSV_PROCESSING_ERROR', {
+      cause: error,
+      details: {
+        path: csvPath,
+        templateFields,
+      },
     });
   }
 }
