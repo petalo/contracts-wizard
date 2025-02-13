@@ -50,11 +50,19 @@ const { ENCODING_CONFIG } = require('@/config/encoding');
  */
 const csvStructureSchema = Joi.array()
   .items(
-    Joi.object({
-      key: Joi.string().required(),
-      value: Joi.string().allow('').optional(),
-      comment: Joi.string().allow('').optional(),
-    })
+    Joi.alternatives().try(
+      // Schema para 3 columnas (key, value, comment)
+      Joi.object({
+        key: Joi.string().required(),
+        value: Joi.string().allow('').optional(),
+        comment: Joi.string().allow('').optional(),
+      }),
+      // Schema para 2 columnas (key, value)
+      Joi.object({
+        key: Joi.string().required(),
+        value: Joi.string().allow('').optional(),
+      })
+    )
   )
   .min(1);
 
@@ -77,31 +85,40 @@ function validateCsvStructure(parsedData) {
   try {
     // Transform data to match schema format if needed
     const transformedData = parsedData.map((row) => {
-      // If row is already in correct format, return as is
+      // Si ya tiene la estructura correcta, devolver como está
       if (row.key !== undefined) {
-        return {
+        const transformed = {
           key: row.key,
           value: row.value || '',
-          comment: row.comment || '',
         };
+        // Solo añadir comment si existe
+        if (row.comment !== undefined) {
+          transformed.comment = row.comment;
+        }
+        return transformed;
       }
 
-      // Extract key and value from row object
+      // Extraer key y value del objeto
       const entries = Object.entries(row);
       if (entries.length === 0) {
         return {
           key: '',
           value: '',
-          comment: '',
         };
       }
 
-      // Handle case where first column is the key
-      return {
+      // Manejar caso donde la primera columna es la key
+      const transformed = {
         key: entries[0][0],
         value: entries[0][1] || '',
-        comment: entries[2] ? entries[2][1] : '',
       };
+
+      // Solo añadir comment si existe una tercera columna
+      if (entries[2]) {
+        transformed.comment = entries[2][1] || '';
+      }
+
+      return transformed;
     });
 
     const { error } = csvStructureSchema.validate(transformedData);
@@ -454,14 +471,28 @@ async function processCsvData(csvPath, templateFields = []) {
       comments: '#',
       delimiter: ',',
       transformHeader: (h) => h.toLowerCase().trim(),
+      error: (error) => {
+        // Ignorar errores de FieldMismatch
+        if (error.type === 'FieldMismatch') {
+          return;
+        }
+        throw error;
+      },
+      // No fallar si faltan campos
+      transform: (value) => value || '',
     });
 
-    if (errors.length > 0) {
+    // Filtrar errores que no sean FieldMismatch
+    const criticalErrors = errors.filter(
+      (error) => error.type !== 'FieldMismatch'
+    );
+
+    if (criticalErrors.length > 0) {
       logger.error('CSV parsing failed', {
         context: '[error]',
         filename: 'process-csv.js',
         correlationId,
-        errors,
+        errors: criticalErrors,
         type: 'parse-error',
       });
       throw new AppError('Failed to parse CSV file', 'CSV_PARSE_ERROR');
