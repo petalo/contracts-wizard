@@ -634,11 +634,10 @@ async function generateContract({
 }) {
   const correlationId = Date.now().toString(36);
   logger.info('Starting contract generation', {
+    filename: 'contracts-wizard.js',
+    context: '[cli]',
     correlationId,
-    template: path.basename(template),
-    hasData: !!data,
-    hasCss: !!css,
-    hasSuffix: !!suffix,
+    params: `template=${path.basename(template)} • data=${data ? path.basename(data) : 'none'} • css=${css ? path.basename(css) : 'none'} • suffix=${suffix || 'none'}`,
   });
 
   try {
@@ -663,11 +662,10 @@ async function generateContract({
       : PATHS.output;
 
     logger.debug('Resolved paths', {
+      filename: 'contracts-wizard.js',
+      context: '[cli]',
       correlationId,
-      templatePath,
-      dataPath,
-      cssPath,
-      outputDir,
+      params: `template=${templatePath} • data=${dataPath || 'none'} • css=${cssPath || 'none'} • output=${outputDir}`,
     });
 
     // Validate files exist and are accessible
@@ -689,9 +687,10 @@ async function generateContract({
         logger.warn(
           `Retry ${attempt}/${MAX_RETRIES} validating output directory`,
           {
+            filename: 'contracts-wizard.js',
+            context: '[file]',
             correlationId,
-            path: outputDir,
-            error: error.message,
+            params: `path=${outputDir} • attempt=${attempt}/${MAX_RETRIES} • error=${error.message}`,
           }
         );
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
@@ -716,40 +715,33 @@ async function generateContract({
 
     // Log context with sanitized paths
     logger.debug('Starting workflow with context', {
-      context: '[system]',
+      filename: 'contracts-wizard.js',
+      context: '[cli]',
       correlationId,
-      data: {
-        ...context,
-        // Exclude full paths from logs for security
-        templatePath: path.basename(templatePath),
-        dataPath: dataPath ? path.basename(dataPath) : null,
-        cssPath: cssPath ? path.basename(cssPath) : null,
-        outputDir: path.basename(outputDir),
-        suffix, // Include suffix in logs
-      },
+      params: `template=${path.basename(templatePath)} • data=${dataPath ? path.basename(dataPath) : 'none'} • css=${cssPath ? path.basename(cssPath) : 'none'} • output=${path.basename(outputDir)} • suffix=${suffix || 'none'}`,
     });
 
     // Start workflow with context
     const result = await startWorkflow(context);
 
     logger.info('Contract generation completed successfully', {
+      filename: 'contracts-wizard.js',
+      context: '[cli]',
       correlationId,
-      outputFiles: result.files,
+      params: `files=${Object.keys(result.files).join(',')} • template=${path.basename(templatePath)}`,
     });
 
     return result;
   } catch (error) {
     logger.error('Contract generation failed', {
+      filename: 'contracts-wizard.js',
+      context: '[error]',
       correlationId,
       error: error.message,
-      code: error.code,
-      details: error.details,
-      paths: {
-        template: path.basename(template),
-        data: data ? path.basename(data) : null,
-        css: css ? path.basename(css) : null,
-        output,
-      },
+      code: error.code || 'UNKNOWN_ERROR',
+      details: error.details || {},
+      stack: error.stack,
+      params: `type=${error.name} • code=${error.code || 'UNKNOWN_ERROR'} • message=${error.message} • template=${path.basename(template)}`,
     });
 
     // Rethrow with appropriate error type
@@ -797,22 +789,38 @@ async function generateContract({
  */
 program.description('Generate contracts interactively').action(async () => {
   try {
-    logger.debug('=== INTERACTIVE MODE STARTED ===');
+    logger.debug('=== INTERACTIVE MODE STARTED ===', {
+      filename: 'contracts-wizard.js',
+      context: '[cli]',
+      mode: 'interactive',
+    });
     display.status.info('Starting interactive mode...');
 
     // Step 1: Template selection
     const template = await selectMarkdownTemplate();
-    logger.debug('Template selected:', { template });
+    logger.debug('Template selected:', {
+      filename: 'contracts-wizard.js',
+      context: '[cli]',
+      template: path.basename(template),
+    });
 
     // Step 2: Input method selection
     const inputMethod = await selectInputMethod();
-    logger.debug('Input method selected:', { inputMethod });
+    logger.debug('Input method selected:', {
+      filename: 'contracts-wizard.js',
+      context: '[cli]',
+      method: inputMethod,
+    });
 
     // Step 3: Data file selection or creation
     let data;
     if (inputMethod === 'csv') {
       data = await selectDataFile(template);
-      logger.debug('Data file selected:', { data });
+      logger.debug('Data file selected:', {
+        filename: 'contracts-wizard.js',
+        context: '[cli]',
+        data: data ? path.basename(data) : 'none',
+      });
     } else if (inputMethod === 'create') {
       // Generate new CSV template from markdown
       display.status.info('Generating CSV template from markdown...');
@@ -821,22 +829,33 @@ program.description('Generate contracts interactively').action(async () => {
       display.status.info(
         'Please fill in the CSV file and run the command again with the filled file.'
       );
-      // Asegurar que todos los procesos se cierren antes de salir
+      // Ensure all processes are closed before exiting
       await cleanupAndExit(0);
       return;
     } else {
       // No data input selected
       data = null;
-      logger.debug('No data input selected');
+      logger.debug('No data input selected', {
+        filename: 'contracts-wizard.js',
+        context: '[cli]',
+      });
     }
 
     // Step 4: CSS theme selection
     const css = await selectCssFile();
-    logger.debug('CSS file selected:', { css });
+    logger.debug('CSS file selected:', {
+      filename: 'contracts-wizard.js',
+      context: '[cli]',
+      css: css ? path.basename(css) : 'none',
+    });
 
     // Use default output directory
     const outputDir = process.env.DIR_OUTPUT || 'output_files';
-    logger.debug('Using default output directory:', { outputDir });
+    logger.debug('Using default output directory:', {
+      filename: 'contracts-wizard.js',
+      context: '[cli]',
+      dir: outputDir,
+    });
 
     // Convert all paths to absolute
     const templatePath = path.isAbsolute(template)
@@ -852,6 +871,20 @@ program.description('Generate contracts interactively').action(async () => {
         ? css
         : path.join(process.cwd(), css)
       : null;
+
+    // Show CLI command equivalent
+
+    // Break long command into parts for readability
+    const baseCommand = `node bin/contracts-wizard generate -t ${templatePath}`;
+    const dataCommand = dataPath ? ` -d ${dataPath}` : '';
+    const cssCommand = cssPath ? ` -c ${cssPath}` : '';
+    const cliCommand = `${baseCommand}${dataCommand}${cssCommand}`;
+
+    logger.info('Replicate in CLI:', {
+      filename: 'contracts-wizard.js',
+      context: '[cli]',
+      command: cliCommand,
+    });
 
     // Validate all files exist and are accessible
     await validateFiles(templatePath, dataPath, cssPath);
@@ -869,24 +902,27 @@ program.description('Generate contracts interactively').action(async () => {
 
     // Log context with sanitized paths
     logger.debug('Starting workflow with context', {
-      context: {
-        ...context,
-        // Exclude full paths from logs for security
-        templatePath: path.basename(templatePath),
-        dataPath: dataPath ? path.basename(dataPath) : null,
-        cssPath: cssPath ? path.basename(cssPath) : null,
-        outputDir: path.basename(outputDir),
-      },
+      filename: 'contracts-wizard.js',
+      context: '[cli]',
+      params: `template=${path.basename(templatePath)} • data=${dataPath ? path.basename(dataPath) : 'none'} • css=${cssPath ? path.basename(cssPath) : 'none'} • output=${path.basename(outputDir)}`,
     });
 
     // Execute workflow with collected information
     await startWorkflow(context);
 
     display.status.success('Contract generated successfully!');
-    // Asegurar que todos los procesos se cierren antes de salir
+    // Ensure all processes are closed before exiting
     await cleanupAndExit(0);
   } catch (error) {
-    logger.error('Interactive mode failed:', error);
+    logger.error('Interactive mode failed:', {
+      filename: 'contracts-wizard.js',
+      context: '[error]',
+      error: error.message,
+      code: error.code || 'UNKNOWN_ERROR',
+      details: error.details || {},
+      stack: error.stack,
+      params: `type=${error.name} • code=${error.code || 'UNKNOWN_ERROR'} • message=${error.message}`,
+    });
 
     if (error instanceof AppError) {
       console.error(`Error: ${error.message} (${error.code})`);
@@ -900,7 +936,7 @@ program.description('Generate contracts interactively').action(async () => {
       `2. Check the log file at: ${process.env.LATEST_LOG_PATH || 'logs/logging-latest.log'}`
     );
 
-    // Asegurar que todos los procesos se cierren antes de salir con error
+    // Ensure all processes are closed before exiting with error
     await cleanupAndExit(1);
   }
 });

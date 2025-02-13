@@ -104,6 +104,7 @@ const VALID_CONTEXTS = new Set([
   'auth', // Authentication specific events
   'cache', // Cache operations, hits, misses
   'cleanup', // Cleanup operations, maintenance
+  'cli', // CLI interactions, commands
   'config', // Configuration changes, env vars
   'data', // Data processing, transformations
   'db', // Database operations, queries
