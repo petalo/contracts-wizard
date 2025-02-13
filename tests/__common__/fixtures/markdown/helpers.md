@@ -242,21 +242,21 @@ Would have passed second level!
 <span class="pass">Currency formatting with USD: <span class="imported-value">{{this}}</span></span>
 {{else}}
 <span class="failed">Currency formatting failed</span>
-{{/currency}}
+{{/currency}}<br>
 
 <span class="explanation"> currency(1000, "EUR") </span><br>
 {{#currency 1000 "EUR"}}
 <span class="pass">Currency formatting with EUR: <span class="imported-value">{{this}}</span></span>
 {{else}}
 <span class="failed">Currency formatting failed</span>
-{{/currency}}
+{{/currency}}<br>
 
 <span class="explanation"> currency(1000.50, "USD") </span><br>
 {{#currency 1000.50 "USD"}}
 <span class="pass">Currency with decimals: <span class="imported-value">{{this}}</span></span>
 {{else}}
 <span class="failed">Currency decimal handling failed</span>
-{{/currency}}
+{{/currency}}<br>
 </div>
 
 <!-- ---------------------------------------------------------------- -->
