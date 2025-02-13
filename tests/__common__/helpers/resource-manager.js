@@ -15,6 +15,7 @@
 const { EventEmitter } = require('events');
 const path = require('path');
 const fs = require('fs/promises');
+const process = require('process');
 
 /**
  * Resource manager class for test environment
@@ -40,6 +41,16 @@ class ResourceManager {
     this.fileOperations = new Set();
     this.eventEmitter = new EventEmitter();
     this.isShuttingDown = false;
+
+    // Define permanent directories that should not be cleaned
+    this.permanentDirectories = [
+      process.env.TEMPLATES_DIR || 'templates',
+      process.env.OUTPUT_DIR || 'output',
+      'templates/css',
+      'output_files',
+    ]
+      .filter(Boolean)
+      .map((dir) => path.resolve(process.cwd(), dir));
 
     // Define test directories
     this.testDirectories = [
@@ -121,15 +132,19 @@ class ResourceManager {
   async cleanup() {
     this.isShuttingDown = true;
 
-    // Only clean up test directories
-    const testCleanup = this.testDirectories.map(async (dir) => {
-      try {
-        const files = await fs.readdir(dir);
-        await Promise.all(files.map((file) => fs.unlink(path.join(dir, file))));
-      } catch (error) {
-        // Ignore cleanup errors
-      }
-    });
+    // Only clean up test directories that are not permanent
+    const testCleanup = this.testDirectories
+      .filter((dir) => !this.permanentDirectories.includes(dir))
+      .map(async (dir) => {
+        try {
+          const files = await fs.readdir(dir);
+          await Promise.all(
+            files.map((file) => fs.unlink(path.join(dir, file)))
+          );
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+      });
 
     await Promise.all(testCleanup);
 

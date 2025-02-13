@@ -140,6 +140,8 @@ const CRITICAL_DIRS = [
   process.env.DIR_OUTPUT || 'tests/output',
   process.env.DIR_CSV || 'tests/csv',
   process.env.DIR_IMAGES || 'templates/images',
+  'output_files', // Add output_files directory
+  'templates/css', // Ensure CSS directory exists
 ].map((dir) => path.resolve(process.cwd(), dir));
 
 // Create critical directories before any test runs
@@ -153,6 +155,8 @@ CRITICAL_DIRS.forEach((dir) => {
 // Add these directories to PERMANENT_DIRS
 const PERMANENT_DIRS = [
   'tests/__common__/fixtures', // Permanent fixtures directory
+  'templates/css', // CSS templates directory
+  'output_files', // Output files directory
   ...CRITICAL_DIRS, // Add critical directories
 ]
   .filter(Boolean)
