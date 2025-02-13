@@ -524,11 +524,6 @@ Would have passed second level!
             <td>{{currencySymbol "USD"}}</td>
           </tr>
           <tr>
-            <td>exchangeRate</td>
-            <td><span class="csv-value">1000</span></td>
-            <td>{{exchangeRate 1000 "EUR" "USD"}}</td>
-          </tr>
-          <tr>
             <td>lookup.testObject.property</td>
             <td><span class="csv-value">value</span></td>
             <td>{{lookup.testObject.property}}</td>

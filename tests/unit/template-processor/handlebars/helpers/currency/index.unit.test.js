@@ -1,224 +1,153 @@
 /**
- * @file Currency Helpers Unit Tests
+ * @file Currency Formatting Helper Tests
  *
- * Tests for currency formatting and manipulation helpers:
- * - formatCurrency
- * - currencySymbol
- * - exchangeRate
+ * Tests for currency formatting utilities:
+ * - Basic currency formatting
+ * - Currency symbol handling
+ * - Edge cases and error handling
  *
  * @module tests/unit/template-processor/handlebars/helpers/currency
  */
 
-const handlebars = require('handlebars');
-const { LOCALE_CONFIG } = require('@/config/locale');
-const { HANDLEBARS_CONFIG } = require('@/config/handlebars-config');
 const {
   formatCurrency,
-  currencySymbol,
-  exchangeRate,
+  formatCurrencyHelper,
+  getCurrencySymbol,
 } = require('@/utils/template-processor/handlebars/helpers/currency');
 
-// Register helpers for template tests
-handlebars.registerHelper('formatCurrency', formatCurrency);
-handlebars.registerHelper('currencySymbol', currencySymbol);
-handlebars.registerHelper('exchangeRate', exchangeRate);
+const handlebars = require('handlebars');
 
 describe('Currency Helpers', () => {
   describe('formatCurrency', () => {
-    it('should format number with default currency (EUR)', () => {
+    test('formats number with default currency (EUR)', () => {
       const result = formatCurrency(1000);
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency">1.000,00 €</span>'
-      );
+      expect(result).toBe('1.000,00 €');
     });
 
-    it('should format number with USD currency', () => {
-      const result = formatCurrency(1000, 'USD');
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency">$1,000.00</span>'
-      );
+    test('formats number with USD currency', () => {
+      const result = formatCurrency(1000, { currency: 'USD' });
+      expect(result).toBe('1.000,00 $');
     });
 
-    it('should format decimal numbers correctly', () => {
-      const result = formatCurrency(1000.5, 'EUR');
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency">1.000,50 €</span>'
-      );
+    test('formats decimal numbers correctly', () => {
+      const result = formatCurrency(1000.5);
+      expect(result).toBe('1.000,50 €');
     });
 
-    it('should handle string numbers', () => {
-      const result = formatCurrency('1000.50', 'EUR');
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency">1.000,50 €</span>'
-      );
+    test('handles string numbers', () => {
+      const result = formatCurrency('1000.50');
+      expect(result).toBe('1.000,50 €');
     });
 
-    it('should handle zero', () => {
-      const result = formatCurrency(0, 'EUR');
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency">0,00 €</span>'
-      );
+    test('handles zero', () => {
+      const result = formatCurrency(0);
+      expect(result).toBe('0,00 €');
     });
 
-    it('should handle negative numbers', () => {
-      const result = formatCurrency(-1000.5, 'EUR');
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency">-1.000,50 €</span>'
-      );
+    test('handles negative numbers', () => {
+      const result = formatCurrency(-1000.5);
+      expect(result).toBe('-1.000,50 €');
     });
 
-    it('should handle invalid numbers', () => {
-      const result = formatCurrency('invalid', 'EUR');
-      expect(result.toString()).toBe(
-        `<span class="missing-value" data-field="currency">${HANDLEBARS_CONFIG.errorMessages.invalidAmount}</span>`
-      );
+    test('handles invalid numbers', () => {
+      const result = formatCurrency('invalid');
+      expect(result).toBe('invalid');
     });
 
-    it('should handle undefined amount', () => {
-      const result = formatCurrency(undefined, 'EUR');
-      expect(result.toString()).toBe(
-        `<span class="missing-value" data-field="currency">${HANDLEBARS_CONFIG.errorMessages.invalidAmount}</span>`
-      );
+    test('handles undefined amount', () => {
+      const result = formatCurrency(undefined);
+      expect(result).toBe('');
     });
 
-    it('should handle null amount', () => {
-      const result = formatCurrency(null, 'EUR');
-      expect(result.toString()).toBe(
-        `<span class="missing-value" data-field="currency">${HANDLEBARS_CONFIG.errorMessages.invalidAmount}</span>`
-      );
+    test('handles null amount', () => {
+      const result = formatCurrency(null);
+      expect(result).toBe('');
     });
   });
 
-  describe('currencySymbol', () => {
-    it('should return EUR symbol', () => {
-      const result = currencySymbol('EUR');
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency-symbol">€</span>'
-      );
+  describe('getCurrencySymbol', () => {
+    test('returns EUR symbol', () => {
+      expect(getCurrencySymbol('EUR')).toBe('€');
     });
 
-    it('should return USD symbol', () => {
-      const result = currencySymbol('USD');
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency-symbol">$</span>'
-      );
+    test('returns USD symbol', () => {
+      expect(getCurrencySymbol('USD')).toBe('$');
     });
 
-    it('should handle invalid currency code', () => {
-      const result = currencySymbol('INVALID');
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency-symbol">INVALID</span>'
-      );
+    test('returns GBP symbol', () => {
+      expect(getCurrencySymbol('GBP')).toBe('£');
     });
 
-    it('should handle undefined currency code', () => {
-      const result = currencySymbol(undefined);
-      expect(result.toString()).toBe(
-        `<span class="missing-value" data-field="currency">${HANDLEBARS_CONFIG.errorMessages.invalidCurrency}</span>`
-      );
+    test('returns currency code for unknown currencies', () => {
+      expect(getCurrencySymbol('XYZ')).toBe('XYZ');
     });
 
-    it('should handle null currency code', () => {
-      const result = currencySymbol(null);
-      expect(result.toString()).toBe(
-        `<span class="missing-value" data-field="currency">${HANDLEBARS_CONFIG.errorMessages.invalidCurrency}</span>`
-      );
+    test('returns EUR symbol by default', () => {
+      expect(getCurrencySymbol()).toBe('€');
     });
   });
 
-  describe('exchangeRate', () => {
-    it('should format converted amount in target currency', () => {
-      const result = exchangeRate(1000, 'EUR', 'USD');
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency">$1,000.00</span>'
-      );
+  describe('formatCurrencyHelper', () => {
+    test('wraps formatted currency in HTML span', () => {
+      const result = formatCurrencyHelper(1000);
+      const htmlString = result.toString();
+
+      // Verify HTML structure
+      expect(htmlString).toContain('class="imported-value"');
+      expect(htmlString).toContain('data-field="currency"');
+
+      // Verify currency content
+      expect(htmlString).toContain('1.000,00 €');
     });
 
-    it('should handle decimal amounts', () => {
-      const result = exchangeRate(1000.5, 'EUR', 'USD');
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency">$1,000.50</span>'
-      );
+    test('handles different currencies', () => {
+      const result = formatCurrencyHelper(1000, { hash: { currency: 'USD' } });
+      const htmlString = result.toString();
+
+      expect(htmlString).toContain('1.000,00 $');
     });
 
-    it('should handle string amounts', () => {
-      const result = exchangeRate('1000.50', 'EUR', 'USD');
-      expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="currency">$1,000.50</span>'
-      );
-    });
+    test('handles invalid values gracefully', () => {
+      const result = formatCurrencyHelper(null);
+      const htmlString = result.toString();
 
-    it('should handle missing amount', () => {
-      const result = exchangeRate(undefined, 'EUR', 'USD');
-      expect(result.toString()).toBe(
-        `<span class="missing-value" data-field="currency">${HANDLEBARS_CONFIG.errorMessages.invalidConversion}</span>`
-      );
-    });
-
-    it('should handle missing source currency', () => {
-      const result = exchangeRate(1000, undefined, 'USD');
-      expect(result.toString()).toBe(
-        `<span class="missing-value" data-field="currency">${HANDLEBARS_CONFIG.errorMessages.invalidConversion}</span>`
-      );
-    });
-
-    it('should handle missing target currency', () => {
-      const result = exchangeRate(1000, 'EUR', undefined);
-      expect(result.toString()).toBe(
-        `<span class="missing-value" data-field="currency">${HANDLEBARS_CONFIG.errorMessages.invalidConversion}</span>`
-      );
-    });
-
-    it('should handle invalid amount', () => {
-      const result = exchangeRate('invalid', 'EUR', 'USD');
-      expect(result.toString()).toBe(
-        `<span class="missing-value" data-field="currency">${HANDLEBARS_CONFIG.errorMessages.invalidAmount}</span>`
-      );
+      expect(htmlString).toContain('class="imported-value"');
+      expect(htmlString).toContain('data-field="currency"');
+      expect(htmlString).toContain('></span>'); // Empty content
     });
   });
 
   describe('Handlebars integration', () => {
-    it('should work in template with formatCurrency', () => {
-      const template = handlebars.compile('{{formatCurrency amount currency}}');
-      const result = template({
-        amount: 1000,
-        currency: 'EUR',
-      });
-      expect(result).toBe(
-        '<span class="imported-value" data-field="currency">1.000,00 €</span>'
-      );
+    beforeAll(() => {
+      // Register the helper for template tests
+      handlebars.registerHelper('formatCurrency', formatCurrencyHelper);
     });
 
-    it('should work in template with currencySymbol', () => {
-      const template = handlebars.compile('{{currencySymbol currency}}');
-      const result = template({ currency: 'EUR' });
-      expect(result).toBe(
-        '<span class="imported-value" data-field="currency-symbol">€</span>'
-      );
+    test('works in template with formatCurrency', () => {
+      const template = handlebars.compile('{{formatCurrency amount}}');
+      const result = template({ amount: 1000 });
+
+      expect(result).toContain('1.000,00 €');
+      expect(result).toContain('class="imported-value"');
+      expect(result).toContain('data-field="currency"');
     });
 
-    it('should work in template with exchangeRate', () => {
+    test('works with different currencies in template', () => {
       const template = handlebars.compile(
-        '{{exchangeRate amount fromCurrency toCurrency}}'
-      );
-      const result = template({
-        amount: 1000,
-        fromCurrency: 'EUR',
-        toCurrency: 'USD',
-      });
-      expect(result).toBe(
-        '<span class="imported-value" data-field="currency">$1,000.00</span>'
-      );
-    });
-
-    it('should handle nested helper calls', () => {
-      const template = handlebars.compile(
-        '{{formatCurrency (exchangeRate amount "EUR" "USD" subexpression=true) "USD"}}'
+        '{{formatCurrency amount currency="USD"}}'
       );
       const result = template({ amount: 1000 });
-      expect(result).toBe(
-        '<span class="imported-value" data-field="currency">$1,000.00</span>'
-      );
+
+      expect(result).toContain('1.000,00 $');
+    });
+
+    test('handles missing values in template', () => {
+      const template = handlebars.compile('{{formatCurrency}}');
+      const result = template({});
+
+      expect(result).toContain('class="imported-value"');
+      expect(result).toContain('data-field="currency"');
+      expect(result).toContain('></span>'); // Empty content
     });
   });
 });

@@ -19,8 +19,8 @@ formatDate.DEFAULT,"2024-01-01",default format
 formatDate.FULL,"2024-01-01",full format
 formatDate.ISO,"2024-01-01",ISO format
 innerCondition,false,boolean
-lookup.testObject.nested.deepProperty,value,nested object property
-lookup.testObject.property,value,test object property
+lookupTest.testObject.nested.deepProperty,value,nested object property
+lookupTest.testObject.property,value,test object property
 nullValue,null,null
 numberTest,42,number
 objectTest.status1,valid,string
