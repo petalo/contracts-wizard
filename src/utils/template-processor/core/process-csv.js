@@ -69,7 +69,7 @@ const csvStructureSchema = Joi.array()
 /**
  * Validates CSV file structure
  *
- * @param {Array<{key: string, value: string, comment?: string}>} parsedData - Parsed CSV data
+ * @param {object[]} parsedData - Parsed CSV data array where each object has key and value properties
  * @returns {boolean} True if structure is valid
  * @throws {AppError} On validation failure
  */
@@ -272,8 +272,8 @@ function convertValueType(value) {
 /**
  * Process data lines from CSV into a structured object
  *
- * @param {Array<{key: string, value: string}>} lines - Array of key-value pairs from CSV
- * @returns {object} - Processed data structure
+ * @param {object[]} lines - Array of objects with key and value properties
+ * @returns {object} Processed data structure
  */
 function processDataLines(lines) {
   const result = {};
@@ -433,12 +433,11 @@ function initializeDataFromFields(data, templateFields = []) {
 }
 
 /**
- * Process CSV data and validate against template fields
+ * Process CSV data from file
  *
  * @param {string} csvPath - Path to CSV file
- * @param {Array<string>} templateFields - Template field paths
- * @returns {Promise<{ [key: string]: any }>} Processed data object
- * @throws {AppError} If processing fails
+ * @param {string[]} [templateFields] - Optional template fields
+ * @returns {Promise<{[key: string]: any}>} Processed data object containing parsed CSV data
  */
 async function processCsvData(csvPath, templateFields = []) {
   const correlationId = Date.now().toString(36);

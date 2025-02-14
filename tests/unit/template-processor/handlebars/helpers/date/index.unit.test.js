@@ -205,10 +205,17 @@ describe('Date Helpers', () => {
     });
 
     it('should handle invalid date', () => {
+      // Temporarily suppress moment warnings for this test
+      const originalWarn = console.warn;
+      console.warn = jest.fn();
+
       const result = addYears('invalid-date', 1);
       expect(result.toString()).toBe(
         '<span class="missing-value" data-field="date">[[Invalid date]]</span>'
       );
+
+      // Restore console.warn
+      console.warn = originalWarn;
     });
 
     it('should handle extraction errors', () => {
