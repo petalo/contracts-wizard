@@ -205,10 +205,15 @@ async function listFiles(type, recursive = true) {
     // Get extensions for type
     const extensions = FILE_EXTENSIONS[type] || [];
     logger.debug('Listing files', {
-      type,
-      path: targetPath,
-      extensions,
-      recursive,
+      filename: 'file-scanner.js',
+      context: '[file-management]',
+      operation: 'list-files',
+      technical: {
+        type,
+        path: targetPath,
+        extensions,
+        recursive,
+      },
     });
 
     // Scan directory with type extensions
