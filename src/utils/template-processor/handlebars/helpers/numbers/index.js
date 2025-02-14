@@ -32,12 +32,12 @@
  * @requires numeral
  */
 
-const { LOCALE_CONFIG } = require('@/config/locale');
 const { logger } = require('@/utils/common/logger');
 const handlebars = require('handlebars');
 const numeral = require('numeral');
+const { LOCALE_CONFIG } = require('@/config/locale');
 
-// Importar explícitamente el locale español para extractNumericValue
+// Explicitly import Spanish locale for extractNumericValue
 require('numeral/locales/es');
 numeral.locale('es');
 
@@ -47,8 +47,8 @@ numeral.locale('es');
  */
 const DEFAULT_OPTIONS = {
   decimal: {
-    minDecimals: null, // Usar decimales originales
-    maxDecimals: null, // Usar decimales originales
+    minDecimals: null, // Use original decimals
+    maxDecimals: null, // Use original decimals
   },
   percent: {
     minDecimals: 0,
@@ -110,7 +110,7 @@ function extractNumericValue(value) {
 
   // If it's an object, try to find a numeric property
   if (typeof value === 'object' && value !== null) {
-    // Si es un objeto con propiedades específicas de moneda
+    // If it's an object with specific currency properties
     if (value.decimal || value.EUR || value.USD) {
       const numericValue = value.decimal || value.EUR || value.USD;
       logger.debug('Found currency value:', {
@@ -121,7 +121,7 @@ function extractNumericValue(value) {
       });
       return extractNumericValue(numericValue);
     }
-    // Si es un objeto con otras propiedades numéricas
+    // If it's an object with other numeric properties
     const numericValue =
       value.numero || value.number || value.value || value.importe_numero;
     if (numericValue !== undefined) {
@@ -136,17 +136,17 @@ function extractNumericValue(value) {
     return null;
   }
 
-  // Si es un string, intentar convertirlo
+  // If it's a string, try to convert it
   if (typeof value === 'string') {
-    // Limpiar el string de espacios y caracteres no numéricos
+    // Clean string from spaces and non-numeric characters
     const cleanValue = value.trim();
 
-    // Si está vacío después de limpiar, retornar null
+    // If empty after cleaning, return null
     if (!cleanValue) {
       return null;
     }
 
-    // Intentar como formato español (1.234,56)
+    // Try Spanish format (1.234,56)
     if (cleanValue.includes(',')) {
       const spanishValue = cleanValue.replace(/\./g, '').replace(',', '.');
       const parsedSpanish = parseFloat(spanishValue);
@@ -162,7 +162,7 @@ function extractNumericValue(value) {
       }
     }
 
-    // Intentar como formato inglés (1234.56)
+    // Try English format (1234.56)
     const parsedEnglish = parseFloat(cleanValue);
     if (!isNaN(parsedEnglish)) {
       logger.debug('Parsed as English format:', {
@@ -207,7 +207,7 @@ function validateFormatOptions(options = {}) {
   const style = (options?.style || 'decimal').toLowerCase();
   const currency = options?.currency;
 
-  // Obtener los decimales por defecto según el estilo
+  // Get default decimals based on style
   const defaults = DEFAULT_OPTIONS[style] || DEFAULT_OPTIONS.decimal;
 
   const minimumFractionDigits =
@@ -249,34 +249,37 @@ function validateFormatOptions(options = {}) {
  * // returns: "1.234,50"
  */
 function formatNumberCore(number, options = {}) {
-  // Determinar la cantidad de decimales del número original
-  const originalDecimals = (number.toString().split('.')[1] || '').length;
+  const validatedOptions = validateFormatOptions(options);
 
-  // Determinar los decimales por defecto según el estilo
-  const defaultDecimals =
-    options.style === 'percent'
-      ? DEFAULT_OPTIONS.percent.minDecimals
-      : options.style === 'currency'
-        ? DEFAULT_OPTIONS.currency.minDecimals
-        : originalDecimals;
+  try {
+    // Adjust number for percentages
+    const adjustedNumber =
+      validatedOptions.style === 'percent' ? number * 100 : number;
 
-  // Usar los decimales especificados o los por defecto
-  const minDecimals = options.minimumFractionDigits ?? defaultDecimals;
-  const maxDecimals = options.maximumFractionDigits ?? minDecimals;
+    // Use configured locale with fallback to es-ES
+    const locale = LOCALE_CONFIG?.fullLocale || 'es-ES';
 
-  // Ajustar el número para porcentajes
-  const adjustedNumber = options.style === 'percent' ? number * 100 : number;
+    // Use native formatter with configured locale
+    const formatter = new Intl.NumberFormat(locale, {
+      style: 'decimal',
+      minimumFractionDigits: validatedOptions.minimumFractionDigits || 0,
+      maximumFractionDigits: validatedOptions.maximumFractionDigits || 20,
+      useGrouping: true,
+    });
 
-  // Formatear usando Intl.NumberFormat
-  const formatter = new Intl.NumberFormat(LOCALE_CONFIG.fullLocale, {
-    style: 'decimal',
-    minimumFractionDigits: minDecimals,
-    maximumFractionDigits: maxDecimals,
-    useGrouping: true,
-    numberingSystem: 'latn',
-  });
-
-  return formatter.format(adjustedNumber);
+    return formatter.format(adjustedNumber);
+  } catch (error) {
+    logger.error('Error formatting number:', {
+      context: '[error]',
+      filename: 'numbers/index.js',
+      error: error.message,
+      stack: error.stack,
+      number,
+      options: validatedOptions,
+      locale: LOCALE_CONFIG?.fullLocale || 'es-ES',
+    });
+    return String(number);
+  }
 }
 
 /**
@@ -312,18 +315,18 @@ function formatNumber(value, options = {}) {
         value,
         type: typeof value,
       });
-      // Si el valor es una cadena, devolverla tal cual
+      // If the value is a string, return it as is
       if (typeof value === 'string') {
         return value;
       }
-      // Para null, undefined u otros tipos, devolver cadena vacía
+      // For null, undefined or other types, return empty string
       return '';
     }
 
-    // Formatear el número base
+    // Format base number
     let formattedNumber = formatNumberCore(number, options);
 
-    // Añadir símbolos según el estilo
+    // Add symbols based on style
     if (options.style === 'percent') {
       formattedNumber += ' %';
     } else if (options.style === 'currency' && options.currency === 'EUR') {
@@ -375,11 +378,11 @@ function formatNumberHelper(value, options) {
   });
 
   try {
-    // Si el valor es un SafeString, extraer el valor real
+    // If the value is a SafeString, extract the real value
     if (value && typeof value === 'object' && value.toString) {
       const stringValue = value.toString();
       if (stringValue.includes('class="imported-value"')) {
-        // Extraer el valor del span
+        // Extract value from span
         const match = stringValue.match(/>([^<]+)</);
         if (match) {
           value = match[1];
@@ -395,7 +398,7 @@ function formatNumberHelper(value, options) {
 
     const formattedNumber = formatNumber(value, options?.hash);
 
-    // Si el valor formateado está vacío, mostrar un mensaje de error
+    // If the formatted value is empty, show an error message
     if (!formattedNumber) {
       logger.warn('Invalid or empty number:', {
         context: '[format]',
@@ -409,8 +412,8 @@ function formatNumberHelper(value, options) {
       );
     }
 
-    // Si el valor formateado es igual al valor original y no es un número,
-    // significa que no se pudo formatear
+    // If the formatted value equals the original value and is not a number,
+    // it means it couldn't be formatted
     if (formattedNumber === value && isNaN(Number(value))) {
       return new handlebars.SafeString(
         `<span class="missing-value" data-field="number">[[Invalid number]]</span>`

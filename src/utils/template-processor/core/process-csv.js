@@ -85,17 +85,9 @@ function validateCsvStructure(parsedData) {
   try {
     // Transform data to match schema format if needed
     const transformedData = parsedData.map((row) => {
-      // Si ya tiene la estructura correcta, devolver como está
-      if (row.key !== undefined) {
-        const transformed = {
-          key: row.key,
-          value: row.value || '',
-        };
-        // Solo añadir comment si existe
-        if (row.comment !== undefined) {
-          transformed.comment = row.comment;
-        }
-        return transformed;
+      // If it already has the correct structure, return as is
+      if (Array.isArray(row) && row.length > 0 && typeof row[0] === 'object') {
+        return row;
       }
 
       // Extraer key y value del objeto

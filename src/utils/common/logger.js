@@ -166,21 +166,22 @@ const originalEmit = process.emit;
  * @returns {string} Validated and normalized context
  */
 const validateContext = (context) => {
-  // Si el contexto es undefined o null, retornar 'system'
+  // If context is undefined or null, return 'system'
   if (!context) return 'system';
 
-  // Si el contexto es un objeto, intentar obtener una propiedad válida
+  // If context is an object, try to get a valid property
   if (typeof context === 'object') {
-    // Si tiene una propiedad 'context', usarla
+    // If it has a 'context' property, use it
     if (context.context) {
       return validateContext(context.context.toString().replace(/[\s]/g, ''));
     }
-    // Si tiene una propiedad 'name', usarla
+
+    // If it has a 'name' property, use it
     if (context.name) {
       return validateContext(context.name.toString().replace(/[\s]/g, ''));
     }
 
-    // Si no tiene propiedades útiles, usar 'system'
+    // If it has no useful properties, use 'system'
     return 'system';
   }
 

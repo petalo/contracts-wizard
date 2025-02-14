@@ -25,25 +25,27 @@ const fsMock = {
     },
 
     async mkdir(path, options = {}) {
-      if (options.recursive) {
-        // Si es recursive, crear todos los directorios padre
+      const { recursive = false } = options;
+
+      // If recursive, create all parent directories
+      if (recursive) {
         const parts = path.split('/');
         let currentPath = '';
         for (const part of parts) {
-          if (part) {
-            currentPath += '/' + part;
-            mockDirs.add(currentPath);
+          currentPath = currentPath ? `${currentPath}/${part}` : part;
+          if (!mockFiles.has(currentPath)) {
+            mockFiles.set(currentPath, { type: 'directory' });
           }
         }
       } else {
-        // Si no es recursive, verificar que el padre existe
-        const parentDir = path.split('/').slice(0, -1).join('/');
-        if (parentDir && !mockDirs.has(parentDir)) {
-          const error = new Error(`ENOENT: no such directory '${parentDir}'`);
+        // If not recursive, verify parent exists
+        const parent = path.split('/').slice(0, -1).join('/');
+        if (parent !== '.' && !mockFiles.has(parent)) {
+          const error = new Error(`ENOENT: no such directory '${parent}'`);
           error.code = 'ENOENT';
           throw error;
         }
-        mockDirs.add(path);
+        mockFiles.set(path, { type: 'directory' });
       }
       return Promise.resolve();
     },

@@ -29,13 +29,10 @@
  * @requires handlebars
  */
 
-const {
-  extractNumericValue,
-  formatNumberCore,
-  DEFAULT_OPTIONS,
-} = require('../numbers');
+const { extractNumericValue, DEFAULT_OPTIONS } = require('../numbers');
 const { logger } = require('@/utils/common/logger');
 const handlebars = require('handlebars');
+const { LOCALE_CONFIG } = require('@/config/locale');
 
 /**
  * Formats a number as currency
@@ -79,22 +76,6 @@ const handlebars = require('handlebars');
  */
 function formatCurrency(value, options = {}) {
   try {
-    // Si es un string, intentar convertirlo primero
-    if (typeof value === 'string') {
-      // Intentar primero como formato inglés (1000.50)
-      const parsedEnglish = parseFloat(value);
-      if (!isNaN(parsedEnglish)) {
-        value = parsedEnglish;
-      } else {
-        // Si no funciona, intentar como formato español (1.000,50)
-        const spanishValue = value.replace(/\./g, '').replace(',', '.');
-        const parsedSpanish = parseFloat(spanishValue);
-        if (!isNaN(parsedSpanish)) {
-          value = parsedSpanish;
-        }
-      }
-    }
-
     const number = extractNumericValue(value);
 
     if (number === null) {
@@ -107,22 +88,21 @@ function formatCurrency(value, options = {}) {
       return typeof value === 'string' ? value : '';
     }
 
-    // Usar las opciones por defecto de moneda
-    const currencyOptions = {
-      ...options,
-      style: 'currency',
-      currency: options.currency || 'EUR',
+    // Use configured locale with fallback to es-ES
+    const locale = LOCALE_CONFIG?.fullLocale || 'es-ES';
+
+    // Use native formatter with configured locale
+    const formatter = new Intl.NumberFormat(locale, {
+      style: 'decimal',
       minimumFractionDigits:
         options.minimumFractionDigits ?? DEFAULT_OPTIONS.currency.minDecimals,
       maximumFractionDigits:
         options.maximumFractionDigits ?? DEFAULT_OPTIONS.currency.maxDecimals,
-    };
+      useGrouping: true,
+    });
 
-    // Formatear usando la función core
-    const formattedNumber = formatNumberCore(number, currencyOptions);
-
-    // Añadir el símbolo de la moneda
-    return `${formattedNumber} ${getCurrencySymbol(currencyOptions.currency)}`;
+    // Format number and add currency symbol
+    return `${formatter.format(number)} ${getCurrencySymbol(options.currency || 'EUR')}`;
   } catch (error) {
     logger.error('Error in formatCurrency:', {
       context: '[error]',
@@ -131,6 +111,7 @@ function formatCurrency(value, options = {}) {
       stack: error.stack,
       value,
       options,
+      locale: LOCALE_CONFIG?.fullLocale || 'es-ES',
     });
     return String(value);
   }
