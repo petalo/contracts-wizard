@@ -12,12 +12,14 @@
  * - Directory path handling
  * - Timestamp formatting
  * - Revision numbering
+ * - Suffix sanitization
  *
  * Functions:
  * - generateTimestampedFilename: Creates timestamped unique names
  * - generateRevisionedFilename: Handles file collisions with revisions
  * - generateFileName: Generates output filenames for multiple formats
  * - sanitizeFileName: Cleanses filenames of invalid characters
+ * - sanitizeSuffix: Cleanses suffix of invalid characters
  *
  * Flow:
  * 1. Input validation and sanitization
@@ -52,13 +54,15 @@
  * @exports generateTimestampedFilename Timestamp-based filename generator
  * @exports generateRevisionedFilename Revision-based filename generator
  * @exports generateFileName Multi-format filename generator
+ * @exports sanitizeSuffix Suffix sanitization utility
  *
  * @example
  * // Import filename generators
  * const {
  *   generateTimestampedFilename,
  *   generateRevisionedFilename,
- *   generateFileName
+ *   generateFileName,
+ *   sanitizeSuffix
  * } = require('@/utils/common/generateFilename');
  *
  * // Generate timestamped filename
@@ -76,6 +80,10 @@
  * //   html: 'output/template-20240315-143022.html',
  * //   pdf: 'output/template-20240315-143022.pdf'
  * // }
+ *
+ * // Sanitize suffix
+ * const suffix = sanitizeSuffix('My Client Name!');
+ * console.log(suffix); // my-client-name
  */
 
 const path = require('path');
@@ -395,13 +403,15 @@ async function generateFileName(sourcePath, outputDir, options = {}) {
     let highestRevision = 0;
     let foundExisting = false;
 
-    // Get suffix from options
-    const suffix = options.suffix ? `.${options.suffix}` : '';
+    // Get and sanitize only the suffix argument value, not the whole suffix structure
+    const suffixValue = options.suffix ? sanitizeSuffix(options.suffix) : '';
+    const suffix = suffixValue ? `.${suffixValue}` : '';
+    const highlightSuffix = options.highlight ? '.HIGHLIGHTED' : '';
 
     // Check base files first
-    const baseHtmlPath = `${basePath}${suffix}${FILE_EXTENSIONS.output.html}`;
-    const basePdfPath = `${basePath}${suffix}${FILE_EXTENSIONS.output.pdf}`;
-    const baseMdPath = `${basePath}${suffix}${FILE_EXTENSIONS.output.markdown}`;
+    const baseHtmlPath = `${basePath}${suffix}${highlightSuffix}${FILE_EXTENSIONS.output.html}`;
+    const basePdfPath = `${basePath}${suffix}${highlightSuffix}${FILE_EXTENSIONS.output.pdf}`;
+    const baseMdPath = `${basePath}${suffix}${highlightSuffix}${FILE_EXTENSIONS.output.markdown}`;
 
     // Helper function to check if a file exists
     const checkFileExists = async (filePath) => {
@@ -445,9 +455,9 @@ async function generateFileName(sourcePath, outputDir, options = {}) {
       // If files exist, find highest revision
       while (highestRevision < FILENAME_CONFIG.MAX_REVISIONS) {
         const currentRevision = highestRevision + 1;
-        const htmlRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${suffix}${FILE_EXTENSIONS.output.html}`;
-        const pdfRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${suffix}${FILE_EXTENSIONS.output.pdf}`;
-        const mdRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${suffix}${FILE_EXTENSIONS.output.markdown}`;
+        const htmlRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${suffix}${highlightSuffix}${FILE_EXTENSIONS.output.html}`;
+        const pdfRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${suffix}${highlightSuffix}${FILE_EXTENSIONS.output.pdf}`;
+        const mdRevPath = `${basePath}${FILENAME_CONFIG.REVISION_PREFIX}${currentRevision}${suffix}${highlightSuffix}${FILE_EXTENSIONS.output.markdown}`;
 
         const revisionExists = await Promise.all([
           checkFileExists(htmlRevPath),
@@ -560,10 +570,143 @@ function generateFilename(options) {
   return filename;
 }
 
+/**
+ * Sanitizes a suffix for use in filenames
+ *
+ * Processes a suffix string to ensure it's safe for use in filenames by:
+ * 1. Converting to lowercase
+ * 2. Removing all special characters (including hyphens)
+ * 3. Converting spaces to single underscores
+ * 4. Removing leading/trailing underscores
+ *
+ * @param {string} suffix - The suffix to sanitize
+ * @returns {string} Sanitized suffix safe for use in filenames
+ * @throws {AppError} If suffix is invalid after sanitization
+ */
+function sanitizeSuffix(suffix) {
+  if (!suffix) return '';
+
+  // Convert to string if not already
+  const str = String(suffix);
+
+  // Log original input with detailed character analysis
+  logger.debug('Suffix sanitization - Original input:', {
+    filename: 'generate-filename.js',
+    context: 'file',
+    message: 'Original input string analysis',
+    params: {
+      original: str,
+      length: str.length,
+      charDetails: Array.from(str).map((c, i) => ({
+        index: i,
+        char: c,
+        code: c.charCodeAt(0),
+        hex: `0x${c.charCodeAt(0).toString(16)}`,
+      })),
+    },
+  });
+
+  // Process in steps for better control and log each step
+  let step1 = str.toLowerCase(); // Convert to lowercase
+
+  logger.debug('Suffix sanitization - Step 1 (lowercase):', {
+    filename: 'generate-filename.js',
+    context: 'file',
+    message: 'After converting to lowercase',
+    params: {
+      step1,
+      length: step1.length,
+      charDetails: Array.from(step1).map((c, i) => ({
+        index: i,
+        char: c,
+        code: c.charCodeAt(0),
+        hex: `0x${c.charCodeAt(0).toString(16)}`,
+      })),
+    },
+  });
+
+  // Check if there are actual spaces in the input
+  const hasSpaces = str.includes(' ');
+
+  // Handle special characters differently based on whether there are spaces
+  let step2;
+  if (hasSpaces) {
+    // If there are spaces, treat hyphens as spaces
+    step2 = step1.replace(/[-\s]+/g, ' ').trim();
+  } else {
+    // If no spaces, remove all special characters without creating spaces
+    step2 = step1.replace(/[^a-z0-9]/g, '');
+  }
+
+  // Then remove remaining special characters if we're handling spaces
+  if (hasSpaces) {
+    step2 = step2.replace(/[^a-z0-9\s]/g, '');
+  }
+
+  logger.debug('Suffix sanitization - Step 2 (remove special chars):', {
+    filename: 'generate-filename.js',
+    context: 'file',
+    message: 'After removing special characters',
+    params: {
+      step1,
+      step2,
+      length: step2.length,
+      charDetails: Array.from(step2).map((c, i) => ({
+        index: i,
+        char: c,
+        code: c.charCodeAt(0),
+        hex: `0x${c.charCodeAt(0).toString(16)}`,
+      })),
+    },
+  });
+
+  let step3 = step2.trim(); // Remove any leading/trailing spaces
+
+  logger.debug('Suffix sanitization - Step 3 (trim):', {
+    filename: 'generate-filename.js',
+    context: 'file',
+    message: 'After trimming spaces',
+    params: {
+      step2,
+      step3,
+      length: step3.length,
+      charDetails: Array.from(step3).map((c, i) => ({
+        index: i,
+        char: c,
+        code: c.charCodeAt(0),
+        hex: `0x${c.charCodeAt(0).toString(16)}`,
+      })),
+    },
+  });
+
+  // Convert spaces to underscores only if we had spaces in the input
+  let step4 = hasSpaces ? step3.replace(/\s+/g, '_') : step3;
+
+  logger.debug('Suffix sanitization - Step 4 (finalize):', {
+    filename: 'generate-filename.js',
+    context: 'file',
+    message: 'Final result after processing',
+    params: {
+      step3,
+      step4,
+      length: step4.length,
+      charDetails: Array.from(step4).map((c, i) => ({
+        index: i,
+        char: c,
+        code: c.charCodeAt(0),
+        hex: `0x${c.charCodeAt(0).toString(16)}`,
+      })),
+    },
+  });
+
+  return step4;
+}
+
 module.exports = {
   generateFileName,
   generateTimestampedFilename,
   generateRevisionedFilename,
   FILENAME_CONFIG, // Exported for testing
   generateFilename,
+  sanitizeSuffix,
 };

@@ -7,13 +7,17 @@
  * - Suffix functionality
  * - Error cases
  * - Edge cases
+ * - Suffix sanitization
  *
  * @module tests/unit/common/generate-filename.unit.test
  */
 
 const fs = require('fs').promises;
 const path = require('path');
-const { generateFileName } = require('@/utils/common/generate-filename');
+const {
+  generateFileName,
+  sanitizeSuffix,
+} = require('@/utils/common/generate-filename');
 
 describe('Filename Generation', () => {
   beforeEach(() => {
@@ -226,5 +230,51 @@ describe('Filename Generation', () => {
         'Failed to generate filenames'
       );
     });
+  });
+});
+
+describe('Suffix Sanitization', () => {
+  test('should convert to lowercase and replace spaces with underscores', () => {
+    expect(sanitizeSuffix('My Client Name')).toBe('my_client_name');
+    expect(sanitizeSuffix('TEST FILE')).toBe('test_file');
+  });
+
+  test('should remove all special characters', () => {
+    expect(sanitizeSuffix('Client!@#$%^&*()')).toBe('client');
+    expect(sanitizeSuffix('My.File-Name')).toBe('myfilename');
+    expect(sanitizeSuffix('test--file')).toBe('testfile');
+  });
+
+  test('should handle multiple spaces and convert to single underscore', () => {
+    expect(sanitizeSuffix('My   Client  Name')).toBe('my_client_name');
+    expect(sanitizeSuffix('test    file')).toBe('test_file');
+    expect(sanitizeSuffix(' test   file  ')).toBe('test_file');
+  });
+
+  test('should handle empty or invalid input', () => {
+    expect(sanitizeSuffix('')).toBe('');
+    expect(sanitizeSuffix(null)).toBe('');
+    expect(sanitizeSuffix(undefined)).toBe('');
+    expect(sanitizeSuffix('!@#$%')).toBe('');
+  });
+
+  test('should handle numbers correctly', () => {
+    expect(sanitizeSuffix('client123')).toBe('client123');
+    expect(sanitizeSuffix('test 456 file')).toBe('test_456_file');
+  });
+
+  test('should handle mixed case, spaces and special characters', () => {
+    expect(sanitizeSuffix('My!Client@Name#123')).toBe('myclientname123');
+    expect(sanitizeSuffix('TEST-file.NAME')).toBe('testfilename');
+    expect(sanitizeSuffix('Complex!@#  Example--123')).toBe(
+      'complex_example_123'
+    );
+  });
+
+  test('should handle extreme cases', () => {
+    expect(sanitizeSuffix('   ')).toBe('');
+    expect(sanitizeSuffix('!@#$%^&*()')).toBe('');
+    expect(sanitizeSuffix('a!@#b$%^c')).toBe('abc');
+    expect(sanitizeSuffix('test--suffix%ˆ&*&ˆ%$#@  hi')).toBe('test_suffix_hi');
   });
 });
