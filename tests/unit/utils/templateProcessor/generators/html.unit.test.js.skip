@@ -1,11 +1,39 @@
 /**
- * @fileoverview Unit tests for HTML generation
+ * @file Unit tests for HTML generation functionality
+ *
+ * Tests cover:
+ * 1. Basic HTML generation from markdown templates
+ * 2. CSS integration and styling
+ * 3. Template variable handling
+ * 4. Error scenarios and edge cases
+ * 5. File system interactions
+ *
+ * Functions:
+ * - generateHTML: Generates HTML from markdown with optional CSS and data
+ *
+ * Flow:
+ * 1. Read and validate input files
+ * 2. Process markdown to HTML
+ * 3. Apply CSS styling
+ * 4. Handle template variables
+ * 5. Write output file
+ *
+ * Error Handling:
+ * - Invalid markdown syntax
+ * - Missing or invalid CSS
+ * - File system errors
+ * - Template processing errors
+ *
+ * @module tests/unit/utils/templateProcessor/generators/html
+ * @requires @/utils/templateProcessor/generators/html
  */
 
 const { generateHTML } = require('@/utils/templateProcessor/generators/html');
 const fs = require('fs').promises;
 const path = require('path');
+const { logger } = require('@/utils/common/logger');
 
+// Mock filesystem operations
 jest.mock('fs', () => ({
   promises: {
     readFile: jest.fn(),
@@ -14,18 +42,34 @@ jest.mock('fs', () => ({
   },
 }));
 
-describe.skip('HTML Generation', () => {
+// Mock logger to prevent console output during tests
+jest.mock('@/utils/common/logger', () => ({
+  logger: {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
+describe('HTML Generation', () => {
+  // Test fixtures
   const mockTemplate = '# Title\n\nContent';
   const mockCss = 'body { color: black; }';
   const mockData = { title: 'Test' };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Setup default mock responses
     fs.readFile
       .mockResolvedValueOnce(mockTemplate)
       .mockResolvedValueOnce(mockCss);
   });
 
+  /**
+   * Tests basic HTML generation from markdown
+   * Verifies the output contains expected HTML structure
+   */
   test('should generate HTML from markdown', async () => {
     const outputPath = 'output.html';
     await generateHTML(mockTemplate, outputPath, mockData);
@@ -34,8 +78,16 @@ describe.skip('HTML Generation', () => {
       outputPath,
       expect.stringContaining('<h1>Title</h1>')
     );
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining('HTML generation completed'),
+      expect.any(Object)
+    );
   });
 
+  /**
+   * Tests CSS integration with HTML generation
+   * Verifies CSS content is properly included in output
+   */
   test('should include CSS when provided', async () => {
     const outputPath = 'output.html';
     const cssPath = 'style.css';
@@ -45,8 +97,16 @@ describe.skip('HTML Generation', () => {
       outputPath,
       expect.stringContaining(mockCss)
     );
+    expect(logger.debug).toHaveBeenCalledWith(
+      expect.stringContaining('CSS applied'),
+      expect.any(Object)
+    );
   });
 
+  /**
+   * Tests template variable processing
+   * Verifies variables are correctly replaced in output
+   */
   test('should handle template variables', async () => {
     const template = '# {{title}}\n\nContent';
     const outputPath = 'output.html';
@@ -58,6 +118,10 @@ describe.skip('HTML Generation', () => {
     );
   });
 
+  /**
+   * Tests graceful handling of missing CSS file
+   * Verifies generation continues without CSS
+   */
   test('should handle missing CSS file', async () => {
     const outputPath = 'output.html';
     const cssPath = 'missing.css';
@@ -69,8 +133,16 @@ describe.skip('HTML Generation', () => {
       outputPath,
       expect.not.stringContaining('style')
     );
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('CSS file not found'),
+      expect.any(Object)
+    );
   });
 
+  /**
+   * Tests error handling for invalid markdown
+   * Verifies appropriate error is thrown
+   */
   test('should handle invalid markdown', async () => {
     const invalidTemplate = '```invalid```';
     const outputPath = 'output.html';
@@ -78,8 +150,16 @@ describe.skip('HTML Generation', () => {
     await expect(
       generateHTML(invalidTemplate, outputPath, mockData)
     ).rejects.toThrow();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('Markdown processing failed'),
+      expect.any(Object)
+    );
   });
 
+  /**
+   * Tests error handling for empty templates
+   * Verifies appropriate error is thrown
+   */
   test('should handle empty template', async () => {
     const emptyTemplate = '';
     const outputPath = 'output.html';
@@ -87,8 +167,16 @@ describe.skip('HTML Generation', () => {
     await expect(
       generateHTML(emptyTemplate, outputPath, mockData)
     ).rejects.toThrow();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('Empty template'),
+      expect.any(Object)
+    );
   });
 
+  /**
+   * Tests error handling for file system write errors
+   * Verifies appropriate error is thrown and logged
+   */
   test('should handle write errors', async () => {
     const outputPath = 'output.html';
     fs.writeFile.mockRejectedValueOnce(new Error('Write error'));
@@ -96,8 +184,16 @@ describe.skip('HTML Generation', () => {
     await expect(
       generateHTML(mockTemplate, outputPath, mockData)
     ).rejects.toThrow('Write error');
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to write HTML file'),
+      expect.any(Object)
+    );
   });
 
+  /**
+   * Tests HTML structure validation
+   * Verifies output contains all required HTML elements
+   */
   test('should generate valid HTML structure', async () => {
     const outputPath = 'output.html';
     await generateHTML(mockTemplate, outputPath, mockData);
@@ -108,6 +204,10 @@ describe.skip('HTML Generation', () => {
     );
   });
 
+  /**
+   * Tests metadata inclusion in HTML output
+   * Verifies required meta tags are present
+   */
   test('should include metadata in HTML', async () => {
     const outputPath = 'output.html';
     await generateHTML(mockTemplate, outputPath, mockData);
@@ -115,6 +215,42 @@ describe.skip('HTML Generation', () => {
     expect(fs.writeFile).toHaveBeenCalledWith(
       outputPath,
       expect.stringMatching(/<meta charset="[\w-]+"/)
+    );
+  });
+
+  /**
+   * Tests handling of Unicode content
+   * Verifies proper encoding of special characters
+   */
+  test('should handle Unicode content correctly', async () => {
+    const unicodeTemplate = '# 你好\n\n🌟 Special ♥️';
+    const outputPath = 'output.html';
+    
+    await generateHTML(unicodeTemplate, outputPath, mockData);
+    
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      outputPath,
+      expect.stringContaining('你好')
+    );
+  });
+
+  /**
+   * Tests handling of malformed HTML in markdown
+   * Verifies sanitization and error handling
+   */
+  test('should handle malformed HTML in markdown', async () => {
+    const malformedTemplate = '# Title\n\n<div>Unclosed div';
+    const outputPath = 'output.html';
+    
+    await generateHTML(malformedTemplate, outputPath, mockData);
+    
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      outputPath,
+      expect.stringContaining('</div>')
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Malformed HTML detected'),
+      expect.any(Object)
     );
   });
 });

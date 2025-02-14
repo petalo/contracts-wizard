@@ -20,21 +20,26 @@ const {
 } = require('../../../src/utils/template-processor/generators/html');
 const resourceManager = require('../../../tests/__common__/helpers/resource-manager');
 
-// Use environment variables for test directories
-const TEST_OUTPUT_DIR = process.env.DIR_OUTPUT || 'tests/output';
-const TEST_CSS_DIR = process.env.DIR_CSS || 'tests/__common__/fixtures/css';
-const TEST_FIXTURES_PATH =
-  process.env.TEST_FIXTURES_PATH || 'tests/__common__/fixtures';
+// Use dedicated test directories, ignoring environment variables in tests
+const TEST_OUTPUT_DIR = 'tests/__output__/html-generation';
+const TEST_CSS_DIR = 'tests/__common__/fixtures/css';
+const TEST_FIXTURES_PATH = 'tests/__common__/fixtures';
 
 describe('HTML Generation Unit Tests', () => {
-  const OUTPUT_PATH = path.resolve(process.cwd(), TEST_OUTPUT_DIR);
-  const CSS_PATH = path.resolve(process.cwd(), TEST_CSS_DIR);
+  const OUTPUT_PATH = path.join(process.cwd(), TEST_OUTPUT_DIR);
+  const CSS_PATH = path.join(process.cwd(), TEST_CSS_DIR);
 
   // Setup test environment
   beforeAll(async () => {
     // Create test directories if they don't exist
     await fs.mkdir(OUTPUT_PATH, { recursive: true });
-    await fs.mkdir(CSS_PATH, { recursive: true });
+
+    // Ensure we're not writing outside test directory
+    const normalizedOutputPath = path.normalize(OUTPUT_PATH);
+    const normalizedTestDir = path.normalize(path.join(process.cwd(), 'tests'));
+    if (!normalizedOutputPath.startsWith(normalizedTestDir)) {
+      throw new Error('Test output directory must be within tests/ directory');
+    }
 
     // Create test CSS files if they don't exist
     const cssFiles = ['valid.css', 'invalid.css', 'empty.css'];
@@ -59,6 +64,18 @@ describe('HTML Generation Unit Tests', () => {
       );
     } catch (error) {
       console.warn('Error cleaning up test files:', error);
+    }
+  });
+
+  // Clean up test output directory after all tests
+  afterAll(async () => {
+    try {
+      await fs.rm(OUTPUT_PATH, {
+        recursive: true,
+        force: true,
+      });
+    } catch (error) {
+      console.warn('Error cleaning up test output directory:', error);
     }
   });
 
