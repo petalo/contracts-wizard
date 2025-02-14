@@ -1,34 +1,139 @@
-name: Create GitHub Release
+# Release Workflow Logic
+#
+# This workflow handles the automated release process with the following steps:
+#
+# 1. Validation Phase (job: validate)
+#    - Ensures we're on main branch
+#    - Checks for clean working directory
+#    - Verifies required files exist
+#    - Runs all tests
+#
+# 2. Release Phase (job: release)
+#    Environment:
+#    - Uses 'test' environment for dry-runs
+#    - Uses 'production' environment for actual releases
+#
+#    Steps:
+#    a) Preparation:
+#       - Configures Git and Node.js
+#       - Installs dependencies
+#       - Runs tests again (safeguard)
+#
+#    b) Preview:
+#       - Generates changelog preview
+#       - Shows what changes will be included
+#
+#    c) Release Execution:
+#       For dry-run:
+#       - Validates all steps without making changes
+#       - Shows what would happen in a real release
+#
+#       For actual release:
+#       - Updates version numbers
+#       - Updates changelog
+#       - Creates git tag
+#       - Creates GitHub release
+#       - Publishes to npm
+#
+#    d) Verification:
+#       - Verifies git tag exists
+#       - Confirms GitHub release creation
+#       - Checks npm package publication
+#
+# Required Secrets:
+# - GITHUB_TOKEN: Automatically provided
+# - NPM_TOKEN: Must be configured for npm publishing
+#
+# Usage:
+# 1. For testing: Run with dry-run=true
+# 2. For release:
+#    - Select version type (patch/minor/major)
+#    - Ensure you have required permissions
+#    - Wait for approval if configured
+#
+# Protection:
+# - Separate environments for test/production
+# - Multiple validation steps
+# - Verification of all created artifacts
+# - Dry-run option for safety
+
+name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version type (major/minor/patch)'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      dry_run:
+        description: 'Dry run (validate without making changes)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
-  release:
+  validate:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Create GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Validate release configuration
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          CHANGELOG_SECTION=$(awk "/## \[$VERSION\]/{p=1;print;next} /## \[/{p=0} p" CHANGELOG.md)
-          gh release create $GITHUB_REF_NAME \
-            --repo $REPO \
-            --title "Release $VERSION" \
-            --notes "$CHANGELOG_SECTION" \
-            --draft=false \
-            --prerelease=false
+          # Verify we're on main branch
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$CURRENT_BRANCH" != "main" ]; then
+            echo "::error::Must be on main branch (current: $CURRENT_BRANCH)"
+            exit 1
+          fi
+
+          # Check for uncommitted changes
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Working directory is not clean"
+            exit 1
+          fi
+
+          # Verify required files exist
+          for file in package.json CHANGELOG.md; do
+            if [ ! -f "$file" ]; then
+              echo "::error::Required file $file not found"
+              exit 1
+            fi
+          done
+
+  release:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.dry_run && 'test' || 'production' }}
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,5 +141,78 @@ jobs:
           node-version: '18'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Preview changes
+        run: node scripts/release.js --${{ inputs.version_type }} --preview
+
+      - name: Run release script
+        env:
+          NODE_ENV: production
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "🔍 Running in dry-run mode"
+            node scripts/release.js --${{ inputs.version_type }} --dry-run
+          else
+            echo "🚀 Running actual release"
+            node scripts/release.js --${{ inputs.version_type }}
+          fi
+
+      - name: Create GitHub Release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -e "console.log(require('./package.json').version)")
+          echo "📦 Creating release v$VERSION"
+          gh release create v$VERSION \
+            --title "Release v$VERSION" \
+            --notes-file CHANGELOG.md \
+            --draft=false \
+            --prerelease=false
+
+      - name: Publish to npm
+        if: ${{ !inputs.dry_run }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "📝 Publishing to npm"
+          npm publish --access public
+
+      - name: Verify Release
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo "✅ Verifying release..."
+
+          VERSION=$(node -e "console.log(require('./package.json').version)")
+
+          # Verify tag exists
+          if ! git tag -l | grep -q "v$VERSION"; then
+            echo "::error::Tag v$VERSION was not created"
+            exit 1
+          fi
+
+          # Verify GitHub release exists
+          if ! gh release view v$VERSION &>/dev/null; then
+            echo "::error::GitHub release v$VERSION was not created"
+            exit 1
+          fi
+
+          # Verify npm package
+          if ! npm view @petalo/contracts-wizard@$VERSION &>/dev/null; then
+            echo "::error::NPM package v$VERSION was not published"
+            exit 1
+          fi
+
+          echo "✨ Release v$VERSION completed successfully!"
