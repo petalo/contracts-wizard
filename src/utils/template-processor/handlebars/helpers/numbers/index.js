@@ -256,16 +256,43 @@ function formatNumberCore(number, options = {}) {
     const adjustedNumber =
       validatedOptions.style === 'percent' ? number * 100 : number;
 
-    // Use configured locale with fallback to es-ES
-    const locale = LOCALE_CONFIG?.fullLocale || 'es-ES';
+    // Define fallback locales in order of preference
+    const fallbackLocales = [
+      LOCALE_CONFIG?.fullLocale,
+      'es-ES',
+      'es',
+      'es-419', // Latin American Spanish
+      'es-AR', // Argentinian Spanish (known to use same format)
+      'en-US', // Last resort
+    ].filter(Boolean); // Remove undefined/null values
 
-    // Use native formatter with configured locale
-    const formatter = new Intl.NumberFormat(locale, {
-      style: 'decimal',
-      minimumFractionDigits: validatedOptions.minimumFractionDigits || 0,
-      maximumFractionDigits: validatedOptions.maximumFractionDigits || 20,
-      useGrouping: true,
-    });
+    // Try each locale until one works
+    let formatter = null;
+    for (const locale of fallbackLocales) {
+      try {
+        formatter = new Intl.NumberFormat(locale, {
+          style: 'decimal',
+          minimumFractionDigits: validatedOptions.minimumFractionDigits || 0,
+          maximumFractionDigits: validatedOptions.maximumFractionDigits || 20,
+          useGrouping: validatedOptions.useGrouping !== false,
+          numberingSystem: 'latn',
+        });
+        // Test if the formatter works with our number
+        formatter.format(1234.56);
+        break; // If we get here, the formatter works
+      } catch (e) {
+        logger.debug(`Locale ${locale} not available, trying next fallback`, {
+          context: '[format]',
+          filename: 'numbers/index.js',
+          error: e.message,
+        });
+        continue;
+      }
+    }
+
+    if (!formatter) {
+      throw new Error('No valid locale found for number formatting');
+    }
 
     return formatter.format(adjustedNumber);
   } catch (error) {
