@@ -309,105 +309,184 @@ services,"Web development services",Description of services
 startDate,2024-01-01,Contract start date
 endDate,2024-12-31,Contract end date
 compensation,10000,Monthly compensation
-signatures[0].name,Client Representative,
-signatures[1].name,Consultant,
+signatures.0.name,Client Representative,
+signatures.1.name,Consultant,
 ```
 
 ### Handling Missing Data
 
 The wizard handles missing data with:
 
-1. Visual indicators in red: `[[missing.field]]`
-2. CSS styling for missing values (see `examples/css/missing-data.css`)
+1. Visual indicators with the name of the field inside double square brackets: `[[missing.field]]`
+2. CSS styling for missing values (see `config/highlight.css`)
 3. Validation warnings
 4. Detailed logging
 
-### Available Helpers
+### Built-in Helpers
 
-Built-in Handlebars helpers:
+The system includes several built-in Handlebars helpers to format and manipulate data:
 
-#### Value Comparison
+All helpers include:
+
+- Consistent error handling through configuration
+- Detailed debug logging with context
+- HTML safety with proper escaping
+- Type coercion where appropriate
+- Full Spanish locale support
+- Configurable styling and messages
+- Comprehensive error reporting
+
+#### Value Helpers
+
+Available helpers in this category:
+
+- `formatEmail`: Formats and validates email addresses with proper HTML links
+- `lookup`: Accesses nested object properties safely
+- `isEmpty`: Checks if a value is empty or undefined
+- `extractValue`: (Internal) Extracts values from different data types
 
 ```handlebars
-{{eq value1 value2}}
-```
+{{! Format email addresses }}
+{{formatEmail user.email}}  {{! Formats and validates email addresses }}
 
-Compares two values for equality with type coercion:
+{{! Extract values from complex objects }}
+{{lookup object "deep.nested.property"}}
 
-- Case-insensitive string comparison
-- HTML-wrapped content extraction
-- Numeric values with type coercion
-- Boolean values and their string representations
-- Proper handling of null/undefined values with configurable error messages
-
-Example:
-
-```handlebars
-{{#if (eq user.age 18)}}
-  User is 18 years old
-{{else}}
-  {{! Will show configured error message if age is missing }}
+{{! Handle empty values }}
+{{#if (isEmpty value)}}
+  Value is empty
 {{/if}}
 ```
 
-#### Object Lookup
+#### Date Helpers
+
+Available helpers in this category:
+
+- `formatDate`: Formats dates with full Spanish locale support
+- `addYears`: Adds a specified number of years to a date
+- `now`: Returns the current date/time in the specified format
 
 ```handlebars
-{{lookup object "property"}}
-```
+{{! Current date with Spanish locale and timezone support }}
+{{now "D [de] MMMM [de] YYYY"}}  {{! Returns: "31 de enero de 2024" }}
+{{now "YYYY-MM-DD HH:mm:ss Z"}}  {{! With timezone: "2024-01-31 15:30:00 +0100" }}
 
-Extracts values from:
+{{! Format specific dates with locale support }}
+{{formatDate someDate "D [de] MMMM [de] YYYY"}}
 
-- Nested objects
-- HTML-wrapped content
-- SafeString instances
-- Objects with string properties
-- Handles missing or invalid values with configurable error messages
+{{! Add years to a date }}
+{{addYears someDate 5}}
 
-#### Date Formatting
+{{! Chain operations }}
+{{formatDate (addYears now 1) "D [de] MMMM [de] YYYY"}}
 
-```handlebars
-{{formatDate date "DD/MM/YYYY"}}
-{{addYears date 1}}
-{{now "YYYY-MM-DD"}}
-```
-
-Date manipulation and formatting with:
-
-- Full Spanish locale support
-- Configurable timezone handling
-- Predefined date formats from configuration
-- Consistent error handling for invalid dates
-- HTML wrapping with configurable classes
-- Support for chained operations
-
-Example with predefined formats:
-
-```handlebars
-{{! Using predefined formats from configuration }}
+{{! Predefined formats }}
 {{formatDate date "DEFAULT"}}  {{! D [de] MMMM [de] YYYY }}
 {{formatDate date "ISO"}}      {{! YYYY-MM-DD }}
 {{formatDate date "FULL"}}     {{! D [de] MMMM [de] YYYY }}
 {{formatDate date "SHORT"}}    {{! DD/MM/YYYY }}
 {{formatDate date "TIME"}}     {{! HH:mm:ss }}
-
-{{! Chaining operations }}
-{{formatDate (addYears now 1) "FULL"}}
 ```
 
-#### Empty Value Handling
+#### Number Formatting
 
-All helpers now use consistent empty value handling from configuration:
+Available helpers in this category:
+
+- `formatNumber`: Formats numbers according to Spanish locale
+- `formatCurrency`: Formats monetary values with currency symbols
+- `currencySymbol`: Returns the symbol for a given currency code
 
 ```handlebars
-{{! Missing or invalid values }}
-<span class="missing-value" data-field="fieldName">[[fieldName]]</span>
+{{! Basic number formatting - Spanish locale }}
+{{formatNumber 1234.56}}  {{! -> "1.234,56" }}
 
-{{! Successfully imported values }}
-<span class="imported-value" data-field="fieldName">value</span>
+{{! Currency formatting with symbol }}
+{{formatNumber value style="currency" currency="EUR"}}  {{! -> "1.234,56 €" }}
+{{currencySymbol "EUR"}}  {{! -> "€" }}
+
+{{! Percentage formatting }}
+{{formatNumber 0.1234 style="percent"}}  {{! -> "12,34 %" }}
+
+{{! Custom decimal places }}
+{{formatNumber value minimumFractionDigits=2 maximumFractionDigits=4}}
+
+{{! Grouping options }}
+{{formatNumber value useGrouping=true}}  {{! -> "1.234.567,89" }}
+{{formatNumber value useGrouping=false}} {{! -> "1234567,89" }}
 ```
 
-The styling and messages are configurable through `HANDLEBARS_CONFIG`:
+#### Logic Helpers
+
+Available helpers in this category:
+
+- `eq`: Compares values with type coercion for equality
+- `and`: Performs logical AND operation on multiple values
+- `not`: Performs logical NOT operation on a value
+
+```handlebars
+{{! Equality comparison with type coercion }}
+{{#if (eq value1 value2)}}
+  Values are equal
+{{/if}}
+
+{{! Logical AND operation }}
+{{#if (and condition1 condition2)}}
+  Both conditions are true
+{{/if}}
+
+{{! Logical NOT operation }}
+{{#if (not condition)}}
+  Condition is false
+{{/if}}
+```
+
+#### Context Management
+
+Available helpers in this category:
+
+- `with`: Changes the context for a block of template
+- `each`: Iterates over arrays and objects
+- `log`: Outputs debug information to the console
+
+```handlebars
+{{! Using with for context changes }}
+{{#with user}}
+  Name: {{name}}
+  Email: {{email}}
+  {{#with address}}
+    Street: {{street}}
+    City: {{city}}
+  {{/with}}
+{{/with}}
+
+{{! Accessing parent context }}
+{{#with user}}
+  {{name}} works at {{../company.name}}
+{{/with}}
+```
+
+#### Error Handling
+
+All helpers include consistent error handling:
+
+```handlebars
+{{! Missing values }}
+{{formatDate invalid_date "SHORT"}}
+{{! -> <span class="missing-value" data-field="date">[[Invalid date]]</span> }}
+
+{{! Invalid operations }}
+{{formatNumber "not-a-number"}}
+{{! -> <span class="missing-value" data-field="number">[[Invalid number]]</span> }}
+
+{{! Empty values }}
+{{#if (eq undefined_value "test")}}
+  {{! -> <span class="missing-value" data-field="undefined_value">(Empty value)</span> }}
+{{/if}}
+```
+
+#### Helper Configuration
+
+All helpers can be configured through `HANDLEBARS_CONFIG`:
 
 ```javascript
 const HANDLEBARS_CONFIG = {
@@ -418,6 +497,8 @@ const HANDLEBARS_CONFIG = {
   },
   errorMessages: {
     invalidDate: '[[Invalid date]]',
+    invalidEmail: '[[Invalid email]]',
+    invalidNumber: '[[Invalid number]]',
     missingValue: '(Empty value)',
     processingError: '[Error processing {type}]'
   },
@@ -427,218 +508,11 @@ const HANDLEBARS_CONFIG = {
     FULL: 'D [de] MMMM [de] YYYY',
     SHORT: 'DD/MM/YYYY',
     TIME: 'HH:mm:ss'
-  }
+  },
+  locale: 'es-ES',
+  timezone: 'Europe/Madrid'
 };
 ```
-
-#### Examples
-
-```handlebars
-{{! Value comparison with error handling }}
-{{#if (eq user.age 18)}}
-  User is 18 years old
-{{else}}
-  {{! Will show configured error message if age is missing }}
-{{/if}}
-
-{{! Date formatting with predefined formats }}
-Created on: {{now "SHORT"}}
-Expires on: {{formatDate (addYears startDate 1) "FULL"}}
-Today is: {{now "DEFAULT"}}
-
-{{! Error handling }}
-{{#if (eq undefined_value "test")}}
-  {{! Will show: <span class="missing-value" data-field="undefined_value">(Empty value)</span> }}
-{{/if}}
-
-{{formatDate invalid_date "SHORT"}}
-{{! Will show: <span class="missing-value" data-field="date">[[Invalid date]]</span> }}
-```
-
-All helpers include:
-
-- Consistent error handling through configuration
-- Detailed debug logging
-- HTML safety with proper escaping
-- Type coercion where appropriate
-- Locale support for dates and numbers
-- Configurable styling and messages
-
-### Built-in Helpers
-
-The system includes several built-in Handlebars helpers to format and manipulate data:
-
-#### Date Helpers
-
-```handlebars
-{{! Current date with Spanish locale }}
-{{now "D [de] MMMM [de] YYYY"}}  {{! Returns: "31 de enero de 2024" }}
-
-{{! Format specific dates with locale support }}
-{{formatDate someDate "D [de] MMMM [de] YYYY"}}
-
-{{! Add years to a date }}
-{{addYears someDate 5}}
-
-{{! Chain operations }}
-{{formatDate (addYears now 1) "D [de] MMMM [de] YYYY"}}
-```
-
-The date helpers include:
-
-- Full Spanish locale support (months, days, etc.)
-- Timezone configuration (default: Europe/Madrid)
-- Consistent formatting across all date operations
-- Proper handling of undefined values and edge cases
-- Debug logging for troubleshooting
-
-#### Number Formatting
-
-The system automatically formats numbers according to the Spanish locale (configurable in `LOCALE_CONFIG`). You can use the `formatNumber` helper explicitly for more control:
-
-```handlebars
-{{! Basic number formatting - adds thousands separator and decimal comma }}
-{{formatNumber 1234.56}}  -> "1.234,56"
-
-{{! Currency formatting }}
-{{formatNumber value style="currency" currency="EUR"}}  -> "1.234,56 €"
-
-{{! Percentage formatting }}
-{{formatNumber 0.1234 style="percent"}}  -> "12,34 %"
-
-{{! Custom decimal places }}
-{{formatNumber value minimumFractionDigits=2 maximumFractionDigits=4}}
-```
-
-The helper handles:
-
-- Thousands separator (punto)
-- Decimal separator (coma)
-- Currency symbols with proper spacing
-- Percentage formatting
-- Custom decimal places
-- Invalid or empty values
-
-Note: Numbers in the template are automatically formatted - you don't need to use `formatNumber` unless you want specific formatting options.
-
-#### Other Helpers
-
-- `eq`: Compare values with type coercion
-
-  ```handlebars
-  {{#if (eq value 0)}}
-  ```
-
-- `lookup`: Access nested object properties
-
-  ```handlebars
-  {{lookup object "property"}}
-  ```
-
-### Using the `with` Helper
-
-The `with` helper is used to change the context within a block, making it easier to access nested properties without repeating the parent object name. It's particularly useful when working with deeply nested objects.
-
-#### Basic Usage
-
-```handlebars
-{{#with user}}
-  Name: {{name}}
-  Email: {{email}}
-  Address: {{address.street}}, {{address.city}}
-{{/with}}
-```
-
-Instead of writing:
-
-```handlebars
-Name: {{user.name}}
-Email: {{user.email}}
-Address: {{user.address.street}}, {{user.address.city}}
-```
-
-#### Key Features
-
-1. **Context Change**: Inside the `with` block, `this` refers to the specified object
-2. **Nested Properties**: Access child properties directly without parent reference
-3. **Fallback Handling**: If the object is undefined, the block is skipped
-4. **Combining with Other Helpers**: Can be used with `if`, `each`, etc.
-
-#### Advanced Examples
-
-```handlebars
-{{! Nested with blocks }}
-{{#with user}}
-  {{#with address}}
-    Street: {{street}}
-    City: {{city}}
-    Country: {{country}}
-  {{/with}}
-{{/with}}
-
-{{! With + if combination }}
-{{#with user}}
-  {{#if address}}
-    {{#with address}}
-      Full Address: {{street}}, {{city}}
-    {{/with}}
-  {{else}}
-    No address provided
-  {{/if}}
-{{/with}}
-
-{{! With + each combination }}
-{{#with company}}
-  Company: {{name}}
-  {{#each employees}}
-    - {{name}} ({{position}})
-  {{/each}}
-{{/with}}
-```
-
-#### Best Practices
-
-1. **Depth Control**: Avoid nesting more than 2-3 levels deep for readability
-2. **Fallback Content**: Use `else` to handle undefined cases:
-
-   ```handlebars
-   {{#with user}}
-     {{name}}
-   {{else}}
-     User not found
-   {{/with}}
-   ```
-
-3. **Context Clarity**: Comment blocks when using multiple nested `with` statements
-4. **Performance**: Use `with` when accessing multiple properties of the same object
-
-#### Common Pitfalls
-
-1. **Accessing Parent Context**: Use `../` to access parent context:
-
-   ```handlebars
-   {{#with user}}
-     {{name}} works at {{../company.name}}
-   {{/with}}
-   ```
-
-2. **Undefined Objects**: The block is skipped if the object is undefined:
-
-   ```handlebars
-   {{#with undefinedObject}}
-     This won't be rendered
-   {{else}}
-     Fallback content
-   {{/with}}
-   ```
-
-3. **This Reference**: Inside `with`, `this` refers to the new context:
-
-   ```handlebars
-   {{#with user}}
-     {{this.name}} {{! same as just {{name}} }}
-   {{/with}}
-   ```
 
 ## 🛠 Configuration
 
