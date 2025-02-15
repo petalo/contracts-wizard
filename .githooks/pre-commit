@@ -3,7 +3,8 @@
 # Pre-commit checks:
 # 1. JSDoc documentation
 # 2. Code style (ESLint)
-# 3. Tests (Jest)
+# 3. Logger metadata
+# 4. Tests (Jest)
 
 echo "🔍 Running pre-commit checks..."
 
@@ -35,16 +36,28 @@ if ! npx eslint --config eslint.config.js $STAGED_JS_FILES; then
   exit 1
 fi
 
-
 # 2. Run linter only on staged files
 echo "🔍 Running linter..."
 if ! npx eslint $STAGED_JS_FILES; then
-
   echo "❌ Error: Code must pass linting before commit!"
   exit 1
 fi
 
-# 3. Run tests (blocking)
+# 3. Check logger calls for required metadata
+echo "📋 Checking logger metadata..."
+for file in $STAGED_JS_FILES; do
+  # Buscar llamadas a logger sin context o filename
+  INVALID_LOGS=$(grep -n "logger\.\(error\|warn\|info\|debug\)" "$file" | grep -v "context.*filename\|filename.*context")
+  if [ ! -z "$INVALID_LOGS" ]; then
+    echo "❌ Error: Invalid logger calls in $file"
+    echo "Logger calls must include both 'context' and 'filename' keys"
+    echo "Found issues in these lines:"
+    echo "$INVALID_LOGS" | sed 's/^/  - /'
+    exit 1
+  fi
+done
+
+# 4. Run tests (blocking)
 echo "🧪 Running tests..."
 if ! npm test; then
   echo "❌ Error: All tests must pass before commit!"
