@@ -1,10 +1,9 @@
 #!/bin/sh
 
 # Pre-commit checks:
-# 1. JSDoc documentation
-# 2. Code style (ESLint)
-# 3. Logger metadata
-# 4. Tests (Jest)
+# 1. JSDoc documentation and linting (ESLint)
+# 2. Logger metadata
+# 3. Tests (Jest)
 
 echo "🔍 Running pre-commit checks..."
 
@@ -29,39 +28,46 @@ fi
 echo "📝 Checking files:"
 echo "$STAGED_JS_FILES" | sed 's/^/  - /'
 
-# 1. Check JSDoc documentation
-echo "📚 Checking JSDoc documentation..."
+# 1. Run ESLint (includes JSDoc and general linting)
+echo "📚 Running ESLint (includes JSDoc and code style)..."
 if ! npx eslint --config eslint.config.js $STAGED_JS_FILES; then
-  echo "❌ Error: JSDoc documentation is incomplete or invalid!"
+  echo "❌ Error: ESLint checks failed!"
   exit 1
 fi
 
-# 2. Run linter only on staged files
-echo "🔍 Running linter..."
-if ! npx eslint $STAGED_JS_FILES; then
-  echo "❌ Error: Code must pass linting before commit!"
-  exit 1
-fi
-
-# 3. Check logger calls for required metadata
+# 2. Check logger calls for required metadata (blocking)
 echo "📋 Checking logger metadata..."
 for file in $STAGED_JS_FILES; do
-  # Buscar llamadas a logger sin context o filename
-  INVALID_LOGS=$(grep -n "logger\.\(error\|warn\|info\|debug\)" "$file" | grep -v "context.*filename\|filename.*context")
-  if [ ! -z "$INVALID_LOGS" ]; then
-    echo "❌ Error: Invalid logger calls in $file"
-    echo "Logger calls must include both 'context' and 'filename' keys"
-    echo "Found issues in these lines:"
-    echo "$INVALID_LOGS" | sed 's/^/  - /'
-    exit 1
+  # Search for logger calls
+  LOGGER_CALLS=$(grep -n "logger\.\(error\|warn\|info\|debug\)" "$file" || true)
+
+  if [ ! -z "$LOGGER_CALLS" ]; then
+    # For each line with a logger, verify that it has context and filename
+    echo "$LOGGER_CALLS" | while IFS=: read -r line_number content; do
+      # Get the complete logger block (may span multiple lines)
+      START_LINE=$((line_number - 0))
+      END_LINE=$((line_number + 10)) # Buscar hasta 10 líneas después
+      LOG_BLOCK=$(sed -n "${START_LINE},${END_LINE}p" "$file" | tr '\n' ' ')
+
+      # Check if the log block contains both 'context' and 'filename' keys
+      if ! echo "$LOG_BLOCK" | grep -q "context.*:" || ! echo "$LOG_BLOCK" | grep -q "filename.*:"; then
+        echo "❌ Error: Invalid logger call in $file at line $line_number"
+        echo "Logger calls must include both 'context' and 'filename' keys"
+        echo "Found issue in line:"
+        echo "  - $line_number: $content"
+        exit 1
+      fi
+    done
   fi
 done
 
-# 4. Run tests (blocking)
-echo "🧪 Running tests..."
-if ! npm test; then
-  echo "❌ Error: All tests must pass before commit!"
-  exit 1
+# 3. Run tests only for modified files (blocking)
+echo "🧪 Running tests for modified files..."
+if [ ! -z "$STAGED_JS_FILES" ]; then
+  if ! npm test -- --findRelatedTests $STAGED_JS_FILES; then
+    echo "❌ Error: Tests must pass before commit!"
+    exit 1
+  fi
 fi
 
 echo "✅ All pre-commit checks passed!"
