@@ -5,37 +5,42 @@
  * - Base number formatting
  * - Number parsing and extraction
  * - Format options validation
+ * - Locale-aware number handling
  *
  * Functions:
- * - formatNumber: Main number formatting function
- * - formatNumberHelper: Handlebars helper wrapper
  * - extractNumericValue: Extracts numeric value from input
+ * - formatNumber: Formats numbers with locale support
  * - validateFormatOptions: Validates formatting options
- * - formatNumberCore: Core formatting logic
+ *
+ * Constants:
+ * - DEFAULT_OPTIONS: Default formatting options by style
  *
  * Flow:
- * 1. Extract numeric value from input
- * 2. Validate formatting options
- * 3. Apply core formatting logic
- * 4. Add style-specific symbols
+ * 1. Configure locale settings
+ * 2. Extract numeric value from input
+ * 3. Apply style-specific formatting options
+ * 4. Format number according to locale
  *
  * Error Handling:
  * - Invalid numbers return original string
  * - Null/undefined return empty string
  * - Objects are searched for numeric properties
  * - Parsing errors return original value
+ * - Locale mismatches are handled gracefully
  *
  * @module @/utils/template-processor/handlebars/helpers/numbers
- * @requires @/config/locale
- * @requires @/utils/common/logger
- * @requires handlebars
- * @requires numeral
+ * @requires @/config/locale - Locale configuration
+ * @requires @/utils/common/logger - Logging system
+ * @requires handlebars - Template system
+ * @requires numeral - Number formatting library
+ * @requires @/utils/template-processor/handlebars/helpers/value/extract-handlebars-values - Value extraction
  */
 
 const { logger } = require('@/utils/common/logger');
 const handlebars = require('handlebars');
 const numeral = require('numeral');
 const { LOCALE_CONFIG } = require('@/config/locale');
+const { extractValue } = require('../value/extract-handlebars-values');
 
 // Explicitly import Spanish locale for extractNumericValue
 require('numeral/locales/es');
@@ -47,12 +52,12 @@ numeral.locale('es');
  */
 const DEFAULT_OPTIONS = {
   decimal: {
-    minDecimals: null, // Use original decimals
-    maxDecimals: null, // Use original decimals
+    minDecimals: null,
+    maxDecimals: null,
   },
   percent: {
     minDecimals: 0,
-    maxDecimals: 0,
+    maxDecimals: 2,
   },
   currency: {
     minDecimals: 2,
@@ -193,15 +198,6 @@ function extractNumericValue(value) {
  * @param {number} [options.minimumFractionDigits] - Min decimals
  * @param {number} [options.maximumFractionDigits] - Max decimals
  * @returns {object} Validated and normalized options
- *
- * @example
- * // Default options
- * validateFormatOptions()
- * // returns: { style: 'decimal', minimumFractionDigits: null, ... }
- *
- * // Currency options
- * validateFormatOptions({ style: 'currency', currency: 'EUR' })
- * // returns: { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, ... }
  */
 function validateFormatOptions(options = {}) {
   const style = (options?.style || 'decimal').toLowerCase();
@@ -210,10 +206,17 @@ function validateFormatOptions(options = {}) {
   // Get default decimals based on style
   const defaults = DEFAULT_OPTIONS[style] || DEFAULT_OPTIONS.decimal;
 
-  const minimumFractionDigits =
-    options?.minimumFractionDigits ?? defaults.minDecimals;
-  const maximumFractionDigits =
-    options?.maximumFractionDigits ?? minimumFractionDigits;
+  // Handle minimumFractionDigits
+  let minimumFractionDigits = options?.minimumFractionDigits;
+  if (minimumFractionDigits === undefined) {
+    minimumFractionDigits = defaults.minDecimals;
+  }
+
+  // Handle maximumFractionDigits
+  let maximumFractionDigits = options?.maximumFractionDigits;
+  if (maximumFractionDigits === undefined) {
+    maximumFractionDigits = defaults.maxDecimals;
+  }
 
   return {
     style,
@@ -226,66 +229,115 @@ function validateFormatOptions(options = {}) {
 }
 
 /**
- * Core number formatting function
+ * Formats a number according to the specified options
  *
- * Used by both number and currency formatters to ensure consistent
- * number formatting across the application.
- *
- * @param {number} number - Number to format
- * @param {object} options - Formatting options
- * @returns {string} Formatted number without symbols
- *
- * @example
- * // Basic decimal formatting
- * formatNumberCore(1234.5, { style: 'decimal' })
- * // returns: "1.234,5"
- *
- * // Percentage with no decimals
- * formatNumberCore(0.75, { style: 'percent' })
- * // returns: "75"
- *
- * // Currency with fixed decimals
- * formatNumberCore(1234.5, { style: 'currency', minimumFractionDigits: 2 })
- * // returns: "1.234,50"
+ * @param {*} value - Value to format
+ * @param {object} options - Handlebars options object
+ * @returns {handlebars.SafeString|string} Formatted number
  */
-function formatNumberCore(number, options = {}) {
-  const validatedOptions = validateFormatOptions(options);
-
+function formatNumber(value, options = {}) {
   try {
-    // Adjust number for percentages
-    const adjustedNumber =
-      validatedOptions.style === 'percent' ? number * 100 : number;
+    // Extract the number value if it's wrapped in HTML
+    const extractedValue = extractValue(value);
+
+    // Handle null/undefined
+    if (extractedValue == null) {
+      if (options?.data?.isSubexpression || options?.hash?.raw) {
+        return '';
+      }
+      return new handlebars.SafeString(
+        '<span class="missing-value" data-field="number">[[Error formatting number]]</span>'
+      );
+    }
+
+    // Handle objects with toString method
+    let processedValue = extractedValue;
+    if (
+      processedValue &&
+      typeof processedValue === 'object' &&
+      typeof processedValue.toString === 'function'
+    ) {
+      processedValue = processedValue.toString();
+    }
+
+    // Handle HTML-wrapped input
+    if (typeof processedValue === 'string') {
+      const match = processedValue.match(/data-field="[^"]+">([^<]+)</);
+      if (match) {
+        processedValue = match[1];
+      }
+    }
+
+    // Parse the number
+    const num = parseFloat(processedValue);
+    if (isNaN(num)) {
+      if (options?.data?.isSubexpression || options?.hash?.raw) {
+        return processedValue;
+      }
+      return new handlebars.SafeString(
+        '<span class="missing-value" data-field="number">[[Invalid number]]</span>'
+      );
+    }
+
+    // Get formatting options, handling block helpers context
+    const formatOptions = validateFormatOptions({
+      ...options?.hash,
+      // If we're in a block helper, check parent context for style
+      style:
+        options?.hash?.style ||
+        (typeof options === 'string' ? options : undefined),
+    });
 
     // Define fallback locales in order of preference
     const fallbackLocales = [
       LOCALE_CONFIG?.fullLocale,
       'es-ES',
       'es',
-      'es-419', // Latin American Spanish
-      'es-AR', // Argentinian Spanish (known to use same format)
-      'en-US', // Last resort
-    ].filter(Boolean); // Remove undefined/null values
+      'es-419',
+      'es-AR',
+      'en-US',
+    ].filter(Boolean);
 
-    // Try each locale until one works
+    // Calcular fracciones: mínimo y máximo (asegurando que máximo >= mínimo)
+    const minFraction = formatOptions.minimumFractionDigits ?? 0;
+    const autoMaxFraction = Math.max(
+      (String(Math.abs(num)).split('.')[1] || '').length,
+      String(num).includes('e-') ? parseInt(String(num).split('e-')[1]) : 0
+    );
+    const maxFraction =
+      formatOptions.maximumFractionDigits != null
+        ? formatOptions.maximumFractionDigits
+        : Math.max(autoMaxFraction, minFraction);
+
+    // Configurar Intl.NumberFormat según el estilo
+    let nfStyle;
+    const nfOptions = {
+      minimumFractionDigits: minFraction,
+      maximumFractionDigits: maxFraction,
+      useGrouping: formatOptions.useGrouping,
+      numberingSystem: formatOptions.numberingSystem,
+    };
+
+    if (formatOptions.style === 'percent') {
+      nfStyle = 'percent';
+    } else if (formatOptions.style === 'currency') {
+      nfStyle = 'currency';
+      nfOptions.currency = formatOptions.currency || 'EUR';
+    } else {
+      nfStyle = 'decimal';
+    }
+
     let formatter = null;
     for (const locale of fallbackLocales) {
       try {
         formatter = new Intl.NumberFormat(locale, {
-          style: 'decimal',
-          minimumFractionDigits: validatedOptions.minimumFractionDigits || 0,
-          maximumFractionDigits: validatedOptions.maximumFractionDigits || 20,
-          useGrouping: validatedOptions.useGrouping !== false,
-          numberingSystem: 'latn',
+          style: nfStyle,
+          ...nfOptions,
         });
-        // Test if the formatter works with our number
+        // Test if the formatter works
         formatter.format(1234.56);
-        break; // If we get here, the formatter works
+        break;
       } catch (e) {
-        logger.debug(`Locale ${locale} not available, trying next fallback`, {
-          context: '[format]',
-          filename: 'numbers/index.js',
-          error: e.message,
-        });
         continue;
       }
     }
@@ -294,183 +346,46 @@ function formatNumberCore(number, options = {}) {
       throw new Error('No valid locale found for number formatting');
     }
 
-    return formatter.format(adjustedNumber);
+    let result = formatter.format(num);
+    // Reemplazar NBSP por espacios normales
+    result = result.replace(/\u00A0/g, ' ');
+    if (nfStyle === 'percent') {
+      result = result.replace(/\s?%/, '%');
+    }
+
+    // If used as a subexpression or raw option is true, return primitive value
+    if (options?.data?.isSubexpression || options?.hash?.raw) {
+      return result;
+    }
+
+    // Return SafeString with proper data-field
+    return new handlebars.SafeString(
+      `<span class="imported-value" data-field="number">${result}</span>`
+    );
   } catch (error) {
-    logger.error('Error formatting number:', {
-      context: '[error]',
+    logger.error('Error in number helper:', {
       filename: 'numbers/index.js',
+      context: 'helper',
       error: error.message,
       stack: error.stack,
-      number,
-      options: validatedOptions,
-      locale: LOCALE_CONFIG?.fullLocale || 'es-ES',
-    });
-    return String(number);
-  }
-}
-
-/**
- * Formats a number according to locale and options
- *
- * Main number formatting function that handles various input types
- * and formatting styles.
- *
- * @param {*} value - Value to format
- * @param {object} [options] - Formatting options
- * @param {string} [options.style='decimal'] - Format style
- * @param {string} [options.currency] - Currency code
- * @param {number} [options.minimumFractionDigits] - Min decimals
- * @param {number} [options.maximumFractionDigits] - Max decimals
- * @returns {string} Formatted number
- */
-function formatNumber(value, options = {}) {
-  try {
-    logger.debug('Formatting number:', {
-      context: '[format]',
-      filename: 'numbers/index.js',
       value,
-      type: typeof value,
       options,
     });
-
-    const number = extractNumericValue(value);
-
-    if (number === null) {
-      logger.warn('formatNumber: null value detected', {
-        context: '[format]',
-        filename: 'numbers/index.js',
-        value,
-        type: typeof value,
-      });
-      // If the value is a string, return it as is
-      if (typeof value === 'string') {
-        return value;
-      }
-      // For null, undefined or other types, return empty string
+    if (options?.data?.isSubexpression || options?.hash?.raw) {
       return '';
     }
-
-    // Format base number
-    let formattedNumber = formatNumberCore(number, options);
-
-    // Add symbols based on style
-    if (options.style === 'percent') {
-      formattedNumber += ' %';
-    } else if (options.style === 'currency' && options.currency === 'EUR') {
-      formattedNumber += ' €';
-    }
-
-    logger.debug('Number formatted successfully:', {
-      context: '[format]',
-      filename: 'numbers/index.js',
-      input: value,
-      extracted: number,
-      formatted: formattedNumber,
-      options,
-    });
-
-    return formattedNumber;
-  } catch (error) {
-    logger.error('Error in formatNumber:', {
-      context: '[error]',
-      filename: 'numbers/index.js',
-      error: error.message,
-      stack: error.stack,
-      value,
-      options,
-    });
-    // En caso de error, devolver cadena vacía
-    return '';
-  }
-}
-
-/**
- * Handlebars helper for number formatting
- *
- * Wraps the formatted number in an HTML span with appropriate classes
- * and data attributes for styling and tracking.
- *
- * @param {*} value - Value to format
- * @param {object} options - Handlebars options
- * @returns {handlebars.SafeString} HTML-safe string
- */
-function formatNumberHelper(value, options) {
-  logger.debug('formatNumber helper called:', {
-    context: '[format]',
-    filename: 'numbers/index.js',
-    rawValue: value,
-    type: typeof value,
-    isObject: typeof value === 'object' && value !== null,
-    options: options?.hash,
-  });
-
-  try {
-    // If the value is a SafeString, extract the real value
-    if (value && typeof value === 'object' && value.toString) {
-      const stringValue = value.toString();
-      if (stringValue.includes('class="imported-value"')) {
-        // Extract value from span
-        const match = stringValue.match(/>([^<]+)</);
-        if (match) {
-          value = match[1];
-          logger.debug('Extracted value from SafeString:', {
-            context: '[format]',
-            filename: 'numbers/index.js',
-            originalString: stringValue,
-            extractedValue: value,
-          });
-        }
-      }
-    }
-
-    const formattedNumber = formatNumber(value, options?.hash);
-
-    // If the formatted value is empty, show an error message
-    if (!formattedNumber) {
-      logger.warn('Invalid or empty number:', {
-        context: '[format]',
-        filename: 'numbers/index.js',
-        value,
-        type: typeof value,
-        path: options?.data?.root?._currentPath,
-      });
-      return new handlebars.SafeString(
-        `<span class="missing-value" data-field="number">[[number]]</span>`
-      );
-    }
-
-    // If the formatted value equals the original value and is not a number,
-    // it means it couldn't be formatted
-    if (formattedNumber === value && isNaN(Number(value))) {
-      return new handlebars.SafeString(
-        `<span class="missing-value" data-field="number">[[Invalid number]]</span>`
-      );
-    }
-
     return new handlebars.SafeString(
-      `<span class="imported-value" data-field="number">${handlebars.escapeExpression(formattedNumber)}</span>`
-    );
-  } catch (error) {
-    logger.error('Error in formatNumberHelper:', {
-      error: error.message,
-      stack: error.stack,
-      context: '[template]',
-      operation: 'format-number',
-      value,
-      type: typeof value,
-      path: options?.data?.root?._currentPath,
-    });
-    return new handlebars.SafeString(
-      `<span class="missing-value" data-field="number">[[Error formatting number]]</span>`
+      '<span class="missing-value" data-field="number">[[Error formatting number]]</span>'
     );
   }
 }
+
+// Register helper
+handlebars.registerHelper('formatNumber', formatNumber);
 
 module.exports = {
   formatNumber,
-  formatNumberHelper,
   extractNumericValue,
   validateFormatOptions,
-  formatNumberCore,
   DEFAULT_OPTIONS,
 };

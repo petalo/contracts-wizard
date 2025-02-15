@@ -4,35 +4,35 @@
  * Provides a centralized registration point for all Handlebars helpers:
  * - Logic helpers (if, eq, and, not)
  * - Date helpers (formatDate, addYears, now)
- * - Currency helpers (formatCurrency, currencySymbol)
  * - Number helpers (formatNumber)
- * - Value helpers (emptyValue)
+ * - Value helpers (formatEmail, extractValue)
  *
  * Functions:
- * - registerHelpers: Registers all helpers with Handlebars
- * - helperMissing: Handles missing values
- * - blockHelperMissing: Handles missing block helpers
- * - with: Context management helper
- * - each: Array/object iteration helper
- * - log: Debug logging helper
- * - and/not: Logical operation helpers
+ * - formatEmail: Formats email addresses
+ * - and: Logical AND operation
+ * - not: Logical NOT operation
+ * - formatNumber: Number formatting
+ * - formatDate: Date formatting
+ * - addYears: Add years to date
+ * - now: Get current date
+ * - extractValue: Extract values from Handlebars context
  *
  * Flow:
- * 1. Register core Handlebars helpers
- * 2. Register custom helpers
- * 3. Configure helper options
- * 4. Set up error handling
+ * 1. Import required dependencies
+ * 2. Import custom helper functions
+ * 3. Load date and currency helpers
+ * 4. Register helpers with Handlebars
  *
  * Error Handling:
- * - Missing values return placeholders
- * - Invalid paths return error spans
- * - Helper errors are logged
- * - Context errors show debug info
+ * - Invalid values return error spans
+ * - Helper errors are logged with debug info
+ * - Missing values handled gracefully
  *
  * @module @/utils/template-processor/handlebars/helpers
  * @requires handlebars
  * @requires handlebars-helpers
  * @requires @/utils/common/logger
+ * @requires @/config/handlebars-config
  */
 
 const handlebars = require('handlebars');
@@ -46,19 +46,66 @@ const { HANDLEBARS_CONFIG } = require('@/config/handlebars-config');
 const { formatEmail } = require('./value/format-email');
 const { and } = require('./logic/and');
 const { not } = require('./logic/not');
-const { formatNumberHelper } = require('./numbers');
+const { formatNumber } = require('./numbers');
+
+logger.debug('Loading date helpers:', {
+  filename: 'helpers/index.js',
+  context: '[system]',
+  operation: 'init',
+  technical: {
+    function: 'require',
+    module: './date',
+  },
+});
+
 // prettier-ignore
 const {
   formatDate,
   addYears,
   now,
 } = require('./date');
+
+logger.debug('Date helpers loaded:', {
+  filename: 'helpers/index.js',
+  context: '[system]',
+  operation: 'init',
+  technical: {
+    helpers: {
+      formatDate: !!formatDate,
+      addYears: !!addYears,
+      now: !!now,
+    },
+  },
+});
+
+logger.debug('Loading currency helpers:', {
+  filename: 'helpers/index.js',
+  context: '[system]',
+  operation: 'init',
+  technical: {
+    function: 'require',
+    module: './currency',
+  },
+});
+
 // prettier-ignore
 const {
   formatCurrency,
   currencySymbol,
   // exchangeRate, // Not implemented yet
 } = require('./currency');
+
+logger.debug('Currency helpers loaded:', {
+  filename: 'helpers/index.js',
+  context: '[system]',
+  operation: 'init',
+  technical: {
+    helpers: {
+      formatCurrency: !!formatCurrency,
+      currencySymbol: !!currencySymbol,
+    },
+  },
+});
 
 // Import explicitly the Spanish locale for numeric value extraction
 require('numeral/locales/es');
@@ -341,9 +388,150 @@ handlebars.registerHelper('if', function (value, options) {
   return isFalsy ? options.inverse(this) : options.fn(this);
 });
 
-// Register other helpers from handlebars-helpers with logging
-logger.debug('Registering handlebars-helpers:', {
+// Register core helpers first
+logger.debug('Starting core helpers registration:', {
+  filename: 'helpers/index.js',
   context: '[system]',
+  operation: 'init',
+  technical: {
+    phase: 'core-registration',
+  },
+});
+
+handlebars.registerHelper({
+  // Value formatting helpers
+  formatEmail: function (value, options) {
+    return formatEmail.call(this, value, options);
+  },
+
+  // Date helpers
+  formatDate: function (date, format, options) {
+    logger.debug('Registering formatDate helper:', {
+      filename: 'helpers/index.js',
+      context: '[system]',
+      operation: 'init',
+      technical: {
+        helper: 'formatDate',
+        hasFunction: !!formatDate,
+      },
+    });
+    // Handle case where format is omitted
+    if (format && typeof format === 'object' && !options) {
+      options = format;
+      format = undefined;
+    }
+    return formatDate.call(this, date, format, options);
+  },
+  addYears: function (date, years, options) {
+    logger.debug('Registering addYears helper:', {
+      filename: 'helpers/index.js',
+      context: '[system]',
+      operation: 'init',
+      technical: {
+        helper: 'addYears',
+        hasFunction: !!addYears,
+      },
+    });
+    return addYears.call(this, date, years, options);
+  },
+  now: function (format, options) {
+    logger.debug('Registering now helper:', {
+      filename: 'helpers/index.js',
+      context: '[system]',
+      operation: 'init',
+      technical: {
+        helper: 'now',
+        hasFunction: !!now,
+      },
+    });
+    logger.debug('now helper wrapper called:', {
+      filename: 'helpers/index.js',
+      context: '[helper]',
+      operation: 'now-wrapper',
+      technical: {
+        function: 'now',
+        args: {
+          format,
+          formatType: typeof format,
+          hasOptions: !!options,
+          optionsData: options?.data,
+          thisContext: this ? Object.keys(this) : undefined,
+        },
+        state: {
+          isSubexpression: options?.data?.isSubexpression,
+          currentPath: options?.data?.root?._currentPath,
+          parentPath: options?.data?.root?._parentPath,
+        },
+      },
+    });
+
+    // Handle case where format is omitted
+    if (format && typeof format === 'object' && !options) {
+      logger.debug('format is options object in wrapper:', {
+        filename: 'helpers/index.js',
+        context: '[helper]',
+        operation: 'now-wrapper',
+        technical: {
+          originalFormat: format,
+          isOptionsObject: true,
+          optionsKeys: Object.keys(format),
+        },
+      });
+      options = format;
+      format = undefined;
+    }
+
+    try {
+      const result = now.call(this, format, options);
+      logger.debug('now helper wrapper result:', {
+        filename: 'helpers/index.js',
+        context: '[helper]',
+        operation: 'now-wrapper',
+        technical: {
+          resultType: typeof result,
+          isSafeString: result instanceof handlebars.SafeString,
+          resultString: result?.toString(),
+        },
+      });
+      return result;
+    } catch (error) {
+      logger.error('Error in now helper wrapper:', {
+        filename: 'helpers/index.js',
+        context: '[helper]',
+        operation: 'now-wrapper',
+        error: {
+          code: 'NOW_WRAPPER_ERROR',
+          message: error.message,
+          stack: error.stack,
+          type: error.name,
+        },
+        technical: {
+          format,
+          formatType: typeof format,
+          hasOptions: !!options,
+          thisContext: this ? Object.keys(this) : undefined,
+        },
+        impact: 'Unable to process date formatting in wrapper',
+      });
+      return new handlebars.SafeString(
+        `<span class="missing-value" data-field="date">[[Error in date wrapper]]</span>`
+      );
+    }
+  },
+
+  // Logic helpers
+  and: function () {
+    return and.apply(this, arguments);
+  },
+  not: function (value, options) {
+    return not.call(this, value, options);
+  },
+});
+
+// Register handlebars-helpers
+logger.debug('Registering handlebars-helpers:', {
+  context: '[helper]',
+  filename: 'helpers/index.js',
   helpers: Object.keys(helpers).filter(
     (name) => !['if', 'eq', 'formatDate', 'now', 'number'].includes(name)
   ),
@@ -380,7 +568,7 @@ handlebars.registerHelper('currency', function (value, currency, options) {
 
   try {
     if (!value && value !== 0) {
-      const errorSpan = `<span class="missing-value" data-field="currency">[[currency]]</span>`;
+      const errorSpan = `<span class="missing-value" data-field="currency">[[Error formatting currency]]</span>`;
       return options?.fn
         ? options.inverse(this)
         : new handlebars.SafeString(errorSpan);
@@ -409,7 +597,7 @@ handlebars.registerHelper('currency', function (value, currency, options) {
 
     const number = Number(extractedValue);
     if (isNaN(number)) {
-      const errorSpan = `<span class="missing-value" data-field="currency">[[Invalid number]]</span>`;
+      const errorSpan = `<span class="missing-value" data-field="currency">[[Error formatting currency]]</span>`;
       return options?.fn
         ? options.inverse(this)
         : new handlebars.SafeString(errorSpan);
@@ -437,7 +625,10 @@ handlebars.registerHelper('currency', function (value, currency, options) {
 
     // If used as a block helper, pass the formatted value as context
     if (options?.fn) {
-      return options.fn({ value: formattedValue });
+      const context = Object.create(this || {});
+      context.this = formattedValue;
+      context.value = formattedValue;
+      return options.fn(context);
     }
 
     // If used as a simple helper, return the span
@@ -478,16 +669,38 @@ handlebars.registerHelper('lookup', function (obj, prop) {
   return value;
 });
 
+// Register date helpers
+logger.debug('Registering date helpers', {
+  filename: 'helpers/index.js',
+  context: '[helper]',
+  operation: 'init',
+  technical: {
+    phase: 'date-registration',
+    helpers: ['formatDate', 'addYears', 'now'],
+  },
+});
+
+// Register each date helper individually to avoid conflicts
+handlebars.registerHelper('formatDate', formatDate);
+handlebars.registerHelper('addYears', addYears);
+handlebars.registerHelper('now', now);
+
 // Register custom helpers
-logger.debug('Registering custom helpers');
+logger.debug('Registering custom helpers', {
+  filename: 'helpers/index.js',
+  context: '[helper]',
+  operation: 'init',
+  technical: {
+    phase: 'custom-registration',
+    helpers: ['formatEmail', 'and', 'not', 'formatNumber'],
+  },
+});
+
+// Register custom helpers
 handlebars.registerHelper({
   formatEmail,
   and,
   not,
-  formatNumber: formatNumberHelper,
-  formatDate,
-  addYears,
-  now,
 });
 
 // Export all helpers for testing and direct use
@@ -496,12 +709,15 @@ module.exports = {
   formatEmail,
   and,
   not,
-  formatNumber: formatNumberHelper,
-  // Re-export handlebars-helpers for convenience
-  helpers,
+  formatNumber,
+  // Date helpers
   formatDate,
   addYears,
   now,
+  // Re-export handlebars-helpers for convenience
+  helpers,
+  formatCurrency,
+  currencySymbol,
   currency: handlebars.helpers.currency,
   emptyValue: handlebars.helpers.emptyValue,
   objectToArray: handlebars.helpers.objectToArray,

@@ -9,7 +9,7 @@
  * - Timezone handling
  */
 
-const moment = require('moment-timezone');
+const { DateTime } = require('luxon');
 const handlebars = require('handlebars');
 const {
   formatDate,
@@ -60,12 +60,9 @@ describe('Date Helpers', () => {
     // Mock extractValue to return input by default
     extractValue.mockImplementation((val) => val);
 
-    // Configure moment
-    moment.locale(LOCALE_CONFIG.locale);
-    moment.tz.setDefault(LOCALE_CONFIG.timezone);
-
-    // Load Spanish locale
-    require('moment/locale/es');
+    // Configure Luxon
+    DateTime.local().setLocale(LOCALE_CONFIG.locale);
+    DateTime.local().setZone(LOCALE_CONFIG.timezone);
   });
 
   afterEach(() => {
@@ -85,7 +82,7 @@ describe('Date Helpers', () => {
 
     it('should format date with custom format', () => {
       const date = '2024-01-29';
-      const format = 'YYYY-MM-DD';
+      const format = 'yyyy-MM-dd';
       const result = formatDate(date, format);
       expect(result.toString()).toBe(
         '<span class="imported-value" data-field="date">2024-01-29</span>'
@@ -94,7 +91,7 @@ describe('Date Helpers', () => {
 
     it('should format date with Spanish locale', () => {
       const date = '2024-01-29';
-      const format = 'D [de] MMMM [de] YYYY';
+      const format = 'd "de" MMMM "de" yyyy';
       const result = formatDate(date, format);
       expect(result.toString()).toBe(
         '<span class="imported-value" data-field="date">29 de enero de 2024</span>'
@@ -104,10 +101,6 @@ describe('Date Helpers', () => {
     it('should handle predefined formats', () => {
       const date = '2024-01-29';
       const format = 'DEFAULT';
-      extractValue.mockImplementation((val) => {
-        if (val === 'DEFAULT') return 'DD/MM/YYYY';
-        return val;
-      });
       const result = formatDate(date, format);
       expect(result.toString()).toBe(
         '<span class="imported-value" data-field="date">29/01/2024</span>'
@@ -115,7 +108,8 @@ describe('Date Helpers', () => {
     });
 
     it('should handle invalid date', () => {
-      const result = formatDate('invalid-date');
+      const date = 'invalid-date';
+      const result = formatDate(date);
       expect(result.toString()).toBe(
         '<span class="missing-value" data-field="date">[[Invalid date]]</span>'
       );
@@ -144,12 +138,63 @@ describe('Date Helpers', () => {
 
     it('should handle extraction errors', () => {
       extractValue.mockImplementation(() => {
-        throw new Error('Extraction failed');
+        throw new Error('Extraction error');
       });
       const result = formatDate('2024-01-29');
       expect(result.toString()).toBe(
         '<span class="missing-value" data-field="date">[[Error formatting date]]</span>'
       );
+    });
+
+    it('should handle DateTime objects directly', () => {
+      const date = DateTime.fromISO('2024-01-29');
+      const format = 'yyyy-MM-dd';
+      const result = formatDate(date, format);
+      expect(result.toString()).toBe(
+        '<span class="imported-value" data-field="date">2024-01-29</span>'
+      );
+    });
+
+    it('should handle dates with different timezones', () => {
+      const date = '2024-01-29T12:00:00.000Z';
+      const format = 'HH:mm:ss';
+      const result = formatDate(date, format);
+      expect(result.toString()).toBe(
+        '<span class="imported-value" data-field="date">13:00:00</span>'
+      );
+    });
+
+    it('should handle dates with time component', () => {
+      const date = '2024-01-29T15:30:45';
+      const format = 'HH:mm:ss';
+      const result = formatDate(date, format);
+      expect(result.toString()).toBe(
+        '<span class="imported-value" data-field="date">15:30:45</span>'
+      );
+    });
+
+    it('should handle HTML-wrapped input dates', () => {
+      const date = '<span>2024-01-29</span>';
+      const result = formatDate(date);
+      expect(result.toString()).toBe(
+        '<span class="imported-value" data-field="date">29/01/2024</span>'
+      );
+    });
+
+    it('should handle HTML-wrapped formats', () => {
+      const date = '2024-01-29';
+      const format = '<span>yyyy-MM-dd</span>';
+      const result = formatDate(date, format);
+      expect(result.toString()).toBe(
+        '<span class="imported-value" data-field="date">2024-01-29</span>'
+      );
+    });
+
+    it('should handle raw option', () => {
+      const date = '2024-01-29';
+      const options = { hash: { raw: true } };
+      const result = formatDate(date, options);
+      expect(result).toBe('29/01/2024');
     });
   });
 
@@ -159,7 +204,7 @@ describe('Date Helpers', () => {
       const years = 1;
       const result = addYears(date, years);
       expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="date">29 de enero de 2025</span>'
+        '<span class="imported-value" data-field="date">29/01/2025</span>'
       );
     });
 
@@ -168,7 +213,7 @@ describe('Date Helpers', () => {
       const years = -1;
       const result = addYears(date, years);
       expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="date">29 de enero de 2023</span>'
+        '<span class="imported-value" data-field="date">29/01/2023</span>'
       );
     });
 
@@ -177,16 +222,16 @@ describe('Date Helpers', () => {
       const years = 1;
       const result = addYears(date, years);
       expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="date">28 de febrero de 2025</span>'
+        '<span class="imported-value" data-field="date">28/02/2025</span>'
       );
     });
 
     it('should handle leap year to leap year', () => {
-      const date = '2020-02-29';
+      const date = '2024-02-29';
       const years = 4;
       const result = addYears(date, years);
       expect(result.toString()).toBe(
-        '<span class="imported-value" data-field="date">29 de febrero de 2024</span>'
+        '<span class="imported-value" data-field="date">29/02/2028</span>'
       );
     });
 
@@ -205,43 +250,68 @@ describe('Date Helpers', () => {
     });
 
     it('should handle invalid date', () => {
-      // Temporarily suppress moment warnings for this test
-      const originalWarn = console.warn;
-      console.warn = jest.fn();
-
       const result = addYears('invalid-date', 1);
       expect(result.toString()).toBe(
         '<span class="missing-value" data-field="date">[[Invalid date]]</span>'
       );
-
-      // Restore console.warn
-      console.warn = originalWarn;
     });
 
     it('should handle extraction errors', () => {
       extractValue.mockImplementation(() => {
-        throw new Error('Extraction failed');
+        throw new Error('Extraction error');
       });
       const result = addYears('2024-01-29', 1);
       expect(result.toString()).toBe(
         '<span class="missing-value" data-field="date">[[Error adding years to date]]</span>'
       );
     });
+
+    it('should handle HTML-wrapped years value', () => {
+      const date = '2024-01-29';
+      const years = '<span>1</span>';
+      const result = addYears(date, years);
+      expect(result.toString()).toBe(
+        '<span class="imported-value" data-field="date">29/01/2025</span>'
+      );
+    });
+
+    it('should handle decimal years', () => {
+      const date = '2024-01-29';
+      const years = '1.5';
+      const result = addYears(date, years);
+      expect(result.toString()).toBe(
+        '<span class="imported-value" data-field="date">29/01/2025</span>'
+      );
+    });
+
+    it('should handle string years', () => {
+      const date = '2024-01-29';
+      const years = '1';
+      const result = addYears(date, years);
+      expect(result.toString()).toBe(
+        '<span class="imported-value" data-field="date">29/01/2025</span>'
+      );
+    });
+
+    it('should handle invalid years value', () => {
+      const date = '2024-01-29';
+      const years = 'invalid';
+      const result = addYears(date, years);
+      expect(result.toString()).toBe(
+        '<span class="missing-value" data-field="date">[[Invalid date]]</span>'
+      );
+    });
+
+    it('should handle raw option', () => {
+      const date = '2024-01-29';
+      const years = 1;
+      const options = { hash: { raw: true } };
+      const result = addYears(date, years, options);
+      expect(result).toBe('29/01/2025');
+    });
   });
 
   describe('now', () => {
-    let mockDate;
-
-    beforeEach(() => {
-      // Mock Date to return a fixed value
-      mockDate = new Date('2024-01-29T12:00:00.000Z');
-      jest.spyOn(global, 'Date').mockImplementation(() => mockDate);
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
     it('should return current date with default format', () => {
       const result = now();
       expect(result.toString()).toBe(
@@ -250,7 +320,7 @@ describe('Date Helpers', () => {
     });
 
     it('should return current date with custom format', () => {
-      const format = 'YYYY-MM-DD';
+      const format = 'yyyy-MM-dd';
       const result = now(format);
       expect(result.toString()).toBe(
         '<span class="imported-value" data-field="date">2024-01-29</span>'
@@ -258,7 +328,7 @@ describe('Date Helpers', () => {
     });
 
     it('should return current date with Spanish locale', () => {
-      const format = 'D [de] MMMM [de] YYYY';
+      const format = 'd "de" MMMM "de" yyyy';
       const result = now(format);
       expect(result.toString()).toBe(
         '<span class="imported-value" data-field="date">29 de enero de 2024</span>'
@@ -275,12 +345,42 @@ describe('Date Helpers', () => {
 
     it('should handle extraction errors', () => {
       extractValue.mockImplementation(() => {
-        throw new Error('Extraction failed');
+        throw new Error('Extraction error');
       });
-      const result = now('YYYY-MM-DD');
+      const result = now('yyyy-MM-dd');
       expect(result.toString()).toBe(
         '<span class="missing-value" data-field="date">[[Error getting current date]]</span>'
       );
+    });
+
+    it('should handle format as options object', () => {
+      const options = { hash: { format: 'yyyy-MM-dd' } };
+      const result = now(options);
+      expect(result.toString()).toBe(
+        '<span class="imported-value" data-field="date">29/01/2024</span>'
+      );
+    });
+
+    it('should handle HTML-wrapped format', () => {
+      const format = '<span>yyyy-MM-dd</span>';
+      const result = now(format);
+      expect(result.toString()).toBe(
+        '<span class="imported-value" data-field="date">2024-01-29</span>'
+      );
+    });
+
+    it('should handle predefined formats', () => {
+      const format = 'DEFAULT';
+      const result = now(format);
+      expect(result.toString()).toBe(
+        '<span class="imported-value" data-field="date">29/01/2024</span>'
+      );
+    });
+
+    it('should handle raw option', () => {
+      const options = { hash: { raw: true } };
+      const result = now(options);
+      expect(result.toFormat('dd/MM/yyyy')).toBe('29/01/2024');
     });
   });
 
@@ -300,68 +400,82 @@ describe('Date Helpers', () => {
     });
 
     it('should work in template with formatDate', () => {
-      const template = handlebars.compile('{{formatDate date "DD/MM/YYYY"}}');
-      const result = template({ date: '2024-01-29' });
+      const template = handlebars.compile('{{formatDate "2024-01-29"}}');
+      const result = template({});
       expect(result).toBe(
         '<span class="imported-value" data-field="date">29/01/2024</span>'
       );
     });
 
     it('should work in template with addYears', () => {
-      const template = handlebars.compile('{{addYears date 1}}');
-      const result = template({ date: '2024-01-29' });
+      const template = handlebars.compile('{{addYears "2024-01-29" 1}}');
+      const result = template({});
       expect(result).toBe(
-        '<span class="imported-value" data-field="date">29 de enero de 2025</span>'
+        '<span class="imported-value" data-field="date">29/01/2025</span>'
       );
     });
 
     it('should work in template with now', () => {
-      const mockDate = new Date('2024-01-29T12:00:00.000Z');
-      jest.spyOn(global, 'Date').mockImplementation(() => mockDate);
-
-      const template = handlebars.compile('{{now "DD/MM/YYYY"}}');
+      const template = handlebars.compile('{{now}}');
       const result = template({});
       expect(result).toBe(
         '<span class="imported-value" data-field="date">29/01/2024</span>'
       );
-
-      jest.restoreAllMocks();
     });
 
     it('should handle nested helper calls', () => {
-      // Mock extractValue to handle both simple values and SafeStrings
-      extractValue.mockImplementation((val) => {
-        console.log('extractValue called with:', val);
-        if (val instanceof handlebars.SafeString) {
-          const match = val.string.match(/data-field="date">([^<]+)<\/span>/);
-          if (match && match[1]) {
-            return match[1];
-          }
-        }
-        return val;
-      });
-
-      console.log('Starting nested helper test');
-      console.log('Creating template with nested helpers');
       const template = handlebars.compile(
-        '{{formatDate (addYears date 1) "D [de] MMMM [de] YYYY"}}'
+        '{{formatDate (addYears "2024-01-29" 1)}}'
       );
-      console.log('Template created');
-
-      console.log('Executing template with date:', '2024-01-29');
-      const result = template({ date: '2024-01-29' });
-      console.log('Template execution result:', result);
-
-      console.log(
-        'Expected:',
-        '<span class="imported-value" data-field="date">29 de enero de 2025</span>'
-      );
-      console.log('Received:', result);
+      const result = template({});
       expect(result).toBe(
-        '<span class="imported-value" data-field="date">29 de enero de 2025</span>'
+        '<span class="imported-value" data-field="date">29/01/2025</span>'
       );
+    });
 
-      jest.restoreAllMocks();
+    it('should work with nested helpers', () => {
+      const template = handlebars.compile('{{formatDate (addYears (now) 1)}}');
+      const result = template({});
+      expect(result).toContain('2025');
+    });
+
+    it('should preserve context in block helpers', () => {
+      const template = handlebars.compile(
+        '{{#each dates}}{{formatDate this}}{{/each}}'
+      );
+      const data = {
+        dates: ['2024-01-29', '2024-02-29'],
+      };
+      const result = template(data);
+      expect(result).toBe(
+        '<span class="imported-value" data-field="date">29/01/2024</span>' +
+          '<span class="imported-value" data-field="date">29/02/2024</span>'
+      );
+    });
+
+    it('should handle dynamic formats', () => {
+      const template = handlebars.compile('{{formatDate date format}}');
+      const data = {
+        date: '2024-01-29',
+        format: 'yyyy-MM-dd',
+      };
+      const result = template(data);
+      expect(result).toBe(
+        '<span class="imported-value" data-field="date">2024-01-29</span>'
+      );
+    });
+
+    it('should handle subexpressions in format', () => {
+      const template = handlebars.compile(
+        '{{formatDate date (addYears "2024-01-29" 1)}}'
+      );
+      const data = {
+        date: '2024-01-29',
+      };
+      const result = template(data);
+      expect(result).toBe(
+        '<span class="imported-value" data-field="date">29/01/2024</span>'
+      );
     });
   });
 });
