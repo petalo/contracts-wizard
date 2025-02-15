@@ -22,288 +22,350 @@
  * - All errors are logged with debug context
  *
  * @module @/utils/template-processor/handlebars/helpers/currency
- * @requires @/utils/template-processor/handlebars/helpers/numbers
  * @requires @/utils/common/logger
  * @requires handlebars
- * @requires @/config/locale
  */
 
-const { extractNumericValue, DEFAULT_OPTIONS } = require('../numbers');
 const { logger } = require('@/utils/common/logger');
 const handlebars = require('handlebars');
-const { LOCALE_CONFIG } = require('@/config/locale');
+
+// Currency configurations with proper locales and formats
+const CURRENCY_CONFIG = {
+  EUR: {
+    locale: 'es-ES',
+    format: {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: true,
+      currencyDisplay: 'symbol',
+    },
+  },
+  USD: {
+    locale: 'en-US',
+    format: {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: true,
+      currencyDisplay: 'symbol',
+    },
+  },
+  GBP: {
+    locale: 'en-GB',
+    format: {
+      style: 'currency',
+      currency: 'GBP',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: true,
+      currencyDisplay: 'symbol',
+    },
+  },
+};
 
 /**
- * Formats a number as currency
+ * Get the currency symbol for a given currency code
  *
- * Handles both English (1000.50) and Spanish (1.000,50) number formats.
- * Defaults to EUR currency if not specified.
- * Always uses Spanish locale for output formatting.
- *
- * @param {*} value - Value to format
- * @param {object} [options] - Formatting options
- * @param {string} [options.currency='EUR'] - Currency code
- * @param {number} [options.minimumFractionDigits] - Minimum fraction digits
- * @param {number} [options.maximumFractionDigits] - Maximum fraction digits
- * @returns {string} Formatted currency
- * @throws {Error} If formatting fails
- *
- * @example
- * // Format number
- * formatCurrency(1000.5)
- * // returns: "1.000,50 €"
- *
- * // Format string in English format
- * formatCurrency("1000.50")
- * // returns: "1.000,50 €"
- *
- * // Format string in Spanish format
- * formatCurrency("1.000,50")
- * // returns: "1.000,50 €"
- *
- * // Format with USD currency
- * formatCurrency(1000.5, { currency: 'USD' })
- * // returns: "1.000,50 $"
- *
- * // Handle invalid input
- * formatCurrency("invalid")
- * // returns: "invalid"
- *
- * // Handle null
- * formatCurrency(null)
- * // returns: ""
+ * @param {string} [currencyCode='EUR'] - The currency code (e.g. 'EUR', 'USD', 'GBP')
+ * @returns {string} The currency symbol (e.g. '€', '$', '£')
  */
-function formatCurrency(value, options = {}) {
-  try {
-    const number = extractNumericValue(value);
+function getCurrencySymbol(currencyCode = 'EUR') {
+  if (!currencyCode) return '€';
 
-    if (number === null) {
-      logger.debug('formatCurrency: null value detected', {
-        context: '[format]',
-        filename: 'currency/index.js',
-        value,
-        type: typeof value,
-      });
-      return typeof value === 'string' ? value : '';
-    }
-
-    // Get currency code with fallback to EUR
-    const currencyCode = (
-      typeof options === 'string' ? options : options.currency || 'EUR'
-    ).toUpperCase();
-
-    // Get decimal options
-    const minDecimals =
-      options.minimumFractionDigits ??
-      options.minDecimals ??
-      DEFAULT_OPTIONS.currency.minDecimals;
-    const maxDecimals =
-      options.maximumFractionDigits ??
-      options.maxDecimals ??
-      DEFAULT_OPTIONS.currency.maxDecimals;
-
-    logger.debug('Currency formatting options:', {
-      context: '[format]',
-      filename: 'currency/index.js',
-      currencyCode,
-      minDecimals,
-      maxDecimals,
-      value,
-      options,
-    });
-
-    // Define fallback locales in order of preference
-    const fallbackLocales = [
-      LOCALE_CONFIG?.fullLocale,
-      'es-ES',
-      'es',
-      'es-419',
-      'es-AR',
-      'en-US',
-    ].filter(Boolean);
-
-    // Try each locale until one works
-    let formatter = null;
-    for (const locale of fallbackLocales) {
-      try {
-        formatter = new Intl.NumberFormat(locale, {
-          style: 'decimal',
-          minimumFractionDigits: minDecimals,
-          maximumFractionDigits: maxDecimals,
-          useGrouping: true,
-          numberingSystem: 'latn',
-        });
-        // Test if the formatter works
-        formatter.format(1234.56);
-        break;
-      } catch (e) {
-        logger.debug(`Locale ${locale} not available, trying next fallback`, {
-          context: '[format]',
-          filename: 'currency/index.js',
-          error: e.message,
-        });
-        continue;
-      }
-    }
-
-    if (!formatter) {
-      throw new Error('No valid locale found for currency formatting');
-    }
-
-    // Format number and add currency symbol
-    const formattedNumber = formatter.format(number);
-    const symbol = getCurrencySymbol(currencyCode);
-
-    return `${formattedNumber} ${symbol}`;
-  } catch (error) {
-    logger.error('Error in formatCurrency:', {
-      context: '[error]',
-      filename: 'currency/index.js',
-      error: error.message,
-      stack: error.stack,
-      value,
-      options,
-      locale: LOCALE_CONFIG?.fullLocale || 'es-ES',
-    });
-    return String(value);
+  const code = currencyCode.trim().toUpperCase();
+  switch (code) {
+    case 'EUR':
+      return '€';
+    case 'USD':
+      return '$';
+    case 'GBP':
+      return '£';
+    default:
+      return code;
   }
 }
 
 /**
- * Gets the symbol for a currency code
+ * Format a number as currency with proper locale and symbol
  *
- * Returns the appropriate currency symbol for supported currencies.
- * For unsupported currencies, returns the currency code itself.
- *
- * @param {string} currency - Currency code
- * @returns {string} Currency symbol
- *
- * @example
- * // Get EUR symbol
- * getCurrencySymbol('EUR')
- * // returns: "€"
- *
- * // Get USD symbol
- * getCurrencySymbol('USD')
- * // returns: "$"
- *
- * // Get symbol for unsupported currency
- * getCurrencySymbol('JPY')
- * // returns: "JPY"
- *
- * // Default to EUR
- * getCurrencySymbol()
- * // returns: "€"
+ * @param {number|string} value - The number to format
+ * @param {object} options - Formatting options
+ * @param {string} options.currency - Currency code (e.g. 'EUR', 'USD')
+ * @param {number} [options.minDecimals] - Minimum decimal places
+ * @param {number} [options.maxDecimals] - Maximum decimal places
+ * @param {boolean} [options.raw] - Return raw value without HTML
+ * @param {boolean} [options.useCode] - Use currency code instead of symbol
+ * @returns {string} Formatted currency string
  */
-function getCurrencySymbol(currency = 'EUR') {
-  if (!currency) return '€';
-
-  const normalizedCurrency = currency.toString().trim().toUpperCase();
-  const symbols = {
-    EUR: '€',
-    USD: '$',
-    GBP: '£',
-  };
-  return symbols[normalizedCurrency] || normalizedCurrency;
-}
-
-/**
- * Handlebars helper for currency formatting
- *
- * Wraps the formatted currency in an HTML span with appropriate classes
- * and data attributes for styling and tracking.
- *
- * @param {*} value - Value to format
- * @param {object} options - Handlebars options object
- * @returns {handlebars.SafeString} HTML-safe string with formatted currency
- *
- * @example
- * // Basic usage in template
- * {{formatCurrency 1000.50}}
- * // returns: <span class="imported-value" data-field="currency">1.000,50 €</span>
- *
- * // With USD currency in template
- * {{formatCurrency 1000.50 currency="USD"}}
- * // returns: <span class="imported-value" data-field="currency">1.000,50 $</span>
- *
- * // Handle invalid value in template
- * {{formatCurrency "invalid"}}
- * // returns: <span class="missing-value" data-field="currency">[[Error formatting currency]]</span>
- */
-function formatCurrencyHelper(value, options) {
-  logger.debug('formatCurrency helper called:', {
-    context: '[format]',
-    filename: 'currency/index.js',
-    rawValue: value,
-    options,
-    template: {
-      path: options?.data?.root?._currentPath,
-      line: options?.data?.loc?.start?.line,
-      column: options?.data?.loc?.start?.column,
-      context: options?.data?.root?._currentContext,
-    },
-  });
-
+function formatCurrency(value, options = {}) {
   try {
-    // Handle objects with toString method
-    if (
-      value &&
-      typeof value === 'object' &&
-      !Array.isArray(value) &&
-      typeof value.toString === 'function'
-    ) {
-      value = value.toString();
+    // Handle special cases
+    if (value === Infinity || value === -Infinity || Number.isNaN(value)) {
+      return '';
     }
 
-    // Handle array values, null, undefined, or empty values
-    if (Array.isArray(value) || value == null || value === '') {
-      return new handlebars.SafeString(
-        '<span class="missing-value" data-field="currency">[[Error formatting currency]]</span>'
-      );
+    // Handle null/undefined/empty values
+    if (value == null || value === '') {
+      return '';
     }
 
-    // Handle subexpressions
-    if (value instanceof handlebars.SafeString) {
-      const match = value.string.match(/data-field="[^"]+">([^<]+)</);
+    // If value is wrapped in HTML, extract the numeric value
+    if (typeof value === 'string' && value.includes('data-field')) {
+      const match = value.match(/data-field="[^"]+">([^<]+)</);
       if (match) {
         value = match[1];
       }
     }
 
-    const result = formatCurrency(value, options?.hash || {});
-
-    // If result is empty or the original invalid value, return error
-    if (!result || (typeof value === 'string' && result === value)) {
-      return new handlebars.SafeString(
-        '<span class="missing-value" data-field="currency">[[Error formatting currency]]</span>'
-      );
+    // If value is not a valid number or string, try to convert it
+    if (typeof value !== 'number' && typeof value !== 'string') {
+      if (typeof value === 'object' && value !== null) {
+        // If it's an object with currency-specific properties
+        if (value.amount && value.currency) {
+          options.currency = value.currency;
+          value = value.amount;
+        }
+        // If it's an object with a value property
+        else if ('value' in value) {
+          value = value.value;
+        } else if ('amount' in value) {
+          value = value.amount;
+        } else if (typeof value.toString === 'function') {
+          value = value.toString();
+        }
+      }
     }
 
-    // If used as a subexpression or raw option is true, return primitive value
-    if (options?.data?.isSubexpression || options?.hash?.raw) {
-      return result;
+    // If value is still not a number or string, return it as is
+    if (typeof value !== 'number' && typeof value !== 'string') {
+      return value;
     }
 
-    // Return SafeString with proper data-field
-    return new handlebars.SafeString(
-      `<span class="imported-value" data-field="currency">${handlebars.escapeExpression(result)}</span>`
-    );
-  } catch (error) {
-    logger.error('Error in currency helper:', {
-      filename: 'currency/index.js',
-      context: 'helper',
-      error: error.message,
-      stack: error.stack,
-      value,
-      options,
+    // Parse the number based on current format
+    let number = value;
+
+    if (typeof number === 'string') {
+      // Try to detect the format and parse accordingly
+      if (number.includes(',') && number.includes('.')) {
+        // Format like 1.234,56 (Spanish)
+        if (number.indexOf('.') < number.indexOf(',')) {
+          number = parseFloat(number.replace(/\./g, '').replace(',', '.'));
+        }
+        // Format like 1,234.56 (English)
+        else {
+          number = parseFloat(number.replace(/,/g, ''));
+        }
+      }
+      // Format like 1,23 (Spanish)
+      else if (number.includes(',')) {
+        number = parseFloat(number.replace(',', '.'));
+      }
+      // Format like 1.23 (English) or scientific notation
+      else {
+        number = parseFloat(number);
+      }
+    }
+
+    // If parsing failed, return original value
+    if (isNaN(number)) {
+      return value;
+    }
+
+    // Get currency configuration
+    const currencyCode = options.currency?.toUpperCase() || 'EUR';
+    const config = CURRENCY_CONFIG[currencyCode] || {
+      locale: 'en-US',
+      format: {
+        style: 'decimal',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+        useGrouping: true,
+      },
+    };
+
+    // For USD without decimals, we need to round the number first
+    if (currencyCode === 'USD' && options.maxDecimals === 0) {
+      number = Math.round(number);
+    }
+
+    // Format the number according to locale
+    const formatter = new Intl.NumberFormat(config.locale, {
+      style: 'decimal',
+      minimumFractionDigits:
+        options.minDecimals ?? config.format.minimumFractionDigits,
+      maximumFractionDigits:
+        options.maxDecimals ?? config.format.maximumFractionDigits,
+      useGrouping: true,
     });
-    return new handlebars.SafeString(
-      '<span class="missing-value" data-field="currency">[[Error formatting currency]]</span>'
-    );
+
+    let formattedNumber = formatter.format(number);
+
+    // Format with currency code
+    let finalFormatted = formattedNumber;
+
+    // Add currency code or symbol based on configuration
+    if (options.useCode) {
+      // Always use currency code
+      finalFormatted = `${formattedNumber} ${currencyCode}`;
+    } else if (currencyCode === 'EUR' && config.locale === 'es-ES') {
+      finalFormatted = `${formattedNumber} €`;
+    } else if (currencyCode === 'USD' && config.locale === 'en-US') {
+      // Handle negative numbers
+      if (number < 0) {
+        finalFormatted = formattedNumber.replace(/^-/, ''); // Remove existing minus
+        finalFormatted = `-$${finalFormatted}`; // Add minus with symbol
+      } else {
+        finalFormatted = `$${formattedNumber}`;
+      }
+    } else if (currencyCode === 'GBP' && config.locale === 'en-GB') {
+      // Handle negative numbers
+      if (number < 0) {
+        finalFormatted = formattedNumber.replace(/^-/, ''); // Remove existing minus
+        finalFormatted = `-£${finalFormatted}`; // Add minus with symbol
+      } else {
+        finalFormatted = `£${formattedNumber}`;
+      }
+    } else {
+      // For other currencies, use code
+      finalFormatted = `${formattedNumber} ${currencyCode}`;
+    }
+
+    // Log final result
+    logger.debug('Final currency formatting:', {
+      filename: 'currency/index.js',
+      context: '[format]',
+      technical: {
+        input: value,
+        parsed: number,
+        currency: currencyCode,
+        locale: config.locale,
+        formattedNumber,
+        finalFormatted,
+        options: {
+          minDecimals: options.minDecimals,
+          maxDecimals: options.maxDecimals,
+          raw: options.raw,
+          useCode: options.useCode,
+        },
+      },
+    });
+
+    // Return raw string if requested
+    if (options.raw) {
+      return finalFormatted;
+    }
+
+    // Return HTML string
+    return `<span class="imported-value" data-field="currency">${finalFormatted}</span>`;
+  } catch (error) {
+    logger.error('Error formatting currency:', {
+      filename: 'currency/index.js',
+      context: '[format]',
+      technical: {
+        input: value,
+        error: error.message,
+        stack: error.stack,
+      },
+    });
+    return value;
   }
 }
 
-// Register helper
+/**
+ * Handlebars helper for formatting currency values
+ *
+ * @param {number|string} value - The value to format
+ * @param {object} options - Handlebars options object
+ * @returns {string} Formatted currency HTML
+ */
+function formatCurrencyHelper(value, options = {}) {
+  // Handle special cases
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  // If value is a SafeString, extract the actual value
+  if (value instanceof handlebars.SafeString) {
+    value = value.toString();
+  }
+
+  // If value is HTML, return it as is
+  if (typeof value === 'string' && value.includes('<')) {
+    return value;
+  }
+
+  // If value is an array or boolean, convert to string
+  if (Array.isArray(value) || typeof value === 'boolean') {
+    return value.toString();
+  }
+
+  // If value has toString method and is not a number, use it
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof value.toString === 'function' &&
+    !('amount' in value) &&
+    !('value' in value)
+  ) {
+    const stringValue = value.toString();
+    if (stringValue !== '[object Object]') {
+      // Format the string value as currency
+      const formattedValue = formatCurrency(stringValue, {
+        currency: options.hash?.currency,
+        minDecimals: options.hash?.minDecimals,
+        maxDecimals: options.hash?.maxDecimals,
+        useCode: false, // Use symbols for toString values
+        raw: true,
+      });
+      return new handlebars.SafeString(
+        `<span class="imported-value" data-field="currency">${formattedValue}</span>`
+      );
+    }
+  }
+
+  // Determine if we should use currency code
+  const currency = options.hash?.currency?.toUpperCase();
+  const isDynamicCurrency =
+    typeof options.hash?.currency === 'string' &&
+    (options.hash.currency.startsWith('{{') ||
+      options.hash.currency.includes('=') ||
+      options.hash.currency.includes('(') ||
+      options.hash.currency.includes('.') ||
+      options.data?.root?.[options.hash.currency] !== undefined);
+
+  // Use code when:
+  // 1. Explicitly requested with useCode
+  // 2. Using an unknown currency
+  // 3. Currency is passed as a variable or expression
+  const useCode =
+    options.hash?.useCode ||
+    (currency && !['EUR', 'USD', 'GBP'].includes(currency)) ||
+    isDynamicCurrency;
+
+  // Format the value
+  const result = formatCurrency(value, {
+    currency: options.hash?.currency,
+    minDecimals: options.hash?.minDecimals,
+    maxDecimals: options.hash?.maxDecimals,
+    useCode,
+    raw: true, // Get raw string first
+  });
+
+  // If result is same as input (invalid), return it as is
+  if (result === value) {
+    return result;
+  }
+
+  // Return the result as SafeString
+  return new handlebars.SafeString(
+    `<span class="imported-value" data-field="currency">${result}</span>`
+  );
+}
+
+// Register the helper with Handlebars
 handlebars.registerHelper('formatCurrency', formatCurrencyHelper);
 
 module.exports = {

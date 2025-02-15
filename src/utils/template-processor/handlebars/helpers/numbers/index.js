@@ -38,13 +38,64 @@
 
 const { logger } = require('@/utils/common/logger');
 const handlebars = require('handlebars');
-const numeral = require('numeral');
+const numbro = require('numbro');
 const { LOCALE_CONFIG } = require('@/config/locale');
 const { extractValue } = require('../value/extract-handlebars-values');
 
-// Explicitly import Spanish locale for extractNumericValue
-require('numeral/locales/es');
-numeral.locale('es');
+// Configurar los locales que necesitamos
+numbro.registerLanguage({
+  languageTag: 'es-ES',
+  delimiters: {
+    thousands: '.',
+    decimal: ',',
+  },
+  abbreviations: {
+    thousand: 'k',
+    million: 'M',
+    billion: 'B',
+    trillion: 'T',
+  },
+  ordinal: () => 'º',
+  currency: {
+    symbol: '€',
+    position: 'postfix',
+    code: 'EUR',
+  },
+});
+
+numbro.registerLanguage({
+  languageTag: 'en-US',
+  delimiters: {
+    thousands: ',',
+    decimal: '.',
+  },
+  abbreviations: {
+    thousand: 'k',
+    million: 'm',
+    billion: 'b',
+    trillion: 't',
+  },
+  ordinal: (number) => {
+    const b = number % 10;
+    return ~~((number % 100) / 10) === 1
+      ? 'th'
+      : b === 1
+        ? 'st'
+        : b === 2
+          ? 'nd'
+          : b === 3
+            ? 'rd'
+            : 'th';
+  },
+  currency: {
+    symbol: '$',
+    position: 'prefix',
+    code: 'USD',
+  },
+});
+
+// Configurar el locale por defecto
+numbro.setLanguage(LOCALE_CONFIG?.fullLocale || 'es-ES');
 
 /**
  * Default formatting options by style
@@ -108,14 +159,14 @@ function extractNumericValue(value) {
     return null;
   }
 
-  // If it's already a number, return it
+  // Si ya es un número, devolverlo
   if (typeof value === 'number' && isFinite(value)) {
     return value;
   }
 
-  // If it's an object, try to find a numeric property
+  // Si es un objeto, buscar una propiedad numérica
   if (typeof value === 'object' && value !== null) {
-    // If it's an object with specific currency properties
+    // Si es un objeto con propiedades específicas de moneda
     if (value.decimal || value.EUR || value.USD) {
       const numericValue = value.decimal || value.EUR || value.USD;
       logger.debug('Found currency value:', {
@@ -126,7 +177,7 @@ function extractNumericValue(value) {
       });
       return extractNumericValue(numericValue);
     }
-    // If it's an object with other numeric properties
+    // Si es un objeto con otras propiedades numéricas
     const numericValue =
       value.numero || value.number || value.value || value.importe_numero;
     if (numericValue !== undefined) {
@@ -141,42 +192,56 @@ function extractNumericValue(value) {
     return null;
   }
 
-  // If it's a string, try to convert it
+  // Si es un string, intentar parsearlo
   if (typeof value === 'string') {
-    // Clean string from spaces and non-numeric characters
     const cleanValue = value.trim();
-
-    // If empty after cleaning, return null
     if (!cleanValue) {
       return null;
     }
 
-    // Try Spanish format (1.234,56)
-    if (cleanValue.includes(',')) {
-      const spanishValue = cleanValue.replace(/\./g, '').replace(',', '.');
-      const parsedSpanish = parseFloat(spanishValue);
-      if (!isNaN(parsedSpanish)) {
-        logger.debug('Parsed as Spanish format:', {
-          context: '[format]',
-          filename: 'numbers/index.js',
-          original: value,
-          cleaned: spanishValue,
-          parsed: parsedSpanish,
-        });
-        return parsedSpanish;
-      }
-    }
+    try {
+      // Detectar el formato del número
+      const hasCommaDecimal =
+        cleanValue.includes(',') && !cleanValue.includes('.');
+      const hasDotDecimal =
+        cleanValue.includes('.') && !cleanValue.includes(',');
+      const hasSpanishFormat =
+        cleanValue.includes('.') && cleanValue.includes(',');
 
-    // Try English format (1234.56)
-    const parsedEnglish = parseFloat(cleanValue);
-    if (!isNaN(parsedEnglish)) {
-      logger.debug('Parsed as English format:', {
+      // Configurar numbro según el formato detectado
+      if (hasSpanishFormat || hasCommaDecimal) {
+        numbro.setLanguage('es-ES');
+      } else if (hasDotDecimal) {
+        numbro.setLanguage('en-US');
+      }
+
+      // Intentar parsear el número
+      const parsed = numbro.unformat(cleanValue);
+
+      logger.debug('Parsed number with numbro:', {
         context: '[format]',
         filename: 'numbers/index.js',
         original: value,
-        parsed: parsedEnglish,
+        format: hasSpanishFormat
+          ? 'Spanish'
+          : hasCommaDecimal
+            ? 'Comma Decimal'
+            : 'Dot Decimal',
+        parsed,
       });
-      return parsedEnglish;
+
+      // Restaurar el locale por defecto
+      numbro.setLanguage(LOCALE_CONFIG?.fullLocale || 'es-ES');
+
+      return isFinite(parsed) ? parsed : null;
+    } catch (error) {
+      logger.debug('Failed to parse number with numbro:', {
+        context: '[format]',
+        filename: 'numbers/index.js',
+        original: value,
+        error: error.message,
+      });
+      return null;
     }
   }
 

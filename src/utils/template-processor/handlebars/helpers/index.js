@@ -697,11 +697,10 @@ logger.debug('Registering custom helpers', {
 });
 
 // Register custom helpers
-handlebars.registerHelper({
-  formatEmail,
-  and,
-  not,
-});
+handlebars.registerHelper('formatEmail', formatEmail);
+handlebars.registerHelper('and', and);
+handlebars.registerHelper('not', not);
+handlebars.registerHelper('formatNumber', formatNumber);
 
 // Export all helpers for testing and direct use
 module.exports = {
@@ -714,10 +713,11 @@ module.exports = {
   formatDate,
   addYears,
   now,
-  // Re-export handlebars-helpers for convenience
-  helpers,
+  // Currency helpers
   formatCurrency,
   currencySymbol,
+  // Re-export handlebars-helpers for convenience
+  helpers,
   currency: handlebars.helpers.currency,
   emptyValue: handlebars.helpers.emptyValue,
   objectToArray: handlebars.helpers.objectToArray,
