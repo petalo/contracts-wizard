@@ -122,7 +122,7 @@ describe('CLI End-to-End Tests', () => {
           path.join(OUTPUT_DIR, htmlFile),
           'utf8'
         );
-        expect(htmlContent).toContain('Quick Handlebars & Markdown Test');
+        expect(htmlContent).toContain('Quick Handlebars &amp; Markdown Test');
         expect(htmlContent).toContain('class="missing-value"');
       });
 
