@@ -42,21 +42,19 @@
  * @example
  * // Import locale configuration
  * const { LOCALE_CONFIG } = require('@/config/locale');
+ * const { DateTime } = require('luxon');
  *
  * // Format date with locale
- * const date = new Date().toLocaleDateString(
- *   LOCALE_CONFIG.fullLocale,
- *   { timeZone: LOCALE_CONFIG.timezone }
- * );
+ * const date = DateTime.now()
+ *   .setLocale(LOCALE_CONFIG.fullLocale)
+ *   .setZone(LOCALE_CONFIG.timezone)
+ *   .toFormat(LOCALE_CONFIG.dateFormat);
  *
  * // Format time
- * const time = new Date().toLocaleTimeString(
- *   LOCALE_CONFIG.fullLocale,
- *   {
- *     timeZone: LOCALE_CONFIG.timezone,
- *     hour12: false
- *   }
- * );
+ * const time = DateTime.now()
+ *   .setLocale(LOCALE_CONFIG.fullLocale)
+ *   .setZone(LOCALE_CONFIG.timezone)
+ *   .toFormat(LOCALE_CONFIG.timeFormat);
  *
  * // Format currency
  * const amount = 1234.56;
@@ -69,12 +67,10 @@
  * ).format(amount);
  *
  * // Custom date formatting
- * const moment = require('moment-timezone');
- * moment.locale(LOCALE_CONFIG.lang);
- * moment.tz.setDefault(LOCALE_CONFIG.timezone);
- *
- * const formattedDate = moment()
- *   .format(LOCALE_CONFIG.dateFormat);
+ * const formattedDate = DateTime.now()
+ *   .setLocale(LOCALE_CONFIG.lang)
+ *   .setZone(LOCALE_CONFIG.timezone)
+ *   .toFormat(LOCALE_CONFIG.dateFormat);
  */
 
 /**
@@ -101,15 +97,10 @@
  * @example
  * // Date formatting
  * const formatDate = (date) => {
- *   return new Intl.DateTimeFormat(
- *     LOCALE_CONFIG.fullLocale,
- *     {
- *       timeZone: LOCALE_CONFIG.timezone,
- *       year: 'numeric',
- *       month: '2-digit',
- *       day: '2-digit'
- *     }
- *   ).format(date);
+ *   return DateTime.fromJSDate(date)
+ *     .setLocale(LOCALE_CONFIG.fullLocale)
+ *     .setZone(LOCALE_CONFIG.timezone)
+ *     .toFormat('dd/MM/yyyy');
  * };
  *
  * // Number formatting
@@ -129,18 +120,18 @@
  * //   lang: 'fr',
  * //   country: 'FR',
  * //   timezone: 'Europe/Paris',
- * //   dateFormat: 'DD/MM/YYYY',
+ * //   dateFormat: 'dd/MM/yyyy',
  * //   timeFormat: 'HH:mm:ss',
  * //   fullLocale: 'fr-FR'
  * // };
  */
 const LOCALE_CONFIG = {
-  lang: 'es', // Spanish language
-  country: 'ES', // Spain country code
-  timezone: 'Europe/Madrid',
-  dateFormat: 'DD/MM/YYYY',
-  timeFormat: 'HH:mm:ss',
-  fullLocale: 'es-ES', // BCP 47 language tag
+  lang: 'es', // ISO 639-1 language code (RFC 5646)
+  country: 'ES', // ISO 3166-1 alpha-2 country code
+  timezone: 'Europe/Madrid', // IANA Time Zone Database name
+  dateFormat: 'dd/MM/yyyy', // Unicode LDML date format (CLDR standard)
+  timeFormat: 'HH:mm:ss', // Unicode LDML time format (CLDR standard)
+  fullLocale: 'es-ES', // BCP 47 language tag (RFC 5646)
 };
 
 // Prevent runtime modifications to ensure consistency

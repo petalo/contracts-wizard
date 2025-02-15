@@ -64,12 +64,12 @@
  */
 const HANDLEBARS_CONFIG = {
   dateFormats: {
-    DEFAULT: 'D [de] MMMM [de] YYYY',
-    ISO: 'YYYY-MM-DD',
-    ISO8601: 'YYYY-MM-DD HH:mm:ss',
-    FULL: 'D [de] MMMM [de] YYYY',
-    SHORT: 'DD/MM/YYYY',
-    TIME: 'HH:mm:ss',
+    DEFAULT: 'dd/LL/yyyy', // Default format: day/month/year with leading zeros (e.g. 01/03/2024)
+    ISO: 'yyyy-LL-dd', // ISO format: year-month-day (e.g. 2024-03-01)
+    ISO8601: 'yyyy-LL-dd HH:mm:ss', // ISO8601 format with time: year-month-day hours:minutes:seconds (e.g. 2024-03-01 13:45:30)
+    FULL: "d 'de' LLLL 'de' yyyy", // Full text format in Spanish: day 'de' month 'de' year (e.g. 1 de marzo de 2024)
+    SHORT: 'dd/LL/yyyy', // Short format: same as DEFAULT - day/month/year with leading zeros (e.g. 01/03/2024)
+    TIME: 'HH:mm:ss', // Time only format: 24h hours:minutes:seconds (e.g. 13:45:30)
   },
   numberFormat: {
     defaults: {
@@ -97,7 +97,8 @@ const HANDLEBARS_CONFIG = {
   },
   arrayConfig: {
     maxDepth: 10,
-    trimEmpty: true,
+    // Remove empty/null/undefined values when processing arrays
+    trimEmpty: true, // When true, filters out empty values from arrays before processing them
   },
   errorMessages: {
     invalidDate: '[[Invalid date]]',
