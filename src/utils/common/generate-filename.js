@@ -50,7 +50,7 @@
  * @requires @/utils/common/errors Error handling
  * @requires @/config/file-extensions File extensions configuration
  * @requires @/config/locale Locale configuration
- * @requires moment-timezone Moment.js timezone plugin
+ * @requires luxon Luxon date handling
  * @exports generateTimestampedFilename Timestamp-based filename generator
  * @exports generateRevisionedFilename Revision-based filename generator
  * @exports generateFileName Multi-format filename generator
@@ -92,7 +92,7 @@ const { logger } = require('@/utils/common/logger');
 const { AppError } = require('@/utils/common/errors');
 const { FILE_EXTENSIONS } = require('@/config/file-extensions');
 const { LOCALE_CONFIG } = require('@/config/locale');
-const moment = require('moment-timezone');
+const { DateTime } = require('luxon');
 
 /**
  * Filename generation configuration
@@ -121,7 +121,7 @@ const moment = require('moment-timezone');
  */
 const FILENAME_CONFIG = {
   MAX_REVISIONS: 1000,
-  TIMESTAMP_FORMAT: 'YYYY-MM-DD-HHmmss',
+  TIMESTAMP_FORMAT: 'yyyyMMdd-HHmmss',
   REVISION_PREFIX: '.rev.',
   SEPARATOR: '-',
 };
@@ -202,11 +202,11 @@ function generateTimestampedFilename(templatePath) {
 
     // Generate timestamp using configured timezone or UTC as fallback
     const now = LOCALE_CONFIG?.timezone
-      ? moment().tz(LOCALE_CONFIG.timezone)
-      : moment.utc();
+      ? DateTime.now().setZone(LOCALE_CONFIG.timezone)
+      : DateTime.utc();
 
     // Format timestamp according to configuration
-    const timestamp = now.format(FILENAME_CONFIG.TIMESTAMP_FORMAT);
+    const timestamp = now.toFormat('yyyyMMdd-HHmmss');
 
     // Generate final filename
     const filename = baseName
