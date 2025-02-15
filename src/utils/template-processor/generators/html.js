@@ -74,15 +74,15 @@ const { LOCALE_CONFIG } = require('@/config/locale');
 const prettier = require('prettier');
 
 const PRETTIER_OPTIONS = {
-  printWidth: 120,
-  tabWidth: 2,
-  useTabs: false,
-  semi: true,
-  singleQuote: true,
-  trailingComma: 'es5',
-  bracketSpacing: true,
-  arrowParens: 'always',
-  endOfLine: 'lf',
+  printWidth: 120, // Maximum line length before wrapping
+  tabWidth: 2, // Number of spaces per indentation level
+  useTabs: false, // Use spaces instead of tabs for indentation
+  semi: true, // Add semicolons at the end of statements
+  singleQuote: true, // Use single quotes instead of double quotes
+  trailingComma: 'es5', // Add trailing commas where valid in ES5
+  bracketSpacing: true, // Add spaces between brackets in object literals
+  arrowParens: 'always', // Always include parentheses around arrow function parameters
+  endOfLine: 'lf', // Use Linux-style line endings (LF)
 };
 
 // Initialize markdown-it with options from HTML_CONFIG
@@ -113,14 +113,14 @@ md.renderer.rules.link_open = (tokens, idx) => {
   const normalizedHref = isInternalLink
     ? '#' +
       safeHref
-        .slice(1)
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+|-+$/g, '')
+        .slice(1) // Remove first character (the #)
+        .normalize('NFD') // Decompose Unicode characters into base + diacritic marks
+        .replace(/[\u0300-\u036f]/g, '') // Remove all diacritic marks
+        .toLowerCase() // Convert to lowercase
+        .replace(/[^\w\s-]/g, '') // Remove all characters except word chars, spaces and hyphens
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+        .replace(/^-+|-+$/g, '') // Remove leading and trailing hyphens
     : safeHref;
 
   // Build link tag with proper attributes
@@ -151,11 +151,11 @@ md.renderer.rules.fence = (tokens, idx) => {
     // Only escape HTML if it doesn't contain HTML tags
     if (!processedCode.match(/<[^>]+>/)) {
       processedCode = processedCode
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+        .replace(/&/g, '&amp;') // Replace & with &amp; to escape ampersands
+        .replace(/</g, '&lt;') // Replace < with &lt; to escape opening angle brackets
+        .replace(/>/g, '&gt;') // Replace > with &gt; to escape closing angle brackets
+        .replace(/"/g, '&quot;') // Replace " with &quot; to escape double quotes
+        .replace(/'/g, '&#39;'); // Replace ' with &#39; to escape single quotes
     }
 
     return lang
@@ -163,7 +163,14 @@ md.renderer.rules.fence = (tokens, idx) => {
       : `<pre><code>${processedCode}</code></pre>`;
   } catch (error) {
     logger.error('Failed to process code block:', {
-      error,
+      filename: 'html.js',
+      context: '[template]',
+      operation: 'code-block',
+      error: {
+        message: error.message,
+        stack: error.stack,
+        type: error.name,
+      },
       code: typeof code === 'object' ? JSON.stringify(code) : code,
     });
     return '<pre><code>[Error processing code block]</code></pre>';
@@ -198,7 +205,14 @@ md.renderer.rules.code_inline = (tokens, idx) => {
     return `<code>${processedCode}</code>`;
   } catch (error) {
     logger.error('Failed to process inline code:', {
-      error,
+      filename: 'html.js',
+      context: '[template]',
+      operation: 'inline-code',
+      error: {
+        message: error.message,
+        stack: error.stack,
+        type: error.name,
+      },
       code: typeof code === 'object' ? JSON.stringify(code) : code,
     });
     return '<code>[Error processing code]</code>';
@@ -244,16 +258,26 @@ md.renderer.rules.html_inline = (tokens, idx) => tokens[idx].content;
  * // <div>
  * //   <p>Content</p>
  * // </div>
- *
- * // Error handling
- * try {
- *   const formatted = await formatHtml(null);
- * } catch (error) {
- *   console.error('Formatting failed:', error);
- * }
  */
 async function formatHtml(content) {
   try {
+    logger.debug('Starting HTML formatting', {
+      filename: 'html.js',
+      context: '[template]',
+      operation: 'format',
+      contentLength: content?.length,
+    });
+
+    // Normalize HTML structure using cheerio
+    const $ = cheerio.load(content, {
+      xmlMode: false,
+      decodeEntities: false,
+      normalizeWhitespace: true,
+    });
+
+    // Get normalized HTML
+    const normalizedContent = $.html();
+
     // Configure Prettier with HTML parser
     const options = {
       ...PRETTIER_OPTIONS,
@@ -263,11 +287,20 @@ async function formatHtml(content) {
     };
 
     // Format the content using Prettier
-    const formattedContent = await prettier.format(content, options);
+    const formattedContent = await prettier.format(normalizedContent, options);
     return formattedContent;
   } catch (error) {
-    logger.warn('HTML formatting failed, using unformatted content', { error });
-    return content;
+    logger.error('HTML formatting failed', {
+      filename: 'html.js',
+      context: '[template]',
+      operation: 'format',
+      error: {
+        message: error.message,
+        stack: error.stack,
+        type: error.name,
+      },
+    });
+    throw error;
   }
 }
 
@@ -354,11 +387,15 @@ async function wrapWithHtmlStructure(content, options = {}) {
       await fs.mkdir(path.dirname(options.cssPath), { recursive: true });
       cssContent = await fs.readFile(options.cssPath, ENCODING_CONFIG.default);
       logger.debug('Successfully read CSS file', {
+        filename: 'html.js',
+        context: '[template]',
         cssPath: options.cssPath,
         cssLength: cssContent.length,
       });
     } catch (error) {
       logger.warn('Failed to read CSS file, continuing without CSS', {
+        filename: 'html.js',
+        context: '[template]',
         error,
         cssPath: options.cssPath,
         errorMessage: error.message,
@@ -462,6 +499,8 @@ async function validateHtml(html) {
     }
 
     logger.debug('HTML validation successful', {
+      filename: 'html.js',
+      context: '[template]',
       contentLength: html.length,
     });
   } catch (error) {
@@ -532,7 +571,11 @@ function validateHtmlOptions(options) {
     }
   });
 
-  logger.debug('HTML options validation successful', { options });
+  logger.debug('HTML options validation successful', {
+    filename: 'html.js',
+    context: '[template]',
+    options,
+  });
 }
 
 /**
@@ -570,6 +613,8 @@ async function createHtmlFromMarkdown(markdown) {
 
     // Log para debugging
     logger.debug('Markdown to HTML conversion:', {
+      filename: 'html.js',
+      context: '[template]',
       markdown: processedMarkdown.substring(0, 100),
       html: html.substring(0, 100),
       imageTag: html.match(/<img[^>]+>/g),
@@ -582,6 +627,8 @@ async function createHtmlFromMarkdown(markdown) {
     return html;
   } catch (error) {
     logger.error('Markdown to HTML conversion failed', {
+      filename: 'html.js',
+      context: '[template]',
       error: error.message,
       markdown: String(markdown).substring(0, 100) + '...',
       stack: error.stack,
@@ -609,6 +656,8 @@ async function createHtmlFromMarkdown(markdown) {
 async function generateHtml(content, options = {}) {
   try {
     logger.info('Starting HTML generation...', {
+      filename: 'html.js',
+      context: '[template]',
       filepath: options.filepath,
       cssPath: options.cssPath,
       transformations: options.transformations,
@@ -617,12 +666,20 @@ async function generateHtml(content, options = {}) {
     // Create output directory
     const outputDir = path.dirname(options.filepath);
     await fs.mkdir(outputDir, { recursive: true });
-    logger.debug('Created output directory', { outputDir });
+    logger.debug('Created output directory', {
+      filename: 'html.js',
+      context: '[template]',
+      outputDir,
+    });
 
     // Verify output directory is accessible
     try {
       await fs.access(outputDir);
-      logger.debug('Output directory exists and is accessible', { outputDir });
+      logger.debug('Output directory exists and is accessible', {
+        filename: 'html.js',
+        context: '[template]',
+        outputDir,
+      });
     } catch (error) {
       throw new AppError(
         'Output directory is not accessible',
@@ -643,11 +700,15 @@ async function generateHtml(content, options = {}) {
           ENCODING_CONFIG.encoding
         );
         logger.debug('Successfully read CSS file', {
+          filename: 'html.js',
+          context: '[template]',
           cssPath: options.cssPath,
           cssLength: cssContent.length,
         });
       } catch (error) {
         logger.warn('Failed to read CSS file', {
+          filename: 'html.js',
+          context: '[template]',
           error,
           cssPath: options.cssPath,
         });
@@ -659,6 +720,8 @@ async function generateHtml(content, options = {}) {
       cssPath: options.cssPath,
     });
     logger.debug('Content wrapped with HTML structure', {
+      filename: 'html.js',
+      context: '[template]',
       contentLength: wrappedContent.length,
     });
 
@@ -669,6 +732,8 @@ async function generateHtml(content, options = {}) {
       // Apply transformations here
       transformedContent = $.html();
       logger.debug('Applied Cheerio transformations', {
+        filename: 'html.js',
+        context: '[template]',
         contentLength: transformedContent.length,
       });
     }
@@ -676,11 +741,18 @@ async function generateHtml(content, options = {}) {
     // Format HTML
     const formattedContent = await formatHtml(transformedContent);
     logger.debug('HTML content formatted', {
+      filename: 'html.js',
+      context: '[template]',
+      operation: 'format',
       contentLength: formattedContent.length,
     });
 
     // Write HTML file
-    logger.debug('Writing HTML file...', { filepath: options.filepath });
+    logger.debug('Writing HTML file...', {
+      filename: 'html.js',
+      context: '[template]',
+      filepath: options.filepath,
+    });
     await fs.writeFile(
       options.filepath,
       formattedContent,
@@ -691,6 +763,8 @@ async function generateHtml(content, options = {}) {
     // Verify file was written
     const stats = await fs.stat(options.filepath);
     logger.debug('HTML file written and verified', {
+      filename: 'html.js',
+      context: '[template]',
       filepath: options.filepath,
       size: stats.size,
     });
