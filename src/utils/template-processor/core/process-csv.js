@@ -43,6 +43,8 @@ const fs = require('fs/promises');
 const { logger } = require('@/utils/common/logger');
 const { AppError } = require('@/utils/common/errors');
 const { ENCODING_CONFIG } = require('@/config/encoding');
+const { DateTime } = require('luxon');
+const { LOCALE_CONFIG } = require('@/config/locale');
 
 /**
  * Schema for validating CSV structure
@@ -225,17 +227,25 @@ function convertValueType(value) {
 
     // If value is a date string in ISO format
     if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
-      const date = new Date(value);
-      if (!isNaN(date.getTime())) {
-        logger.debug('Value is a valid date', {
+      const date = DateTime.fromISO(value, { setZone: true });
+      if (date.isValid) {
+        logger.debug('Value converted to DateTime:', {
           context: '[data]',
           filename: 'process-csv.js',
           originalValue: value,
-          convertedValue: value,
-          type: 'date-string',
+          convertedValue: date.toISO(),
+          type: 'date-conversion',
           operation: 'type-conversion',
+          dateTimeObject: {
+            isValid: date.isValid,
+            zone: date.zoneName,
+            locale: date.locale,
+            format: date.toFormat('yyyy-MM-dd HH:mm:ss'),
+          },
         });
-        return value;
+        return date
+          .setZone(LOCALE_CONFIG.timezone || 'Europe/Madrid')
+          .setLocale(LOCALE_CONFIG.lang || 'es');
       }
     }
 
@@ -334,7 +344,7 @@ function processDataLines(lines) {
       filename: 'process-csv.js',
       key: line.key,
       value: line.value,
-      currentResult: JSON.stringify(result),
+      //  currentResult: JSON.stringify(result),
       type: 'process-line',
     });
   });
