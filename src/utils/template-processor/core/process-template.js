@@ -76,7 +76,7 @@ const {
 } = require('@/utils/template-processor/core/process-csv');
 const { display } = require('@/cli/display');
 const { ENCODING_CONFIG } = require('@/config/encoding');
-const moment = require('moment-timezone');
+const { DateTime } = require('luxon');
 const path = require('path');
 const {
   getRelativePath,
@@ -88,9 +88,17 @@ const customRules = require('../renderers/custom-text-renderer');
 // Register all handlebars-helpers
 require('../handlebars/helpers');
 
-// Configure moment with default timezone and locale
-moment.locale(LOCALE_CONFIG.locale);
-moment.tz.setDefault(LOCALE_CONFIG.timezone);
+// Configure default timezone and locale for DateTime
+const defaultLocale = LOCALE_CONFIG.lang || 'es';
+const defaultTimezone = LOCALE_CONFIG.timezone || 'Europe/Madrid';
+
+// Verify locale and timezone are valid
+if (!DateTime.local().setLocale(defaultLocale).isValid) {
+  throw new Error(`Invalid locale: ${defaultLocale}`);
+}
+if (!DateTime.local().setZone(defaultTimezone).isValid) {
+  throw new Error(`Invalid timezone: ${defaultTimezone}`);
+}
 
 // Initialize markdown-it with options from HTML_CONFIG
 const md = new MarkdownIt(HTML_CONFIG.markdownit);
