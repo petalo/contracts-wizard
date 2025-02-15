@@ -2,47 +2,56 @@
  * @file Application Logging System
  *
  * Provides a comprehensive logging system with standardized formatting,
- * context validation, metadata grouping, and error handling.
+ * metadata grouping, and error handling.
+ *
+ * The logging system provides consistent formatting, context handling, and error
+ * management across the application. It supports multiple output formats,
+ * automatic file rotation, and structured metadata.
  *
  * Functions:
  * - validateContext: Validates and normalizes logging contexts
- * - groupMetadata: Groups related metadata fields
- * - formatMetadata: Formats and sanitizes metadata for logging
+ * - groupMetadata: Groups related metadata fields by category
+ * - formatMetadata: Formats metadata for consistent output
  * - addFilename: Extracts source filenames from stack traces
- * - customFormat: Formats log entries with consistent structure
- * - logger: Public logging interface with error handling
- *   - error(): Logs error messages with stack traces and error context
- *   - warn(): Logs warning messages with optional metadata
- *   - info(): Logs informational messages with optional context
- *   - debug(): Logs debug information with optional metadata
- *   - logExecutionStart(): Logs application startup information once per session
+ * - customFormat: Creates standardized log entry format
+ * - logger.error: Logs error messages with stack traces
+ * - logger.warn: Logs warning messages with metadata
+ * - logger.info: Logs informational messages
+ * - logger.debug: Logs debug information
+ * - logger.logExecutionStart: Logs application startup once
  *
  * Constants:
- * - VALID_CONTEXTS: Set of allowed logging contexts
- * - BASE_DIR: Root directory for application
- * - LOG_DIR: Directory for log files
+ * - BASE_DIR: string - Root directory for application
+ * - LOG_DIR: string - Directory for log files
+ * - originalEmit: function - Original process.emit for event handling
  *
  * Flow:
- * 1. Initialize logging system and ensure directories
- * 2. Validate and clean incoming log data
- * 3. Format log entries with consistent structure
- * 4. Write to appropriate outputs (file/console)
- * 5. Handle errors and provide fallbacks
+ * 1. Initialize logging system and validate directories
+ * 2. Configure Winston with custom formatters
+ * 3. Set up file rotation and console output
+ * 4. Process incoming log requests:
+ *    - Validate and normalize context
+ *    - Group and format metadata
+ *    - Apply consistent formatting
+ *    - Write to appropriate outputs
+ * 5. Handle special cases (errors, events)
  *
  * Error Handling:
- * - Directory creation failures
- * - Invalid contexts
- * - Metadata formatting errors
- * - Stack trace parsing issues
- * - Event logging failures
+ * - Directory creation: Creates missing directories with fallback to console
+ * - Invalid contexts: Normalizes invalid contexts to 'system'
+ * - Metadata formatting: Handles circular references and invalid types
+ * - Stack traces: Provides fallback when stack trace is unavailable
+ * - Event logging: Falls back to console.log on logging failures
+ * - File rotation: Recreates symlinks if deleted
+ * - Winston errors: Falls back to console output
  *
  * @module @/utils/common/logger
- * @requires winston
- * @requires winston-daily-rotate-file
- * @requires path
- * @requires dotenv
- * @requires @/config/env
- * @exports logger - Logging interface
+ * @requires winston - Logging framework with multiple transports
+ * @requires winston-daily-rotate-file - File rotation support
+ * @requires path - Path manipulation utilities
+ * @requires dotenv - Environment configuration
+ * @requires @/config/env - Application environment settings
+ * @exports logger - Logging interface with error handling
  *
  * @example
  * // Import logger
@@ -94,50 +103,6 @@ dotenv.config();
 const BASE_DIR = process.cwd();
 const LOG_DIR = path.join(BASE_DIR, process.env.LOG_DIR || 'logs');
 
-/**
- * Valid logging contexts as defined in logging.mdc
- * @constant {Set<string>}
- */
-const VALID_CONTEXTS = new Set([
-  'api', // API interactions, requests, responses
-  'audit', // Audit trail, compliance events
-  'auth', // Authentication specific events
-  'cache', // Cache operations, hits, misses
-  'cleanup', // Cleanup operations, maintenance
-  'cli', // CLI interactions, commands
-  'config', // Configuration changes, env vars
-  'data', // Data processing, transformations
-  'db', // Database operations, queries
-  'email', // Email sending, templates
-  'error', // Error handling, exceptions
-  'export', // Export operations, data dumps
-  'file', // File system operations, I/O
-  'format', // Data formatting, transformations
-  'health', // Health checks, system status
-  'helper', // Helper functions
-  'import', // Import operations, data loading
-  'metrics', // Application metrics, stats
-  'migration', // Data migrations, schema updates
-  'network', // Network operations, connections
-  'perf', // Performance metrics, timings
-  'queue', // Message queue operations
-  'security', // Security events, authorization
-  'session', // Session management
-  'storage', // Storage operations (S3, etc)
-  'sync', // Synchronization operations
-  'system', // System operations, startup
-  'task', // Background tasks, jobs
-  'template', // Template processing
-  'test', // Test execution, setup
-  'ui', // User interface events
-  'user', // User-specific actions and events
-  'user-pref', // User preferences and settings
-  'user-profile', // User profile operations
-  'user-activity', // User activity tracking
-  'user-content', // User-generated content
-  'validation', // Input validation, schemas
-]);
-
 // Ensure logs directory exists BEFORE configuring winston
 const ensureLogDir = () => {
   try {
@@ -159,11 +124,33 @@ const originalEmit = process.emit;
 /**
  * Validates and formats logging context
  *
- * Ensures that the provided context is valid according to logging standards.
- * Handles context normalization and provides fallback to system context.
+ * Ensures consistent context formatting by:
+ * - Converting null/undefined to 'system'
+ * - Extracting context from objects
+ * - Normalizing string format (lowercase, no brackets)
+ * - Removing whitespace and special characters
  *
+ * @function validateContext
  * @param {string|object} context - The context to validate
- * @returns {string} Validated and normalized context
+ * @param {string} [context.context] - Context property if object
+ * @param {string} [context.name] - Name property as fallback context
+ * @returns {string} Normalized context string
+ * @example
+ * // String context
+ * validateContext('UserService')
+ * // returns: 'userservice'
+ *
+ * // Object with context
+ * validateContext({ context: 'AuthModule' })
+ * // returns: 'authmodule'
+ *
+ * // Object with name
+ * validateContext({ name: 'DataProcessor' })
+ * // returns: 'dataprocessor'
+ *
+ * // Invalid input
+ * validateContext(null)
+ * // returns: 'system'
  */
 const validateContext = (context) => {
   // If context is undefined or null, return 'system'
@@ -185,35 +172,54 @@ const validateContext = (context) => {
     return 'system';
   }
 
-  // Convertir a string y limpiar
+  // Convert to string and clean
   const ctx = String(context).toLowerCase().trim();
 
   // Remove brackets if present
-  const cleanContext = ctx.replace(/^\[|\]$/g, '');
-
-  if (!VALID_CONTEXTS.has(cleanContext)) {
-    console.warn(`Invalid context [${context}] used, defaulting to [system]`);
-    return 'system';
-  }
-  return cleanContext;
+  return ctx.replace(/^\[|\]$/g, '');
 };
 
 /**
  * Groups related metadata fields into logical categories
  *
  * Organizes metadata fields into predefined groups for better readability
- * and analysis. Fields that don't match any group remain ungrouped.
+ * and analysis. Fields are grouped by type (error, performance, batch, etc)
+ * while maintaining the original structure for unmatched fields.
  *
+ * Groups:
+ * - error: Error-related fields (error, stack, code, details)
+ * - perf: Performance metrics (duration, memory, cpu, latency)
+ * - batch: Batch processing stats (total, success, failed)
+ * - request: HTTP request data (method, url, status)
+ * - resource: Resource usage (size, count, limit)
+ *
+ * @function groupMetadata
  * @param {object} metadata - The metadata to group
+ * @param {Error} [metadata.error] - Error object if present
+ * @param {string} [metadata.stack] - Error stack trace
+ * @param {number} [metadata.duration] - Operation duration
+ * @param {number} [metadata.memory] - Memory usage
  * @returns {object} Grouped metadata object
  * @example
- * // Groups related fields
+ * // Mixed metadata fields
  * groupMetadata({
- *   duration: '1s',
- *   memory: '100MB',
+ *   error: new Error('Failed'),
+ *   duration: '1.2s',
+ *   memory: '256MB',
  *   userId: '123'
  * })
- * // Returns: { perf: { duration: '1s', memory: '100MB' }, userId: '123' }
+ * // returns: {
+ * //   userId: '123',
+ * //   error: { message: 'Failed', stack: '...' },
+ * //   perf: { duration: '1.2s', memory: '256MB' }
+ * // }
+ *
+ * // Ungrouped fields
+ * groupMetadata({
+ *   userId: '123',
+ *   role: 'admin'
+ * })
+ * // returns: { userId: '123', role: 'admin' }
  */
 const groupMetadata = (metadata) => {
   if (!metadata || Object.keys(metadata).length === 0) {
@@ -258,20 +264,40 @@ const groupMetadata = (metadata) => {
 /**
  * Formats metadata for logging output
  *
- * Processes and formats metadata object for logging, handling special cases
- * and providing consistent output format.
+ * Processes and formats metadata object for consistent log output:
+ * - Handles special cases (Error objects, circular refs)
+ * - Formats key-value pairs with bullet separators
+ * - Sanitizes sensitive data (base64, tokens)
+ * - Removes empty/undefined values
+ * - Groups related fields by category
  *
+ * @function formatMetadata
  * @param {object} metadata - The metadata to format
+ * @param {Error} [metadata.error] - Error object to format
+ * @param {object} [metadata.params] - Direct params to use
+ * @param {string} [metadata.context] - Context (skipped in output)
+ * @param {string} [metadata.filename] - Filename (skipped in output)
  * @returns {string} Formatted metadata string
  * @throws {Error} If metadata processing fails
  * @example
- * // Basic metadata formatting
+ * // Basic metadata
  * formatMetadata({ user: 'john', count: 5 })
- * // Returns: ' ┃ user=john • count=5'
+ * // returns: ' ┃ user=john • count=5'
  *
- * // Handling errors
- * formatMetadata({ error: new Error('Failed') })
- * // Returns: ' ┃ error={"message":"Failed","stack":"..."}'
+ * // Error object
+ * formatMetadata({
+ *   error: new Error('Failed'),
+ *   code: 'ERR_001'
+ * })
+ * // returns: ' ┃ error={"message":"Failed","stack":"..."} • code=ERR_001'
+ *
+ * // Direct params
+ * formatMetadata({ params: 'key1=val1 • key2=val2' })
+ * // returns: ' ┃ key1=val1 • key2=val2'
+ *
+ * // Empty metadata
+ * formatMetadata({})
+ * // returns: ''
  */
 const formatMetadata = (metadata) => {
   if (!metadata || Object.keys(metadata).length === 0) return '';

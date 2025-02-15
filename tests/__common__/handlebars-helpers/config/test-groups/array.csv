@@ -1,0 +1,31 @@
+# Basic arrays
+array_numbers.0,1,First number
+array_numbers.1,2,Second number
+array_numbers.2,3,Third number
+
+array_strings.0,"a",First string
+array_strings.1,"b",Second string
+array_strings.2,"c",Third string
+
+array_mixed.0,1,Number in mixed array
+array_mixed.1,"two",String in mixed array
+array_mixed.2,true,Boolean in mixed array
+
+# Empty and special arrays
+array_empty,[],Empty array
+array_single.0,1,Single element array
+
+# Nested arrays
+array_nested.0.0,1,Nested array first element first item
+array_nested.0.1,2,Nested array first element second item
+array_nested.1.0,3,Nested array second element first item
+array_nested.1.1,4,Nested array second element second item
+
+# Arrays of objects
+array_objects.0,"{""id"":1}",First object in array
+array_objects.1,"{""id"":2}",Second object in array
+
+# Invalid arrays
+array_null,null,Null array
+array_undefined,,Undefined array
+array_invalid,"not an array",Invalid array value 

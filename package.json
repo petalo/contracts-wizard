@@ -65,7 +65,7 @@
     "test:full": "npm run test:clean && npm run test:ci",
     "test:integration": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/.bin/jest --testMatch='**/tests/integration/**/*.integration.test.js' --logHeapUsage --maxWorkers=50%",
     "test:output:clean": "node scripts/clean.js",
-    "test:smoke:helpers": "node bin/contracts-wizard.js generate -t tests/__common__/fixtures/markdown/helpers.md -d tests/__common__/fixtures/csv/helpers.csv -c tests/__common__/fixtures/css/helpers.css -o tests/output",
+    "test:smoke:helpers": "node tests/__common__/handlebars-helpers/generate-visual-test.js && node -e \"import('open').then(open => open.default('tests/__common__/handlebars-helpers/output/test-results.html'))\"",
     "test:smoke:office": "node bin/contracts-wizard.js generate -t tests/__common__/fixtures/markdown/office_lease_EN.example.md -d tests/__common__/fixtures/csv/office_lease_EN.example.csv -c tests/__common__/fixtures/css/contract.example.css -o tests/output ",
     "test:smoke:quick-filesize": "sed -i '' 's/describe.skip/describe/' tests/e2e/file-size.e2e.test.js && NODE_ENV=test npm test tests/e2e/file-size.e2e.test.js; sed -i '' 's/describe(/describe.skip(/' tests/e2e/file-size.e2e.test.js",
     "test:smoke:quick": "node bin/contracts-wizard.js generate -t tests/__common__/fixtures/markdown/quick.example.md -d tests/__common__/fixtures/csv/quick.example.csv -c tests/__common__/fixtures/css/quick.example.css -o tests/output",
@@ -137,6 +137,7 @@
     "jsdoc": "^3.6.7",
     "jsdoc-tsimport-plugin": "^1.0.5",
     "lint-staged": "^15.2.2",
+    "open": "^10.1.0",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
     "tsd-jsdoc": "^2.5.0"

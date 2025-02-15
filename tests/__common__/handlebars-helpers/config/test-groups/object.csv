@@ -1,0 +1,11 @@
+key,value,comment
+object.simple,"{""property"":""value""}",Simple object with string value
+object.number,"{""count"":42}",Object with number value
+object.boolean,"{""active"":true}",Object with boolean value
+object.nested,"{""user"":{""name"":""John""}}",Nested object
+object.array,"{""items"":[1,2,3]}",Object with array value
+object.empty,"{}",Empty object
+object.null,null,Null object
+object.undefined,,Undefined object
+object.invalid,"not an object",Invalid object value
+object.complex,"{""id"":1,""name"":""Test"",""active"":true,""tags"":[""a"",""b""]}",Complex object with multiple types 

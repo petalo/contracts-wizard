@@ -1,0 +1,13 @@
+key,value,comment
+date.current,2024-01-29,Current date in ISO format
+date.future,2025-12-31,Future date
+date.past,2023-01-01,Past date
+date.leap.year,2024-02-29,Leap year date
+date.invalid,2024-02-30,Invalid date
+date.european,"29/01/2024",European date format
+date.american,"01/29/2024",American date format
+date.text,"29 de enero de 2024",Text date format
+date.null,null,Null date
+date.undefined,,Undefined date
+date.empty,"",Empty date string
+date.invalid.format,"not a date",Invalid date format 

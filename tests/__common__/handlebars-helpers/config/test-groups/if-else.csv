@@ -1,0 +1,12 @@
+key,value,comment
+if.true,true,Basic true value
+if.false,false,Basic false value
+if.undefined,,Undefined value
+if.null,null,Null value
+if.zero,0,Zero value
+if.empty,"",Empty string
+if.object,{},Empty object
+if.array,[],Empty array
+if.whitespace,"   ",Whitespace string
+if.nested.true,true,Nested true value
+if.nested.false,false,Nested false value 

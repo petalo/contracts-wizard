@@ -1,0 +1,51 @@
+key,value,comment
+# Basic currency values
+currency_eur,1000,Basic EUR amount
+currency_usd,1000,Basic USD amount
+currency_gbp,1000,Basic GBP amount
+
+# Decimal values
+currency_eur_decimal,1234.56,EUR with decimals
+currency_usd_decimal,1234.56,USD with decimals
+currency_gbp_decimal,1234.56,GBP with decimals
+
+# Negative values
+currency_eur_negative,-1234.56,Negative EUR amount
+currency_usd_negative,-1234.56,Negative USD amount
+currency_gbp_negative,-1234.56,Negative GBP amount
+
+# String formats
+currency_string_spanish,"1.234,56",Spanish format number
+currency_string_english,"1,234.56",English format number
+currency_string_mixed_spanish,"1.234,56 EUR",Spanish format with currency
+currency_string_mixed_english,"$1,234.56",English format with currency
+
+# Decimal control
+currency_decimals_three,1234.567,Number with 3 decimals
+currency_decimals_none,1000.50,Number without decimals
+currency_decimals_auto,1234.5,Number with auto decimals
+
+# Edge cases
+currency_zero,0,Zero amount
+currency_large,1234567890.12,Very large number
+currency_small,0.000001,Very small number
+currency_scientific,1.234e6,Scientific notation
+currency_null,null,Null value
+currency_undefined,,Undefined value
+currency_empty,"",Empty string
+currency_invalid,"not-a-number",Invalid number string
+
+# Object values
+currency_object_amount,"{""amount"":1000,""currency"":""EUR""}",Object with amount and currency
+currency_object_value,"{""value"":1000}",Object with value property
+currency_object_mixed,"{""amount"":1000,""currency"":""USD"",""format"":""code""}",Object with multiple properties
+
+# Rounding cases
+currency_round_up,1234.567,Number that rounds up
+currency_round_down,1234.562,Number that rounds down
+currency_round_half,1234.565,Number that rounds half
+
+# Different currencies
+currency_jpy,1234,Japanese Yen amount
+currency_chf,1234.56,Swiss Franc amount
+currency_cny,1234.56,Chinese Yuan amount 

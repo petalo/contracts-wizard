@@ -1,0 +1,11 @@
+key,value,comment
+eq.string.hello,hello,Basic string equality
+eq.string.world,world,Another string for comparison
+eq.number.42,42,Basic number equality
+eq.number.42.string,"42",String representation of number
+eq.boolean.true,true,Boolean true value
+eq.boolean.false,false,Boolean false value
+eq.object.empty,{},Empty object for comparison
+eq.array.empty,[],Empty array for comparison
+eq.null,null,Null value for comparison
+eq.undefined,,Undefined value for comparison 

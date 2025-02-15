@@ -1,0 +1,28 @@
+key,value,comment
+# Null and undefined values
+value.null,null,Null value
+value.undefined,,Undefined value
+value.string_null,"null",String "null"
+
+# String values
+value.empty,"",Empty string
+value.spaced,"  test  ",String with spaces
+value.special,"!@#$%^&*()",String with special characters
+
+# Number values
+value.zero,0,Zero value
+value.positive,42,Positive number
+value.negative,-42,Negative number
+value.string_number,"42",String number
+
+# Boolean values
+value.true,true,Boolean true
+value.false,false,Boolean false
+value.string_true,"true",String "true"
+value.string_false,"false",String "false"
+
+# HTML values
+value.html,"<span>test</span>",HTML string
+value.missing_value,"<span class=""missing-value"">[[test]]</span>",Missing value span
+value.imported_value,"<span class=""imported-value"" data-field=""test"">value</span>",Imported value span
+value.imported_spaced,"<span class=""imported-value"" data-field=""test"">  spaced value  </span>",Imported value with spaces 
