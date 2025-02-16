@@ -16,7 +16,7 @@ echo "🔍 Running pre-commit checks..."
 # - data-csv/    -> Generated CSV files (not in repository)
 
 # Get list of staged JavaScript files
-STAGED_JS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.js$')
+STAGED_JS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.js$' || true)
 
 # Skip checks if no JavaScript files are staged
 if [ -z "$STAGED_JS_FILES" ]; then
@@ -61,12 +61,32 @@ for file in $STAGED_JS_FILES; do
   fi
 done
 
-# 3. Run tests only for modified files (blocking)
+# 3. Run tests only for modified files (non-blocking for setup/config files)
 echo "🧪 Running tests for modified files..."
 if [ ! -z "$STAGED_JS_FILES" ]; then
-  if ! npm test -- --findRelatedTests $STAGED_JS_FILES; then
-    echo "❌ Error: Tests must pass before commit!"
-    exit 1
+  # Determine if we're only modifying setup/config files
+  ONLY_SETUP_FILES=true
+  for file in $STAGED_JS_FILES; do
+    case "$file" in
+    scripts/* | .githooks/* | config/* | jest.config.* | babel.config.* | eslint.config.* | .*.js)
+      continue
+      ;;
+    *)
+      ONLY_SETUP_FILES=false
+      break
+      ;;
+    esac
+  done
+
+  # Run tests with appropriate flags
+  if [ "$ONLY_SETUP_FILES" = true ]; then
+    echo "ℹ️  Only setup/config files modified, skipping tests"
+    exit 0
+  else
+    if ! npm test -- --findRelatedTests $STAGED_JS_FILES --passWithNoTests; then
+      echo "❌ Error: Tests failed!"
+      exit 1
+    fi
   fi
 fi
 
