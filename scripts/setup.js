@@ -126,12 +126,16 @@ const REQUIRED_DIRS = [
 const ENV_TEMPLATE = `# Environment Configuration
 NODE_ENV=development # Sets the application environment (development/production/test)
 DEBUG=false          # Debug mode configuration ['true', 'false', 'trace', 'debug', 'info', 'warn', 'error']
+DEBUG_TESTS=false    # Enable debug output during tests
+ALLOW_PROCESS_EXIT=false # Allow process.exit() in tests
 
 # Logging Configuration
 LOG_ENABLED=true                        # Enable or disable application logging
 LOG_LEVEL=info                          # Sets logging verbosity level ['error', 'warn', 'info', 'debug', 'trace']
 LOG_FILE=logging.log                    # Main log file name
-LATEST_LOG_PATH=logs/latest.log # Path to store the most recent log file
+LOG_TO_CONSOLE=true                     # Output logs to console
+LOG_DIR=logs                           # Directory for log files
+LATEST_LOG_PATH=logs/latest.log        # Path to store the most recent log file
 FULL_LOG_PATH=logs/history-%DATE%.log   # Path pattern for historical log files with date
 LOG_MAX_SIZE=10MB                       # Maximum size of each log file before rotation
 LOG_MAX_FILES=7                         # Number of log files to keep before deletion
@@ -143,25 +147,33 @@ LANGUAGE=en-US # Default language/locale for the application
 # Directory Configuration
 DIR_OUTPUT=output_files          # Directory for generated output files
 DIR_TEMPLATES=templates/markdown # Directory for markdown template files
-DIR_CSS=templates/css            # Directory for CSS style files
-DIR_CSV=data-csv                 # Directory for CSV data files
-DIR_IMAGES=templates/images      # Directory for image assets
-DIR_REPORTS=reports              # Directory for generated reports
-DIR_COVERAGE=coverage            # Directory for test coverage reports
+DIR_CSS=templates/css           # Directory for CSS style files
+DIR_CSV=data-csv               # Directory for CSV data files
+DIR_IMAGES=templates/images     # Directory for image assets
+DIR_REPORTS=reports            # Directory for generated reports
+DIR_COVERAGE=coverage          # Directory for test coverage reports
+TEMPLATES_DIR=templates        # Base directory for all templates
+OUTPUT_DIR=output             # Base directory for all output
 
 # Test Directories
-DIR_TEST_LOGS=tests-logs     # Directory for test log files
-DIR_TEST_OUTPUT=tests-output # Directory for test output files
+DIR_TEST_LOGS=tests/logs     # Directory for test log files
+DIR_TEST_OUTPUT=tests/output # Directory for test output files
 
 # Performance Settings
 CACHE_ENABLED=true         # Enable/disable application caching
 CACHE_TTL=1800             # Cache time-to-live in seconds
 MAX_CONCURRENT_PROCESSES=2 # Maximum number of concurrent processes
+MAX_FILE_SIZE=5mb         # Maximum file size for processing
 
 # Security Settings
 RATE_LIMIT_WINDOW=15       # Rate limiting window in minutes
 RATE_LIMIT_MAX_REQUESTS=50 # Maximum requests per window
-SESSION_TIMEOUT=15         # Session timeout in minutes`;
+SESSION_TIMEOUT=15         # Session timeout in minutes
+
+# CI/CD Settings
+CI=false                  # Whether running in CI environment
+FORCE_COLOR=true         # Force color output in logs
+SKIP_POSTINSTALL=false   # Skip postinstall scripts`;
 
 /**
  * Creates required project directories
@@ -588,6 +600,12 @@ async function installDependencies() {
       return;
     }
 
+    // Skip if SKIP_POSTINSTALL is set to avoid potential loops
+    if (process.env.SKIP_POSTINSTALL === 'true') {
+      log.info('Skipping dependency installation (SKIP_POSTINSTALL is set)');
+      return;
+    }
+
     log.info('Installing dependencies...');
 
     // Verify npm is available
@@ -599,66 +617,67 @@ async function installDependencies() {
       simulate.execSync('npm cache clean --force', { stdio: 'ignore' });
     }
 
-    // Install dependencies
+    // Install dependencies with SKIP_POSTINSTALL set to prevent loops
     const installCmd = 'npm install --no-package-lock';
     if (isDryRun) {
       log.info(`Would run: ${installCmd}`);
-    } else {
-      log.info('Installing project dependencies...');
+      return;
+    }
 
-      // First install the main dependencies
-      simulate.execSync(installCmd, {
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          SKIP_POSTINSTALL: 'true',
-        },
-      });
+    log.info('Installing project dependencies...');
 
-      // Then install any missing dependencies specifically
-      const missingDeps = checkMissingDependencies();
-      if (missingDeps.length > 0) {
-        log.info(`Installing missing dependencies: ${missingDeps.join(', ')}`);
+    // First install the main dependencies
+    simulate.execSync(installCmd, {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        SKIP_POSTINSTALL: 'true',
+      },
+    });
 
-        // Separar dependencias de producción y desarrollo
-        const packageJson = require(path.join(process.cwd(), 'package.json'));
-        const prodDeps = missingDeps.filter((dep) =>
-          Object.keys(packageJson.dependencies || {}).includes(dep)
+    // Then install any missing dependencies specifically
+    const missingDeps = checkMissingDependencies();
+    if (missingDeps.length > 0) {
+      log.info(`Installing missing dependencies: ${missingDeps.join(', ')}`);
+
+      // Split dependencies into production and development
+      const packageJson = require(path.join(process.cwd(), 'package.json'));
+      const prodDeps = missingDeps.filter((dep) =>
+        Object.keys(packageJson.dependencies || {}).includes(dep)
+      );
+      const devDeps = missingDeps.filter((dep) =>
+        Object.keys(packageJson.devDependencies || {}).includes(dep)
+      );
+
+      // Instalar dependencias de producción
+      if (prodDeps.length > 0) {
+        simulate.execSync(`npm install ${prodDeps.join(' ')} --save`, {
+          stdio: 'inherit',
+          env: {
+            ...process.env,
+            SKIP_POSTINSTALL: 'true',
+          },
+        });
+      }
+
+      // Install development dependencies
+      if (devDeps.length > 0) {
+        simulate.execSync(`npm install ${devDeps.join(' ')} --save-dev`, {
+          stdio: 'inherit',
+          env: {
+            ...process.env,
+            SKIP_POSTINSTALL: 'true',
+          },
+        });
+      }
+
+      // Final verification - more tolerant
+      const finalCheck = checkMissingDependencies();
+      if (finalCheck.length > 0) {
+        log.warning(
+          'Some dependencies might not be fully installed yet, but continuing anyway:',
+          finalCheck.join(', ')
         );
-        const devDeps = missingDeps.filter((dep) =>
-          Object.keys(packageJson.devDependencies || {}).includes(dep)
-        );
-
-        // Instalar dependencias de producción
-        if (prodDeps.length > 0) {
-          simulate.execSync(`npm install ${prodDeps.join(' ')} --save`, {
-            stdio: 'inherit',
-            env: {
-              ...process.env,
-              SKIP_POSTINSTALL: 'true',
-            },
-          });
-        }
-
-        // Instalar dependencias de desarrollo
-        if (devDeps.length > 0) {
-          simulate.execSync(`npm install ${devDeps.join(' ')} --save-dev`, {
-            stdio: 'inherit',
-            env: {
-              ...process.env,
-              SKIP_POSTINSTALL: 'true',
-            },
-          });
-        }
-
-        // Final verification - more tolerant
-        const finalCheck = checkMissingDependencies();
-        if (finalCheck.length > 0) {
-          log.warning(
-            'Some dependencies might not be fully installed yet, but continuing anyway:',
-            finalCheck.join(', ')
-          );
-        }
       }
     }
 
