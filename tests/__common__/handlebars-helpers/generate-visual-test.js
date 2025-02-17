@@ -15,11 +15,24 @@ const path = require('path');
 const moduleAlias = require('module-alias');
 moduleAlias.addAlias('@', path.join(__dirname, '..', '..', '..', 'src'));
 
+// Force test environment
+process.env.NODE_ENV = 'test';
+
 const fs = require('fs');
 const os = require('os');
 const Papa = require('papaparse');
 const { execSync } = require('child_process');
 const { TEST_GROUPS } = require('./config/test-groups/index.js');
+
+// Import the main handlebars configuration and helpers
+const handlebars = require('handlebars');
+const helpers = require('@/utils/template-processor/handlebars/helpers');
+
+// Log helper registration
+console.log('Registered helpers:', {
+  helpers: Object.keys(helpers),
+  handlebarsHelpers: Object.keys(handlebars.helpers),
+});
 
 // Log TEST_GROUPS content right after importing
 console.log('TEST_GROUPS imported:', {
@@ -48,7 +61,6 @@ const CSS_PATH = path.join(__dirname, 'config', 'styles.css');
 const JS_PATH = path.join(__dirname, 'config', 'scripts.js');
 
 // Register handlebars helpers
-const handlebars = require('handlebars');
 const {
   formatDate,
   addYears,
@@ -64,7 +76,18 @@ handlebars.registerHelper('addYears', addYears);
 handlebars.registerHelper('now', now);
 handlebars.registerHelper('formatCurrency', formatCurrency);
 handlebars.registerHelper('formatNumber', formatNumber);
-handlebars.registerHelper('eq', eq);
+handlebars.registerHelper('eq', function (v1, v2, options) {
+  if (options?.data?.isSubexpression) {
+    return v1 === v2;
+  }
+  return v1 === v2 ? options.fn(this) : options.inverse(this);
+});
+handlebars.registerHelper('each', function (context, options) {
+  if (!context || !Array.isArray(context)) {
+    return options.inverse(this);
+  }
+  return context.map((item) => options.fn(item)).join('');
+});
 
 // Verify contracts-wizard exists
 if (!fs.existsSync(CONTRACTS_WIZARD_BIN)) {
@@ -215,40 +238,24 @@ function mergeCsvFiles() {
  */
 function generateMarkdownFile() {
   const mdPath = path.join(TEMP_DIR, 'test-cases.md');
-
-  // Verify JS_PATH exists and has content
-  if (!fs.existsSync(JS_PATH)) {
-    throw new Error(`JavaScript file not found at ${JS_PATH}`);
-  }
-
-  const jsContent = fs.readFileSync(JS_PATH, 'utf8');
-  console.log(`JavaScript file found (${JS_PATH}):`, {
-    size: jsContent.length,
-    preview: jsContent.slice(0, 100) + '...',
-    exists: !!jsContent,
-  });
-
   let mdContent = '<!DOCTYPE html>\n<html lang="es">\n<head>\n';
   mdContent += '<meta charset="UTF-8">\n';
   mdContent +=
     '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n';
   mdContent += '<title>Visual Test Results</title>\n';
-
-  // Add CSS
-  mdContent += '<style>\n';
-  mdContent += fs.readFileSync(CSS_PATH, 'utf8');
-  mdContent += '\n</style>\n';
+  mdContent += `<meta name="generated-at" content="${new Date().toISOString()}">\n`;
+  mdContent += `<link rel="stylesheet" href="../config/styles.css">\n`;
+  mdContent += `<script src="../config/scripts.js"></script>\n`;
   mdContent += '</head>\n<body>\n';
-
-  // Add test report container
   mdContent += '<div class="test-report">\n';
-
-  // Add test table
+  mdContent += '<div class="controls">\n';
+  mdContent +=
+    '  <button class="toggle-debug" onclick="toggleDebug()">🔍 Show Debug Info</button>\n';
+  mdContent += '</div>\n';
   mdContent += '<table class="test-table">\n';
   mdContent += '<thead>\n';
   mdContent += '<tr>\n';
-  mdContent +=
-    '<th><button class="toggle-debug" onclick="toggleDebug()">🔍</button> Test Case</th>\n';
+  mdContent += '<th>Test Case</th>\n';
   mdContent += '<th>Source</th>\n';
   mdContent += '<th>Input</th>\n';
   mdContent += '<th>Expected</th>\n';
@@ -280,7 +287,7 @@ function generateMarkdownFile() {
       console.log(test);
       mdContent += '<tr>\n';
       mdContent += `<td>${test.name}</td>\n`;
-      mdContent += `<td>${test.source}</td>\n`;
+      mdContent += `<td>${test.source || 'Direct'}</td>\n`;
       mdContent += `<td><code>${JSON.stringify(test.input)}</code></td>\n`;
       mdContent += `<td><code>${test.expected.replace(/<span[^>]*>/g, '').replace(/<\/span>/g, '')}</code></td>\n`;
       mdContent += `<td><code>${test.expected}</code></td>\n`;
@@ -291,81 +298,24 @@ function generateMarkdownFile() {
       mdContent += '<td class="status-pass">✅ PASS</td>\n';
       mdContent += '<td class="status-pending">⏳ PENDING</td>\n';
       mdContent += '</tr>\n';
+      // Add debug row
+      mdContent += '<tr class="debug-info">\n';
+      mdContent += '<td colspan="8">\n';
+      mdContent += '<div class="debug-details">\n';
+      mdContent += `<span><strong>Template:</strong> <code>${test.template}</code></span>\n`;
+      mdContent += `<span><strong>Context:</strong> <code>${JSON.stringify(test.context, null, 2)}</code></span>\n`;
+      if (test.source === 'CSV') {
+        mdContent += `<span><strong>CSV Key:</strong> <code>${test.input}</code></span>\n`;
+      }
+      mdContent += '</div>\n';
+      mdContent += '</td>\n';
+      mdContent += '</tr>\n';
     });
   });
 
   mdContent += '</tbody>\n';
   mdContent += '</table>\n';
   mdContent += '</div>\n';
-
-  // First, define updateMdStatus function
-  mdContent += '<script type="text/javascript">\n';
-  mdContent += '//<![CDATA[\n';
-  mdContent += 'window.updateMdStatus = function() {\n';
-  mdContent += '  console.log("Starting updateMdStatus");\n';
-  mdContent +=
-    '  const rows = document.querySelectorAll(".test-table tbody tr:not(.test-group)");\n';
-  mdContent += '  rows.forEach(row => {\n';
-  mdContent += '    const cells = row.querySelectorAll("td");\n';
-  mdContent += '    if (cells.length >= 8) {\n';
-  mdContent += '      const expectedCell = cells[3];\n';
-  mdContent += '      const mdCell = cells[5];\n';
-  mdContent += '      const statusMdCell = cells[7];\n';
-  mdContent += '      const expected = expectedCell.textContent.trim();\n';
-  mdContent += '      const actual = mdCell.textContent.trim();\n';
-  mdContent += '      const passed = expected === actual;\n';
-  mdContent +=
-    '      statusMdCell.className = passed ? "status-pass" : "status-fail";\n';
-  mdContent +=
-    '      statusMdCell.textContent = passed ? "✅ PASS" : "❌ FAIL";\n';
-  mdContent += '    }\n';
-  mdContent += '  });\n';
-  mdContent += '  console.log("updateMdStatus completed");\n';
-  mdContent += '};\n';
-  mdContent += '//]]>\n';
-  mdContent += '</script>\n';
-
-  // Add debug logging
-  mdContent += '<script type="text/javascript">\n';
-  mdContent += '//<![CDATA[\n';
-  mdContent += 'console.log("Debug - window functions:", {\n';
-  mdContent += '  updateMdStatus: typeof window.updateMdStatus,\n';
-  mdContent += '  document: typeof document,\n';
-  mdContent += '  DOMContentLoaded: !!document.addEventListener\n';
-  mdContent += '});\n';
-  mdContent += '//]]>\n';
-  mdContent += '</script>\n';
-
-  // Add toggle debug function
-  mdContent += '<script type="text/javascript">\n';
-  mdContent += '//<![CDATA[\n';
-  mdContent += 'window.toggleDebug = function() {\n';
-  mdContent += '  document.body.classList.toggle("show-debug");\n';
-  mdContent += '};\n';
-  mdContent += '//]]>\n';
-  mdContent += '</script>\n';
-
-  // Add DOMContentLoaded handler
-  mdContent += '<script type="text/javascript">\n';
-  mdContent += '//<![CDATA[\n';
-  mdContent += 'document.addEventListener("DOMContentLoaded", function() {\n';
-  mdContent += '  console.log("🔄 DOMContentLoaded fired");\n';
-  mdContent += '  try {\n';
-  mdContent += '    if (typeof window.updateMdStatus === "function") {\n';
-  mdContent += '      console.log("📋 Calling updateMdStatus()");\n';
-  mdContent += '      window.updateMdStatus();\n';
-  mdContent += '      console.log("✅ updateMdStatus() completed");\n';
-  mdContent += '    } else {\n';
-  mdContent +=
-    '      console.error("❌ updateMdStatus is not a function:", typeof window.updateMdStatus);\n';
-  mdContent += '    }\n';
-  mdContent += '  } catch (error) {\n';
-  mdContent += '    console.error("❌ Error in DOMContentLoaded:", error);\n';
-  mdContent += '  }\n';
-  mdContent += '});\n';
-  mdContent += '//]]>\n';
-  mdContent += '</script>\n';
-
   mdContent += '</body>\n</html>';
 
   // Write the file and verify it was written correctly
@@ -453,9 +403,48 @@ function cleanup() {
   }
 }
 
+/**
+ * Verifies that all required helpers are registered
+ * @returns {boolean} True if all helpers are registered
+ */
+function verifyHelperRegistration() {
+  const requiredHelpers = [
+    'formatDate',
+    'addYears',
+    'now',
+    'formatCurrency',
+    'formatNumber',
+    'eq',
+    'each',
+    'if',
+    'unless',
+    'with',
+  ];
+
+  const missingHelpers = requiredHelpers.filter(
+    (helper) => !handlebars.helpers[helper]
+  );
+
+  if (missingHelpers.length > 0) {
+    console.error('Missing required helpers:', missingHelpers);
+    throw new Error(`Missing required helpers: ${missingHelpers.join(', ')}`);
+  }
+
+  console.log('Helper verification passed:', {
+    required: requiredHelpers.length,
+    registered: Object.keys(handlebars.helpers).length,
+    helpers: Object.keys(handlebars.helpers),
+  });
+
+  return true;
+}
+
 // Main execution
 try {
   console.log('Generating visual test report...');
+
+  // Verify helpers before running tests
+  verifyHelperRegistration();
 
   const csvPath = mergeCsvFiles();
   const mdPath = generateMarkdownFile();

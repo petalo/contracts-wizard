@@ -1,22 +1,26 @@
 .test-report {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
-  margin: 1rem;
-  font-size: 14px;
+  margin: 0.5rem;
+  font-size: 13px;
   position: relative;
 }
 .test-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  table-layout: auto;
 }
 .test-table th,
 .test-table td {
-  padding: 0.4rem 0.6rem;
+  padding: 0.25rem 0.5rem;
   border: 1px solid #dee2e6;
   text-align: left;
   vertical-align: top;
-  line-height: 1.4;
+  line-height: 1.2;
+}
+.test-table th:first-child {
+  min-width: 200px;
 }
 .test-table th {
   background-color: #f8f9fa;
@@ -24,6 +28,8 @@
   position: sticky;
   top: 0;
   z-index: 1;
+  font-size: 12px;
+  white-space: nowrap;
 }
 .test-group {
   background-color: #e9ecef;
@@ -31,6 +37,7 @@
   position: sticky;
   top: 32px;
   z-index: 1;
+  font-size: 12px;
 }
 .status-pass {
   color: #28a745;
@@ -46,40 +53,119 @@
 }
 .debug-info {
   display: none;
-  font-family: monospace;
   background-color: #f8f9fa;
-  padding: 0.5rem;
-  margin-top: 0.25rem;
-  border-radius: 0.25rem;
-  white-space: pre-wrap;
+}
+.debug-info.show {
+  display: table-row !important;
+}
+.debug-info td[colspan] {
+  padding: 1rem !important;
+  border: 1px solid #dee2e6 !important;
+  background-color: #f8f9fa;
+  width: 100%;
+}
+.debug-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+.debug-section {
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 0.75rem;
+  background: white;
+}
+.debug-section-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.5rem;
   font-size: 12px;
 }
-.show-debug .debug-info {
+.debug-section-content {
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.debug-section-content code {
   display: block;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 2px;
+}
+.debug-section-content .label {
+  display: inline-block;
+  min-width: 100px;
+  color: #495057;
+  font-weight: 500;
+}
+.char-comparison {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+}
+.char-comparison .label {
+  color: #495057;
+  font-weight: 500;
+}
+.char-comparison .value {
+  background: #f8f9fa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+}
+.char-comparison .mismatch {
+  color: #dc3545;
+  font-weight: bold;
+  background: #fff5f5;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+/* Manejo específico de valores importados dentro de debug info */
+.debug-details code .imported-value,
+.debug-details code .missing-value {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+}
+.debug-details code .imported-value {
+  color: #0066cc;
+}
+.debug-details code .missing-value {
+  color: #dc3545;
+}
+.show-debug .debug-info {
+  display: table-row;
 }
 .controls {
   position: sticky;
   top: 0;
   z-index: 1000;
   background: white;
-  padding: 1rem;
-  margin: -1rem -1rem 1rem -1rem;
+  padding: 0.5rem;
+  margin: -0.5rem -0.5rem 0.5rem -0.5rem;
   border-bottom: 1px solid #dee2e6;
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  flex-direction: row;
-  justify-content: flex-start;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .toggle-debug,
 .export-failures {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   border: none;
   transition: all 0.2s ease;
@@ -88,9 +174,23 @@
 .toggle-debug {
   background-color: #007bff;
   color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  transition: all 0.2s ease;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.5rem;
 }
 .toggle-debug:hover {
   background-color: #0056b3;
+  transform: translateY(-1px);
+}
+.toggle-debug:active {
+  transform: translateY(1px);
 }
 .imported-value {
   border: 1px solid #0066cc;
@@ -141,16 +241,100 @@
   white-space: normal;
   font-size: 13px;
 }
-
-.export-failures {
-  background: #dc3545;
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
   color: white;
 }
-
+.export-failures {
+  background: #dc3545;
+}
 .export-failures:hover {
   background: #c82333;
+  transform: translateY(-1px);
 }
-
-.export-failures:active {
+.export-md-failures {
+  background: #fd7e14;
+}
+.export-md-failures:hover {
+  background: #e66a03;
+  transform: translateY(-1px);
+}
+.export-button:active {
   transform: translateY(1px);
+}
+/* Estilos para valores importados/missing en la tabla */
+.test-table td code,
+.test-table td .imported-value,
+.test-table td .missing-value {
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+}
+.test-table td .imported-value {
+  border: 1px solid #0066cc !important;
+  border-radius: 2px !important;
+  padding: 0 2px !important;
+  background-color: #e6f3ff !important;
+  color: #004085 !important;
+  display: inline-block !important;
+  vertical-align: baseline !important;
+}
+.test-table td .missing-value {
+  border: 1px solid #dc3545 !important;
+  border-radius: 2px !important;
+  padding: 0 2px !important;
+  background-color: #fff5f5 !important;
+  color: #dc3545 !important;
+  display: inline-block !important;
+  vertical-align: baseline !important;
+}
+/* Estilos para la primera celda y la lupa */
+div.test-report > table.test-table > tbody > tr > td:first-child {
+  position: relative !important;
+  padding-right: 2rem !important;
+}
+div.test-report > table.test-table > tbody > tr:not(.test-group):not(.debug-info) > td:first-child {
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: background-color 0.2s ease !important;
+}
+div.test-report
+  > table.test-table
+  > tbody
+  > tr:not(.test-group):not(.debug-info)
+  > td:first-child::after {
+  content: '🔍' !important;
+  position: absolute !important;
+  right: 0.5rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  opacity: 0.7 !important;
+  font-size: 14px !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+}
+div.test-report
+  > table.test-table
+  > tbody
+  > tr:not(.test-group):not(.debug-info)
+  > td[data-showing='true']::after {
+  content: '🔍 ✓' !important;
+  opacity: 1 !important;
+}
+/* Manejo de filas de debug */
+div.test-report > table.test-table > tbody > tr.debug-info {
+  display: none !important;
+}
+div.test-report > table.test-table > tbody > tr.debug-info.show {
+  display: table-row !important;
 }

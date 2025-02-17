@@ -1,277 +1,216 @@
-/* global document, window, MutationObserver, Blob */
-
 /**
- * @file Test Results Update Script
+ * @file Visual Test Results Script
  *
- * Updates test results status in the visual test report
+ * Manages the interactive functionality of the visual test results page,
+ * including test status updates, debug information toggling, and failure exports.
+ *
+ * This script provides the core functionality for the visual test results interface,
+ * handling user interactions, test result display, and debug information management.
+ *
+ * Functions:
+ * - handleCellClick: Handles clicks on test case cells to show/hide debug info
+ * - createExportButton: Creates and manages the failures export button
+ * - exportFailures: Exports test failures to a downloadable file
+ * - updateMdStatus: Updates test status and initializes UI components
+ * - toggleDebug: Toggles visibility of debug information
+ * - initializeTestCells: Initializes clickable cells in the test table
+ * - captureMarkdownError: Captures and processes markdown errors
+ *
+ * Constants:
+ * - testFailures: array - Stores test failure information
+ * - debugMode: boolean - Tracks debug mode state
+ *
+ * Flow:
+ * 1. Initialize global state (testFailures and debugMode)
+ * 2. Set up event listeners for DOM and error events
+ * 3. Initialize test cells and status on DOM load
+ * 4. Handle user interactions (clicks, toggles)
+ * 5. Process and display test results
+ *
+ * Error Handling:
+ * - DOM errors: Logged to console with context
+ * - Markdown errors: Captured and processed through error handler
+ * - Missing elements: Gracefully handled with console warnings
+ * - Event failures: Logged with detailed error information
+ *
+ * @module tests/common/handlebars-helpers/config/scripts
+ * @requires document
+ * @requires window
+ * @requires console
  */
+
+/* global document, window, Node, MutationObserver, Blob */
 
 let testFailures = [];
 let debugMode = false;
 
 /**
- * Toggle debug information visibility
+ * Handles click events on test case cells
+ *
+ * Manages the showing/hiding of debug information when a test case cell is clicked.
+ * Prevents event bubbling and updates the cell's visual state.
+ *
+ * @param {Event} event - The click event object
+ * @example
+ * // Basic usage
+ * cell.onclick = handleCellClick;
+ * // When clicked, toggles debug info and updates cell state
+ *
+ * // Event handling
+ * handleCellClick(event);
+ * // Logs: "Cell clicked: Test Case Name"
+ * // Logs: "Debug row shown/hidden"
  */
-function toggleDebug() {
-  debugMode = !debugMode;
-  document.body.classList.toggle('show-debug', debugMode);
-
-  const button = document.querySelector('.toggle-debug');
-  if (button) {
-    button.innerHTML = debugMode ? '🔍 Hide Debug Info' : '🔍 Show Debug Info';
+function handleCellClick(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  const cell = event.currentTarget;
+  console.log(`Cell clicked: ${cell.textContent.trim()}`);
+  const debugRow = cell.parentElement.nextElementSibling;
+  if (debugRow && debugRow.classList.contains('debug-info')) {
+    const isShowing = debugRow.classList.contains('show');
+    debugRow.classList.toggle('show');
+    cell.dataset.showing = !isShowing;
+    console.log(`Debug row ${isShowing ? 'hidden' : 'shown'}`);
   }
-
-  // Update debug rows visibility
-  const debugRows = document.querySelectorAll('.debug-info');
-  debugRows.forEach((row) => {
-    row.style.display = debugMode ? 'block' : 'none';
-  });
 }
 
 /**
- * Create export failures button
+ * Creates or updates the export failures button
+ *
+ * Manages the export failures button in the controls section,
+ * creating it if there are failures and removing it when not needed.
+ *
+ * @example
+ * // With failures
+ * testFailures = [{ testName: 'Test 1', expected: 'a', actual: 'b' }];
+ * createExportButton();
+ * // Creates button with text "📥 Export Failures (1)"
+ *
+ * // Without failures
+ * testFailures = [];
+ * createExportButton();
+ * // Removes existing button if present
  */
 function createExportButton() {
   const controls = document.querySelector('.controls');
   if (!controls) return;
-
   const existingButton = document.querySelector('.export-failures');
-  if (existingButton) {
-    existingButton.remove();
-  }
-
-  const exportButton = document.createElement('button');
-  exportButton.className = 'export-failures';
-  exportButton.innerHTML = '📥 Export Failures';
-  exportButton.onclick = exportFailures;
-  controls.appendChild(exportButton);
-
-  // Update visibility based on failures
-  updateExportButton();
-}
-
-/**
- * Update export button state
- */
-function updateExportButton() {
-  const exportButton = document.querySelector('.export-failures');
-  if (!exportButton) return;
-
+  if (existingButton) existingButton.remove();
   if (testFailures.length > 0) {
+    const exportButton = document.createElement('button');
+    exportButton.className = 'export-button export-failures';
     exportButton.innerHTML = `📥 Export Failures (${testFailures.length})`;
-    exportButton.style.display = 'flex';
-  } else {
-    exportButton.style.display = 'none';
+    exportButton.onclick = exportFailures;
+    controls.appendChild(exportButton);
   }
 }
 
 /**
- * Export failures to a downloadable file
+ * Exports test failures to a downloadable file
+ *
+ * Creates a text file containing details of all test failures
+ * and triggers its download.
+ *
+ * @example
+ * // With failures
+ * testFailures = [
+ *   { testName: 'Test 1', expected: 'a', actual: 'b' }
+ * ];
+ * exportFailures();
+ * // Creates and downloads 'test-failures-2024-03-08.log'
+ *
+ * // Without failures
+ * testFailures = [];
+ * exportFailures();
+ * // Logs: "No failures to export"
  */
 function exportFailures() {
   if (testFailures.length === 0) {
     console.log('No failures to export');
     return;
   }
-
   console.log(`Exporting ${testFailures.length} failures:`);
-  console.table(
-    testFailures.map((f) => ({
-      test: f.testName,
-      expected: f.expected,
-      actual: f.actual,
-    }))
-  );
-
+  console.table(testFailures);
   const content = testFailures
     .map(
       (failure, index) =>
-        `Failure #${index + 1}\n` +
-        `Test: ${failure.testName}\n` +
-        `Expected: ${failure.expected}\n` +
-        `Actual: ${failure.actual}\n` +
-        `Template: ${failure.template}\n` +
-        '----------------------------------------\n'
+        `Failure #${index + 1}\nTest: ${failure.testName}\nExpected: ${failure.expected}\nActual: ${failure.actual}\n----------------------------------------\n`
     )
     .join('\n');
-
-  // Log content to console for easy copy/paste
-  console.log('\nFailures content:\n', content);
-
-  try {
-    // Create download element
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `test-failures-${new Date().toISOString().slice(0, 10)}.log`;
-
-    // Append, click and cleanup
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    console.log('Export completed successfully');
-  } catch (error) {
-    console.error('Error exporting failures:', error);
-  }
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `test-failures-${new Date().toISOString().slice(0, 10)}.log`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
 }
 
 /**
- * Clean HTML tags and normalize whitespace
- * @param {string} str - String to clean
- * @returns {string} Cleaned string
- */
-function cleanHtml(str) {
-  if (!str) return '';
-  console.log('Cleaning HTML:', { input: str });
-  const cleaned = str
-    .replace(/<[^>]+>/g, '') // Remove HTML tags
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .trim(); // Remove leading/trailing whitespace
-  console.log('Cleaned result:', { output: cleaned });
-  return cleaned;
-}
-
-/**
- * Update the Status (md) column based on comparison
+ * Updates test status and initializes UI components
+ *
+ * Evaluates test results, updates status indicators, and initializes
+ * UI components like the export button and test cells.
+ *
+ * @example
+ * // Basic usage
+ * updateMdStatus();
+ * // Updates all test statuses and initializes UI
+ *
+ * // With failures
+ * // Some tests failing
+ * updateMdStatus();
+ * // Updates status cells and creates export button
  */
 function updateMdStatus() {
   console.group('Test Results');
   console.log('Starting test evaluation...');
-  testFailures = []; // Reset failures array
-
-  const table = document.querySelector('.test-table');
-  if (!table) {
-    console.warn('❌ Table not found, waiting...');
-    console.groupEnd();
-    return;
-  }
-
-  // Añadir botón de exportar si no existe
-  createExportButton();
-
-  const rows = table.querySelectorAll('tbody tr:not(.test-group)');
+  testFailures = [];
+  const rows = document.querySelectorAll(
+    '.test-table tbody tr:not(.test-group)'
+  );
   console.log(`Found ${rows.length} test rows to evaluate`);
-
   let totalTests = 0;
   let passedTests = 0;
   let failedTests = 0;
   let currentGroup = '';
-
-  rows.forEach((row, index) => {
+  rows.forEach((row) => {
     const cells = row.querySelectorAll('td');
-
-    // Skip if not a test row
     if (cells.length < 8) {
-      // Check if it's a group header
       if (cells.length === 1 && cells[0].getAttribute('colspan') === '8') {
         currentGroup = cells[0].textContent.trim();
-        console.group(`Group: ${currentGroup}`);
       }
       return;
     }
-
     totalTests++;
     const testName = cells[0].textContent.trim();
     const expectedCell = cells[3];
     const mdCell = cells[5];
     const statusMdCell = cells[7];
-
-    const codeElement = expectedCell.querySelector('code');
-    const expectedValue = cleanHtml(
-      codeElement ? codeElement.textContent : expectedCell.textContent
-    );
-    const mdValue = cleanHtml(mdCell.innerHTML);
-    const template = cells[5].textContent.trim();
-
-    // Compare and update status
-    const passed = expectedValue === mdValue;
+    const expected = expectedCell.textContent.trim();
+    const actual = mdCell.textContent.trim();
+    const passed = expected === actual;
     if (passed) {
       passedTests++;
       console.log(`✅ ${testName}: PASS`);
     } else {
       failedTests++;
-      console.group(`❌ ${testName}: FAIL`);
-      console.log('Template:', template);
-      console.log('Expected:', expectedValue);
-      console.log('Actual  :', mdValue);
-
-      // Log detailed comparison
-      if (expectedValue.length !== mdValue.length) {
-        console.log('Length mismatch:');
-        console.log(`  Expected: ${expectedValue.length} chars`);
-        console.log(`  Actual  : ${mdValue.length} chars`);
-      }
-
-      // Log character codes for debugging
-      console.log('Character codes:');
-      console.log(
-        '  Expected:',
-        Array.from(expectedValue)
-          .map((c) => `${c}(${c.charCodeAt(0)})`)
-          .join(' ')
-      );
-      console.log(
-        '  Actual  :',
-        Array.from(mdValue)
-          .map((c) => `${c}(${c.charCodeAt(0)})`)
-          .join(' ')
-      );
-
-      console.groupEnd();
-
+      console.log(`❌ ${testName}: FAIL`);
+      console.log('Expected:', expected);
+      console.log('Actual:', actual);
       testFailures.push({
         testName,
         group: currentGroup,
-        expected: expectedValue,
-        actual: mdValue,
-        template,
+        expected,
+        actual,
       });
-
-      // Add debug info row
-      const debugRow = document.createElement('tr');
-      /* eslint-disable */
-      debugRow.innerHTML = `
-        <td colspan="8">
-          <div class="debug-info">
-            Group: ${currentGroup}
-            Test: ${testName}
-            
-            Template: ${template}
-            Expected: ${expectedValue}
-            Actual: ${mdValue}
-            
-            Clean Expected: ${expectedValue}
-            Clean Actual: ${mdValue}
-            
-            Length Expected: ${expectedValue.length}
-            Length Actual: ${mdValue.length}
-            
-            Char codes:
-            Expected: ${Array.from(expectedValue)
-              .map((c) => `${c}(${c.charCodeAt(0)})`)
-              .join(' ')}
-            Actual  : ${Array.from(mdValue)
-              .map((c) => `${c}(${c.charCodeAt(0)})`)
-              .join(' ')}
-          </div>
-        </td>
-      `;
-      /* eslint-enable */
-      row.parentNode.insertBefore(debugRow, row.nextSibling);
     }
-
     statusMdCell.className = passed ? 'status-pass' : 'status-fail';
     statusMdCell.textContent = passed ? '✅ PASS' : '❌ FAIL';
   });
-
-  // Close any open group
-  console.groupEnd();
-
-  // Log test summary
-  console.group('Test Summary');
   console.log('=============');
   console.log(`Total Tests : ${totalTests}`);
   console.log(`Passed      : ${passedTests}`);
@@ -279,84 +218,172 @@ function updateMdStatus() {
   console.log(
     `Success Rate: ${((passedTests / totalTests) * 100).toFixed(2)}%`
   );
-
   if (failedTests > 0) {
     console.group(`Failed Tests (${failedTests})`);
-    console.table(
-      testFailures.map((f) => ({
-        group: f.group,
-        test: f.testName,
-        expected: f.expected,
-        actual: f.actual,
-      }))
-    );
+    console.table(testFailures);
     console.groupEnd();
   }
-
   console.groupEnd();
-  console.groupEnd();
-
-  // Actualizar contador en el botón
-  updateExportButton();
+  createExportButton();
+  initializeTestCells();
 }
 
-// Esperar a que el DOM esté completamente cargado
-function init() {
-  console.log('🚀 Initializing test results...');
+/**
+ * Toggles debug information visibility
+ *
+ * Controls the visibility of debug information rows and updates
+ * the UI to reflect the current debug mode state.
+ *
+ * @example
+ * // Enable debug mode
+ * toggleDebug();
+ * // Shows debug rows and updates button text
+ *
+ * // Disable debug mode
+ * toggleDebug();
+ * // Hides debug rows and restores button text
+ */
+window.toggleDebug = function () {
+  debugMode = !debugMode;
+  console.log('Debug mode toggled:', debugMode);
+  document.body.classList.toggle('show-debug', debugMode);
+  const buttons = document.querySelectorAll('.toggle-debug');
+  buttons.forEach((button) => {
+    button.innerHTML = debugMode ? '🔍 Hide Debug Info' : '🔍 Show Debug Info';
+  });
+  const debugRows = document.querySelectorAll('.debug-info');
+  debugRows.forEach((row) => {
+    row.classList.toggle('show', debugMode);
+  });
+};
 
-  // Verificar que tenemos acceso a las funciones necesarias
-  // prettier-ignore
-  if (typeof updateMdStatus !== 'function') {
-    console.error('❌ updateMdStatus is not available!', {
-      type: typeof updateMdStatus,
-      value: updateMdStatus,
-    });
+/**
+ * Initializes clickable cells in the test table
+ *
+ * Sets up click handlers and visual indicators for cells
+ * that can show debug information.
+ *
+ * @example
+ * // Basic initialization
+ * initializeTestCells();
+ * // Initializes all eligible cells with click handlers
+ *
+ * // No table found
+ * initializeTestCells();
+ * // Logs warning: "Table not found"
+ */
+function initializeTestCells() {
+  console.group('Initializing test cells');
+  const table = document.querySelector('.test-table');
+  if (!table) {
+    console.warn('Table not found');
+    console.groupEnd();
     return;
   }
+  const cells = table.querySelectorAll(
+    'tbody tr:not(.test-group):not(.debug-info) td:first-child'
+  );
+  console.log(`Found ${cells.length} clickable cells`);
+  cells.forEach((cell, index) => {
+    cell.style.cursor = 'pointer';
+    cell.onclick = handleCellClick;
+    console.log(`Cell ${index} initialized: ${cell.textContent.trim()}`);
+  });
+  console.groupEnd();
+}
 
-  // Configurar MutationObserver para detectar cambios en el DOM
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-        // Si se añaden nodos, verificar si la tabla está lista
-        const table = document.querySelector('.test-table');
-        if (table) {
-          console.log('📋 Table found, running updateMdStatus...');
-          try {
-            updateMdStatus();
-            console.log('✅ updateMdStatus completed successfully');
-          } catch (error) {
-            console.error('❌ Error running updateMdStatus:', error);
-          }
-        }
-      }
+/**
+ * Captures and processes markdown errors
+ *
+ * Handles markdown-related errors by capturing and formatting
+ * them for display in the UI.
+ *
+ * @param {object} error - The error object to process
+ * @param {string} [error.location] - Error location
+ * @param {string} [error.message] - Error message
+ * @param {string} [error.context] - Error context
+ * @param {string} [error.source] - Error source
+ * @param {string} [error.expected] - Expected value
+ * @param {string} [error.actual] - Actual value
+ *
+ * @example
+ * // Basic error
+ * captureMarkdownError({
+ *   message: 'Invalid markdown',
+ *   context: 'Test case'
+ * });
+ * // Processes and displays error
+ *
+ * // Detailed error
+ * captureMarkdownError({
+ *   location: 'file.md',
+ *   message: 'Syntax error',
+ *   context: 'Parsing',
+ *   source: '# Invalid',
+ *   expected: '# Valid',
+ *   actual: '# Invalid'
+ * });
+ * // Processes and displays detailed error
+ */
+function captureMarkdownError(error) {
+  if (typeof window.addMarkdownError === 'function') {
+    window.addMarkdownError({
+      location: error.location || window.location.href,
+      message: error.message || 'Unknown markdown error',
+      context: error.context || document.title,
+      source: error.source,
+      expected: error.expected,
+      actual: error.actual,
     });
-  });
-
-  // Observar cambios en el body
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
-
-  // Ejecutar updateMdStatus inmediatamente
-  console.log('📋 Running initial updateMdStatus...');
-  try {
-    updateMdStatus();
-    console.log('✅ Initial updateMdStatus completed successfully');
-  } catch (error) {
-    console.error('❌ Error running initial updateMdStatus:', error);
   }
 }
 
-// Asegurarnos de que el script se ejecuta en el momento correcto
-if (document.readyState === 'loading') {
-  console.log('🔄 Document still loading, waiting for DOMContentLoaded...');
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log('🔄 DOMContentLoaded fired, initializing...');
-    init();
-  });
-} else {
-  console.log('🔄 Document already loaded, initializing immediately...');
-  init();
-}
+// Initialize event listeners
+document.addEventListener('DOMContentLoaded', function () {
+  console.log('🔄 DOMContentLoaded fired');
+  try {
+    const generatedAt = document.querySelector(
+      'meta[name="generated-at"]'
+    ).content;
+    console.log(
+      '📅 Test report generated at:',
+      new Date(generatedAt).toLocaleString()
+    );
+    updateMdStatus();
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const errorElements = node.querySelectorAll(
+                '.missing-value, .error-value, [data-markdown-error]'
+              );
+              errorElements.forEach((errorElement) => {
+                captureMarkdownError({
+                  location: errorElement.getAttribute('data-location'),
+                  message: errorElement.textContent,
+                  context: errorElement.getAttribute('data-context'),
+                  source: errorElement.getAttribute('data-source'),
+                  expected: errorElement.getAttribute('data-expected'),
+                  actual: errorElement.getAttribute('data-actual'),
+                });
+              });
+            }
+          });
+        }
+      });
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  } catch (error) {
+    console.error('❌ Error in DOMContentLoaded:', error);
+  }
+});
+
+window.addEventListener('error', (event) => {
+  if (event.error && event.error.name === 'MarkdownError') {
+    captureMarkdownError(event.error);
+  }
+});

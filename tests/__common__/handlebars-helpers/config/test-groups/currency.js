@@ -36,7 +36,7 @@ const CURRENCY_TESTS = [
     name: 'formatCurrency(1000, "USD")',
     source: 'Direct',
     input: 1000,
-    template: '{{{formatCurrency value currency="USD"}}}',
+    template: '{{{formatCurrency value currency="USD" useCode=false}}}',
     context: { value: 1000 },
     expected:
       '<span class="imported-value" data-field="currency">$1,000.00</span>',
@@ -54,7 +54,7 @@ const CURRENCY_TESTS = [
     name: 'formatCurrency(1000, "GBP")',
     source: 'Direct',
     input: 1000,
-    template: '{{{formatCurrency value currency="GBP"}}}',
+    template: '{{{formatCurrency value currency="GBP" useCode=false}}}',
     context: { value: 1000 },
     expected:
       '<span class="imported-value" data-field="currency">£1,000.00</span>',
