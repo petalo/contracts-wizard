@@ -11,7 +11,7 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { formatDebugInfo } = require('./html-utils');
+const { formatDebugInfo, generateTableRows } = require('./html-utils');
 
 /**
  * Read external resources (CSS/JS)
@@ -33,50 +33,6 @@ async function loadResources() {
 }
 
 /**
- * Generate HTML table rows for test results
- * @param {string} groupName - Name of the test group
- * @param {object[]} tests - Array of test results
- * @returns {string} HTML table rows
- */
-function generateTableRows(groupName, tests) {
-  let rows = `<tr class="test-group">
-<td colspan="8">${groupName}</td>
-</tr>
-`;
-
-  for (const test of tests) {
-    const statusCode = test.result.passed ? '✅ PASS' : '❌ FAIL';
-    const statusCodeClass = test.result.passed ? 'status-pass' : 'status-fail';
-
-    rows += `<tr>
-<td>${test.name}</td>
-<td>${test.source}</td>
-<td><code>${test.input}</code></td>
-<td><code>${test.expected}</code></td>
-<td><code>${test.result.actual}</code></td>
-<td>${test.template}</td>
-<td class="${statusCodeClass}">${statusCode}</td>
-<td class="status-pending">⏳ PENDING</td>
-</tr>
-`;
-
-    // Add debug info if test failed
-    if (!test.result.passed) {
-      rows += `<tr>
-<td colspan="8">
-<div class="debug-info">
-${formatDebugInfo(test.result.debug)}
-</div>
-</td>
-</tr>
-`;
-    }
-  }
-
-  return rows;
-}
-
-/**
  * Generate complete HTML report
  * @param {object} testResults - Test results by group
  * @param {object} resources - CSS and JS content
@@ -90,6 +46,8 @@ function generateReport(testResults, resources) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Test Results</title>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <style>${resources.css}</style>
 </head>
 <body>
@@ -98,7 +56,7 @@ function generateReport(testResults, resources) {
       <button class="toggle-debug" onclick="toggleDebug()">🔍 Show Debug Info</button>
     </div>
 
-    <table class="test-table">
+    <table class="test-table table" id="resultsTable">
       <thead>
         <tr>
           <th>Test Case</th>
@@ -123,7 +81,29 @@ function generateReport(testResults, resources) {
     </table>
   </div>
 
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
   <script>
+    // Initialize DataTables
+    $(document).ready(function() {
+      window.resultsTable = $('#resultsTable').DataTable({
+        pageLength: 50,
+        order: [[0, 'asc']],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+             '<"row"<"col-sm-12"tr>>' +
+             '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        language: {
+          search: "🔍 Filter:",
+          lengthMenu: "Show _MENU_ tests per page",
+          info: "Showing _START_ to _END_ of _TOTAL_ tests",
+          infoEmpty: "No tests found",
+          infoFiltered: "(filtered from _MAX_ total tests)",
+          zeroRecords: "No matching tests found"
+        }
+      });
+    });
+
     // Ensure functions are available in window scope
     window.updateMdStatus = ${resources.js.match(/function updateMdStatus\(\) \{[\s\S]*?\}/)[0]};
     window.toggleDebug = ${resources.js.match(/function toggleDebug\(\) \{[\s\S]*?\}/)[0]};

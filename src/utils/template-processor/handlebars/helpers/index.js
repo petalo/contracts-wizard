@@ -692,7 +692,7 @@ logger.debug('Registering custom helpers', {
   operation: 'init',
   technical: {
     phase: 'custom-registration',
-    helpers: ['formatEmail', 'and', 'not', 'formatNumber'],
+    helpers: ['formatEmail', 'and', 'not', 'formatNumber', 'formatCurrency'],
   },
 });
 
@@ -701,6 +701,7 @@ handlebars.registerHelper('formatEmail', formatEmail);
 handlebars.registerHelper('and', and);
 handlebars.registerHelper('not', not);
 handlebars.registerHelper('formatNumber', formatNumber);
+handlebars.registerHelper('formatCurrency', formatCurrency);
 
 // Export all helpers for testing and direct use
 module.exports = {

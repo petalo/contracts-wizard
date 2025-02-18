@@ -71,6 +71,44 @@ function handleCellClick(event) {
     const isShowing = debugRow.classList.contains('show');
     debugRow.classList.toggle('show');
     cell.dataset.showing = !isShowing;
+
+    // Highlight differences in raw values
+    if (!isShowing) {
+      const debugContent = debugRow.querySelector('.debug-section-content');
+      const expectedRaw = debugContent.querySelector('.value.raw.expected');
+      const actualRaw = debugContent.querySelector('.value.raw.actual');
+
+      if (expectedRaw && actualRaw) {
+        const expectedText = expectedRaw.textContent;
+        const actualText = actualRaw.textContent;
+
+        if (expectedText !== actualText) {
+          let i = 0;
+          while (
+            i < expectedText.length &&
+            i < actualText.length &&
+            expectedText[i] === actualText[i]
+          ) {
+            i++;
+          }
+
+          if (i < expectedText.length || i < actualText.length) {
+            const expectedHighlight = document.createElement('span');
+            expectedHighlight.className = 'mismatch';
+            expectedHighlight.textContent = expectedText.slice(i);
+            expectedRaw.textContent = expectedText.slice(0, i);
+            expectedRaw.appendChild(expectedHighlight);
+
+            const actualHighlight = document.createElement('span');
+            actualHighlight.className = 'mismatch';
+            actualHighlight.textContent = actualText.slice(i);
+            actualRaw.textContent = actualText.slice(0, i);
+            actualRaw.appendChild(actualHighlight);
+          }
+        }
+      }
+    }
+
     console.log(`Debug row ${isShowing ? 'hidden' : 'shown'}`);
   }
 }

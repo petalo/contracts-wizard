@@ -4,33 +4,70 @@
   margin: 0.5rem;
   font-size: 13px;
   position: relative;
+  padding-top: 48px;
 }
+
 .test-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin-bottom: 0.5rem;
-  table-layout: auto;
+  table-layout: fixed;
 }
+
 .test-table th,
 .test-table td {
-  padding: 0.25rem 0.5rem;
+  padding: 0.5rem;
   border: 1px solid #dee2e6;
   text-align: left;
   vertical-align: top;
   line-height: 1.2;
+  background-color: white;
 }
-.test-table th:first-child {
-  min-width: 200px;
-}
+
 .test-table th {
   background-color: #f8f9fa;
   font-weight: 600;
   position: sticky;
-  top: 0;
-  z-index: 1;
+  top: 48px;
+  z-index: 1001;
   font-size: 12px;
   white-space: nowrap;
 }
+
+/* Column widths */
+.test-table th:nth-child(1),
+.test-table td:nth-child(1) {
+  width: 20%;
+}
+
+.test-table th:nth-child(2),
+.test-table td:nth-child(2) {
+  width: 5%;
+}
+
+.test-table th:nth-child(3),
+.test-table td:nth-child(3) {
+  width: 12%;
+}
+
+.test-table th:nth-child(4),
+.test-table td:nth-child(4),
+.test-table th:nth-child(5),
+.test-table td:nth-child(5),
+.test-table th:nth-child(6),
+.test-table td:nth-child(6) {
+  width: 17%;
+}
+
+.test-table th:nth-child(7),
+.test-table th:nth-child(8),
+.test-table td:nth-child(7),
+.test-table td:nth-child(8) {
+  width: 6%;
+  text-align: center;
+}
+
 .test-group {
   background-color: #e9ecef;
   font-weight: 600;
@@ -39,6 +76,15 @@
   z-index: 1;
   font-size: 12px;
 }
+
+.test-group td {
+  background-color: #e9ecef !important;
+  font-weight: 600 !important;
+  padding: 0.5rem !important;
+  text-align: left !important;
+  border: 1px solid #dee2e6 !important;
+}
+
 .status-pass {
   color: #28a745;
   font-weight: 500;
@@ -87,20 +133,83 @@
   font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
   font-size: 11px;
   line-height: 1.4;
-  white-space: pre-wrap;
-  word-break: break-all;
 }
-.debug-section-content code {
-  display: block;
-  padding: 0.5rem;
+.code {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
   background: #f8f9fa;
   border-radius: 2px;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.2;
 }
 .debug-section-content .label {
   display: inline-block;
-  min-width: 100px;
+  min-width: 120px;
   color: #495057;
   font-weight: 500;
+  text-align: right;
+  vertical-align: text-bottom;
+  padding: 0.25rem 0.5rem;
+}
+.debug-section-content .value {
+  display: block;
+  background: #f8f9fa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  line-height: 1.2;
+  min-height: 0;
+  height: fit-content;
+}
+.debug-section-content .value.expected,
+.debug-section-content .value.actual {
+  border-left-width: 3px;
+  border-left-style: solid;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+}
+.debug-section-content .value.expected {
+  border-left-color: transparent;
+}
+.debug-section-content .value.actual {
+  border-left-color: #dc3545;
+}
+.debug-section-content .value.raw {
+  font-family: monospace;
+  background: #e9ecef;
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+  margin-top: 0.25rem;
+}
+.debug-section-content .type {
+  color: #6c757d;
+  font-size: 0.9em;
+  margin-left: 0.5rem;
+  display: inline;
+  vertical-align: text-top;
+}
+.debug-section-content .delimiter {
+  color: #6c757d;
+  font-weight: bold;
+  padding: 0 0.25rem;
+}
+.debug-section-content .comparison {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: start;
+  margin: 0.25rem 0;
+}
+.debug-section-content .comparison .value {
+  display: block;
+  background: #f8f9fa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  line-height: 1.2;
+  min-height: 0;
+  height: fit-content;
 }
 .char-comparison {
   display: grid;
@@ -124,6 +233,12 @@
   border-radius: 2px;
   padding: 0 2px;
 }
+.char-code {
+  color: #6c757d;
+  font-size: 0.9em;
+  opacity: 0.5;
+  font-family: inherit;
+}
 /* Manejo específico de valores importados dentro de debug info */
 .debug-details code .imported-value,
 .debug-details code .missing-value {
@@ -145,12 +260,13 @@
   display: table-row;
 }
 .controls {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 1000;
+  left: 0;
+  right: 0;
+  z-index: 1001;
   background: white;
   padding: 0.5rem;
-  margin: -0.5rem -0.5rem 0.5rem -0.5rem;
   border-bottom: 1px solid #dee2e6;
   display: flex;
   gap: 0.5rem;
@@ -298,6 +414,25 @@
   display: inline-block !important;
   vertical-align: baseline !important;
 }
+/* Estilos para valores que pasan o fallan */
+.value-pass {
+  border: 1px solid #28a745 !important;
+  border-radius: 2px !important;
+  padding: 0 2px !important;
+  background-color: #f8fff9 !important;
+  color: #28a745 !important;
+  display: inline-block !important;
+  vertical-align: baseline !important;
+}
+.value-fail {
+  border: 1px solid #dc3545 !important;
+  border-radius: 2px !important;
+  padding: 0 2px !important;
+  background-color: #fff5f5 !important;
+  color: #dc3545 !important;
+  display: inline-block !important;
+  vertical-align: baseline !important;
+}
 /* Estilos para la primera celda y la lupa */
 div.test-report > table.test-table > tbody > tr > td:first-child {
   position: relative !important;
@@ -337,4 +472,33 @@ div.test-report > table.test-table > tbody > tr.debug-info {
 }
 div.test-report > table.test-table > tbody > tr.debug-info.show {
   display: table-row !important;
+}
+
+.test-table thead {
+  position: sticky;
+  top: 48px; /* Altura del control panel */
+  z-index: 1000;
+  background: white;
+}
+
+.test-table thead th {
+  position: sticky;
+  top: 48px;
+  background-color: #f8f9fa;
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  padding: 0.5rem;
+  text-align: left;
+  border: 1px solid #dee2e6;
+  z-index: 1000;
+}
+
+.test-table tbody {
+  margin-top: 0;
+}
+
+/* Asegurar que el contenido de la tabla no se solape con los headers fijos */
+.test-table tbody tr:first-child td {
+  padding-top: 0.5rem;
 }

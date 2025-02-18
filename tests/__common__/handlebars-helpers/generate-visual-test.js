@@ -23,6 +23,11 @@ const os = require('os');
 const Papa = require('papaparse');
 const { execSync } = require('child_process');
 const { TEST_GROUPS } = require('./config/test-groups/index.js');
+const {
+  generateTableRows,
+  compareValues,
+  escapeHtml,
+} = require('./lib/html-utils');
 
 // Import the main handlebars configuration and helpers
 const handlebars = require('handlebars');
@@ -267,50 +272,21 @@ function generateMarkdownFile() {
   mdContent += '</thead>\n';
   mdContent += '<tbody>\n';
 
-  // Log TEST_GROUPS content
-  console.log('TEST_GROUPS before processing:', {
-    groups: Object.keys(TEST_GROUPS),
-    currencyTests: TEST_GROUPS['Currency Formatting']?.length || 0,
-    currencyTestNames:
-      TEST_GROUPS['Currency Formatting']?.map((test) => test.name) || [],
-  });
-
   // Add test groups
   Object.entries(TEST_GROUPS).forEach(([groupName, tests]) => {
-    // Add group header
-    mdContent += '<tr class="test-group">\n';
-    mdContent += `<td colspan="8">${groupName}</td>\n`;
-    mdContent += '</tr>\n';
-
-    // Add test cases
-    tests.forEach((test) => {
-      console.log(test);
-      mdContent += '<tr>\n';
-      mdContent += `<td>${test.name}</td>\n`;
-      mdContent += `<td>${test.source || 'Direct'}</td>\n`;
-      mdContent += `<td><code>${JSON.stringify(test.input)}</code></td>\n`;
-      mdContent += `<td><code>${test.expected.replace(/<span[^>]*>/g, '').replace(/<\/span>/g, '')}</code></td>\n`;
-      mdContent += `<td><code>${test.expected}</code></td>\n`;
-      const handlebars = require('handlebars');
+    // Process each test to add results
+    const testsWithResults = tests.map((test) => {
       const template = handlebars.compile(test.template);
-      const result = template(test.context);
-      mdContent += `<td>${result}</td>\n`;
-      mdContent += '<td class="status-pass">✅ PASS</td>\n';
-      mdContent += '<td class="status-pending">⏳ PENDING</td>\n';
-      mdContent += '</tr>\n';
-      // Add debug row
-      mdContent += '<tr class="debug-info">\n';
-      mdContent += '<td colspan="8">\n';
-      mdContent += '<div class="debug-details">\n';
-      mdContent += `<span><strong>Template:</strong> <code>${test.template}</code></span>\n`;
-      mdContent += `<span><strong>Context:</strong> <code>${JSON.stringify(test.context, null, 2)}</code></span>\n`;
-      if (test.source === 'CSV') {
-        mdContent += `<span><strong>CSV Key:</strong> <code>${test.input}</code></span>\n`;
-      }
-      mdContent += '</div>\n';
-      mdContent += '</td>\n';
-      mdContent += '</tr>\n';
+      return {
+        ...test,
+        result: {
+          actual: template(test.context),
+        },
+      };
     });
+
+    // Generate rows using our detailed row generator
+    mdContent += generateTableRows(groupName, testsWithResults);
   });
 
   mdContent += '</tbody>\n';
