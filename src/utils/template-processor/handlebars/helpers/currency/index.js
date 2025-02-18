@@ -148,6 +148,9 @@ function formatCurrency(value, options = {}) {
     let number = value;
 
     if (typeof number === 'string') {
+      // Remove currency symbols and spaces first
+      number = number.replace(/[$€£]/g, '').trim();
+
       // Try to detect the format and parse accordingly
       if (number.includes(',') && number.includes('.')) {
         // Format like 1.234,56 (Spanish)
@@ -195,7 +198,9 @@ function formatCurrency(value, options = {}) {
     const formatter = new Intl.NumberFormat(config.locale, {
       style: 'decimal',
       minimumFractionDigits:
-        options.minDecimals ?? config.format.minimumFractionDigits,
+        options.maxDecimals === 0
+          ? 0
+          : (options.minDecimals ?? config.format.minimumFractionDigits),
       maximumFractionDigits:
         options.maxDecimals ?? config.format.maximumFractionDigits,
       useGrouping: true,

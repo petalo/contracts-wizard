@@ -59,6 +59,177 @@ const {
 
 const handlebars = require('handlebars');
 
+describe('Currency Formatting', () => {
+  describe('EUR formatting', () => {
+    it('formats basic EUR amount', () => {
+      const result = formatCurrency(1000, {
+        currency: 'EUR',
+        raw: true,
+      });
+      expect(result).toBe('1.000,00 €');
+    });
+
+    it('formats EUR with decimals', () => {
+      const result = formatCurrency(1234.56, {
+        currency: 'EUR',
+        raw: true,
+      });
+      expect(result).toBe('1.234,56 €');
+    });
+
+    it('formats negative EUR', () => {
+      const result = formatCurrency(-1234.56, {
+        currency: 'EUR',
+        raw: true,
+      });
+      expect(result).toBe('-1.234,56 €');
+    });
+  });
+
+  describe('USD formatting', () => {
+    it('formats basic USD amount', () => {
+      const result = formatCurrency(1000, {
+        currency: 'USD',
+        raw: true,
+      });
+      expect(result).toBe('$1,000.00');
+    });
+
+    it('formats USD with decimals', () => {
+      const result = formatCurrency(1234.56, {
+        currency: 'USD',
+        raw: true,
+      });
+      expect(result).toBe('$1,234.56');
+    });
+
+    it('formats negative USD', () => {
+      const result = formatCurrency(-1234.56, {
+        currency: 'USD',
+        raw: true,
+      });
+      expect(result).toBe('-$1,234.56');
+    });
+
+    it('formats USD with no decimals', () => {
+      const result = formatCurrency(1000.5, {
+        currency: 'USD',
+        maxDecimals: 0,
+        raw: true,
+      });
+      expect(result).toBe('$1,001');
+    });
+  });
+
+  describe('GBP formatting', () => {
+    it('formats basic GBP amount', () => {
+      const result = formatCurrency(1000, {
+        currency: 'GBP',
+        raw: true,
+      });
+      expect(result).toBe('£1,000.00');
+    });
+
+    it('formats GBP with decimals', () => {
+      const result = formatCurrency(1234.56, {
+        currency: 'GBP',
+        raw: true,
+      });
+      expect(result).toBe('£1,234.56');
+    });
+
+    it('formats negative GBP', () => {
+      const result = formatCurrency(-1234.56, {
+        currency: 'GBP',
+        raw: true,
+      });
+      expect(result).toBe('-£1,234.56');
+    });
+  });
+
+  describe('Other currencies', () => {
+    it('formats JPY', () => {
+      const result = formatCurrency(1234, {
+        currency: 'JPY',
+        raw: true,
+      });
+      expect(result).toBe('1,234.00 JPY');
+    });
+
+    it('formats CHF', () => {
+      const result = formatCurrency(1234.56, {
+        currency: 'CHF',
+        raw: true,
+      });
+      expect(result).toBe('1,234.56 CHF');
+    });
+
+    it('formats CNY', () => {
+      const result = formatCurrency(1234.56, {
+        currency: 'CNY',
+        raw: true,
+      });
+      expect(result).toBe('1,234.56 CNY');
+    });
+  });
+
+  describe('Special formats', () => {
+    it('formats Spanish format input to USD', () => {
+      const result = formatCurrency('1.234,56', {
+        currency: 'USD',
+        raw: true,
+      });
+      expect(result).toBe('$1,234.56');
+    });
+
+    it('formats English format input to EUR', () => {
+      const result = formatCurrency('1,234.56', {
+        currency: 'EUR',
+        raw: true,
+      });
+      expect(result).toBe('1.234,56 €');
+    });
+
+    it('formats three decimals', () => {
+      const result = formatCurrency(1234.567, {
+        currency: 'EUR',
+        minDecimals: 3,
+        maxDecimals: 3,
+        raw: true,
+      });
+      expect(result).toBe('1.234,567 €');
+    });
+  });
+
+  describe('Object inputs', () => {
+    it('formats object with amount and currency', () => {
+      const result = formatCurrency(
+        {
+          amount: 1000,
+          currency: 'EUR',
+        },
+        {
+          raw: true,
+        }
+      );
+      expect(result).toBe('1.000,00 €');
+    });
+
+    it('formats object with value', () => {
+      const result = formatCurrency(
+        {
+          value: 1000,
+        },
+        {
+          currency: 'EUR',
+          raw: true,
+        }
+      );
+      expect(result).toBe('1.000,00 €');
+    });
+  });
+});
+
 describe('Currency Helpers', () => {
   describe('formatCurrency', () => {
     test('formats number with default currency (EUR)', () => {
