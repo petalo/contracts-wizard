@@ -71,6 +71,7 @@ const {
 const { PATHS } = require('@/config/paths');
 const { FILE_EXTENSIONS } = require('@/config/file-extensions');
 const { ENCODING_CONFIG } = require('@/config/encoding');
+const { AppError } = require('@/utils/common/errors');
 
 /**
  * Generates CSV structure from template fields
@@ -166,53 +167,296 @@ function formatCsvContent(csvStructure) {
 /**
  * Generates a CSV template file from a markdown template
  *
- * Processes template through:
- * 1. Template validation
- * 2. Field extraction
- * 3. Structure generation
- * 4. Content formatting
- * 5. File naming
- * 6. Output writing
- *
- * Creates a CSV file with:
- * - Standard headers
- * - One row per template field
- * - Empty value placeholders
- * - Field descriptions
- *
  * @param {string} templatePath - Path to markdown template file
  * @returns {Promise<string>} Path to generated CSV file
  * @throws {AppError} On template processing failure
- *
- * @example
- * try {
- *   const csvPath = await generateCsvTemplate('templates/contract.md');
- *   console.log('CSV template generated at:', csvPath);
- * } catch (error) {
- *   console.error('Template generation failed:', error);
- * }
  */
 async function generateCsvTemplate(templatePath) {
-  logger.debug('Generating CSV template', { templatePath });
+  const correlationId = Date.now().toString(36);
+  try {
+    logger.debug('Starting CSV template generation', {
+      filename: 'csv.js',
+      context: '[template]',
+      correlationId,
+      operation: 'generate',
+      technical: {
+        function: 'generateCsvTemplate',
+        args: {
+          templatePath,
+        },
+      },
+    });
 
-  const fields = await extractTemplateFields(templatePath);
-  const csvStructure = generateCsvStructure(fields);
-  const csvContent = formatCsvContent(csvStructure);
+    // Extract fields from template
+    let fields;
+    try {
+      fields = await extractTemplateFields(templatePath);
+      if (!fields || fields.length === 0) {
+        logger.error('No fields found in template', {
+          filename: 'csv.js',
+          context: '[template]',
+          correlationId,
+          error: {
+            code: 'TEMPLATE_ERROR',
+            message: 'Template contains no extractable fields',
+            type: 'ValidationError',
+          },
+          impact: 'Cannot generate CSV template without fields',
+          data: {
+            templatePath,
+            templateContent: await fs.readFile(
+              templatePath,
+              ENCODING_CONFIG.default
+            ),
+          },
+        });
+        throw new AppError('No fields found in template', 'TEMPLATE_ERROR');
+      }
 
-  const templateName = path.basename(templatePath, FILE_EXTENSIONS.markdown[0]);
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const csvFilename = `${templateName}-${timestamp}`;
-  const outputPath = path.join(
-    PATHS.csv,
-    `${csvFilename}${FILE_EXTENSIONS.csv[0]}`
-  );
+      logger.debug('Fields extracted successfully', {
+        filename: 'csv.js',
+        context: '[template]',
+        correlationId,
+        technical: {
+          function: 'extractTemplateFields',
+          state: {
+            fieldCount: fields.length,
+            fields,
+          },
+        },
+      });
+    } catch (error) {
+      // Propagate AppError instances directly
+      if (error instanceof AppError) {
+        logger.error('Template field extraction failed with AppError', {
+          filename: 'csv.js',
+          context: '[template]',
+          correlationId,
+          error: {
+            code: error.code,
+            message: error.message,
+            type: error.name,
+            details: error.details,
+          },
+          impact: 'Cannot proceed with CSV generation',
+          data: {
+            templatePath,
+          },
+        });
+        throw error;
+      }
+      // Wrap other errors
+      logger.error('Template field extraction failed with unexpected error', {
+        filename: 'csv.js',
+        context: '[template]',
+        correlationId,
+        error: {
+          code: 'TEMPLATE_ERROR',
+          message: error.message,
+          type: error.name,
+          stack: error.stack,
+        },
+        impact: 'Cannot proceed with CSV generation',
+        data: {
+          templatePath,
+        },
+      });
+      throw new AppError(
+        'Failed to extract template fields',
+        'TEMPLATE_ERROR',
+        {
+          originalError: error,
+          path: templatePath,
+        }
+      );
+    }
 
-  await fs.writeFile(outputPath, csvContent, ENCODING_CONFIG.default);
-  logger.debug('CSV template generated successfully', { outputPath });
+    // Generate CSV structure
+    const csvStructure = generateCsvStructure(fields);
+    const csvContent = formatCsvContent(csvStructure);
 
-  return outputPath;
+    logger.debug('CSV content generated', {
+      filename: 'csv.js',
+      context: '[template]',
+      correlationId,
+      technical: {
+        function: 'generateCsvStructure',
+        state: {
+          structureLength: csvStructure.length,
+          contentLength: csvContent.length,
+          fieldCount: fields.length,
+        },
+      },
+    });
+
+    // Generate output filename
+    const templateName = path.basename(
+      templatePath,
+      FILE_EXTENSIONS.markdown[0]
+    );
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const csvFilename = `${templateName}-${timestamp}`;
+    const outputPath = path.join(
+      PATHS.csv,
+      `${csvFilename}${FILE_EXTENSIONS.csv[0]}`
+    );
+
+    logger.debug('Output path generated', {
+      filename: 'csv.js',
+      context: '[template]',
+      correlationId,
+      technical: {
+        function: 'generateCsvTemplate',
+        state: {
+          templateName,
+          timestamp,
+          outputPath,
+        },
+      },
+    });
+
+    // Ensure output directory exists
+    try {
+      await fs.mkdir(PATHS.csv, { recursive: true });
+      logger.debug('Output directory created/verified', {
+        filename: 'csv.js',
+        context: '[file]',
+        correlationId,
+        technical: {
+          function: 'mkdir',
+          args: {
+            path: PATHS.csv,
+            recursive: true,
+          },
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to create output directory', {
+        filename: 'csv.js',
+        context: '[file]',
+        correlationId,
+        error: {
+          code: 'CSV_DIR_ERROR',
+          message: error.message,
+          type: error.name,
+          stack: error.stack,
+        },
+        impact: 'Cannot save generated CSV template',
+        data: {
+          path: PATHS.csv,
+          mode: error.code,
+        },
+        recovery: [
+          'Verify directory permissions',
+          'Check disk space',
+          'Ensure parent directories exist',
+        ],
+      });
+      throw new AppError('Failed to create output directory', 'CSV_DIR_ERROR', {
+        originalError: error,
+        path: PATHS.csv,
+      });
+    }
+
+    // Write CSV file
+    try {
+      await fs.writeFile(outputPath, csvContent, ENCODING_CONFIG.default);
+      logger.info('CSV template generated successfully', {
+        filename: 'csv.js',
+        context: '[template]',
+        correlationId,
+        operation: {
+          name: 'csv_template_generation',
+          status: 'success',
+          result: {
+            outputPath,
+            fieldCount: fields.length,
+          },
+        },
+        metrics: {
+          contentLength: csvContent.length,
+          fieldCount: fields.length,
+        },
+      });
+      return outputPath;
+    } catch (error) {
+      logger.error('Failed to write CSV file', {
+        filename: 'csv.js',
+        context: '[file]',
+        correlationId,
+        error: {
+          code: 'CSV_WRITE_ERROR',
+          message: error.message,
+          type: error.name,
+          stack: error.stack,
+        },
+        impact: 'Generated CSV template could not be saved',
+        data: {
+          path: outputPath,
+          contentLength: csvContent.length,
+          mode: error.code,
+        },
+        recovery: [
+          'Verify file permissions',
+          'Check disk space',
+          'Ensure directory is writable',
+        ],
+      });
+      throw new AppError('Failed to write CSV template', 'CSV_WRITE_ERROR', {
+        originalError: error,
+        path: outputPath,
+      });
+    }
+  } catch (error) {
+    // Log and rethrow AppError instances directly
+    if (error instanceof AppError) {
+      logger.error('CSV template generation failed with AppError', {
+        filename: 'csv.js',
+        context: '[template]',
+        correlationId,
+        error: {
+          code: error.code,
+          message: error.message,
+          type: error.name,
+          details: error.details,
+        },
+        impact: 'CSV template could not be generated',
+        data: {
+          templatePath,
+        },
+      });
+      throw error;
+    }
+
+    // Wrap other errors
+    logger.error('CSV template generation failed with unexpected error', {
+      filename: 'csv.js',
+      context: '[template]',
+      correlationId,
+      error: {
+        code: 'CSV_GENERATION_ERROR',
+        message: error.message,
+        type: error.name,
+        stack: error.stack,
+      },
+      impact: 'CSV template could not be generated',
+      data: {
+        templatePath,
+      },
+    });
+    throw new AppError(
+      'Failed to generate CSV template',
+      'CSV_GENERATION_ERROR',
+      {
+        originalError: error,
+        path: templatePath,
+      }
+    );
+  }
 }
 
 module.exports = {
   generateCsvTemplate,
+  generateCsvStructure,
+  formatCsvContent,
 };

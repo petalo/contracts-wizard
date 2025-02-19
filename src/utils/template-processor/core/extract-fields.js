@@ -49,7 +49,7 @@
  * @requires @/utils/common/logger - Logging system
  * @requires @/utils/common/errors - Error handling
  * @requires @/config/encoding - File encoding configuration
- * @exports extractFields Field extractor function
+ * @exports extractTemplateFields Field extractor function
  * @exports validateFields Field validator function
  * @exports processFields Field processor function
  *
@@ -127,32 +127,39 @@ const NODE_TYPES = {
  */
 function processNode(node, fields, prefix = '', context = {}) {
   try {
+    // List of known helpers to skip
+    const KNOWN_HELPERS = [
+      'if',
+      'unless',
+      'each',
+      'with',
+      'eq',
+      'and',
+      'not',
+      'or',
+      'gt',
+      'lt',
+      'formatDate',
+      'formatNumber',
+      'formatCurrency',
+      'now',
+      'addYears',
+    ];
+
     // Handle different node types
     switch (node.type) {
       case NODE_TYPES.MUSTACHE:
-        // Process basic {{field}} expressions
+        // Process basic {{field}} expressions and helper arguments
         if (node.path.type === NODE_TYPES.PATH && !node.path.data) {
-          // Only skip if it's a helper at the root level
-          const isHelper = [
-            'if',
-            'unless',
-            'each',
-            'with',
-            'eq',
-            'formatDate',
-            'addYears',
-            'now',
-            'emptyValue',
-          ].includes(node.path.parts[0]);
-
-          if (!isHelper) {
+          // Skip only helpers
+          if (!KNOWN_HELPERS.includes(node.path.parts[0])) {
             const fieldPath = prefix
               ? `${prefix}.${node.path.original}`
               : node.path.original;
             fields.add(fieldPath);
           }
         }
-        // Always process params regardless of helper
+        // Always process params to extract fields used in helpers
         if (node.params) {
           node.params.forEach((param) => {
             if (param.type === NODE_TYPES.PATH && !param.data) {
@@ -161,15 +168,28 @@ function processNode(node, fields, prefix = '', context = {}) {
                 : param.original;
               fields.add(fieldPath);
             } else if (param.type === NODE_TYPES.SUB_EXPRESSION) {
-              // Process subexpressions (e.g., (eq field "value"))
+              // Process subexpressions recursively
               processNode(param, fields, prefix, context);
+            }
+          });
+        }
+        // Process hash arguments (named parameters)
+        if (node.hash && node.hash.pairs) {
+          node.hash.pairs.forEach((pair) => {
+            if (pair.value.type === NODE_TYPES.PATH && !pair.value.data) {
+              const fieldPath = prefix
+                ? `${prefix}.${pair.value.original}`
+                : pair.value.original;
+              fields.add(fieldPath);
+            } else if (pair.value.type === NODE_TYPES.SUB_EXPRESSION) {
+              processNode(pair.value, fields, prefix, context);
             }
           });
         }
         break;
 
       case NODE_TYPES.SUB_EXPRESSION:
-        // Process helper arguments in subexpressions
+        // Skip helper name but process all parameters
         if (node.params) {
           node.params.forEach((param) => {
             if (param.type === NODE_TYPES.PATH && !param.data) {
@@ -179,6 +199,19 @@ function processNode(node, fields, prefix = '', context = {}) {
               fields.add(fieldPath);
             } else if (param.type === NODE_TYPES.SUB_EXPRESSION) {
               processNode(param, fields, prefix, context);
+            }
+          });
+        }
+        // Process hash arguments
+        if (node.hash && node.hash.pairs) {
+          node.hash.pairs.forEach((pair) => {
+            if (pair.value.type === NODE_TYPES.PATH && !pair.value.data) {
+              const fieldPath = prefix
+                ? `${prefix}.${pair.value.original}`
+                : pair.value.original;
+              fields.add(fieldPath);
+            } else if (pair.value.type === NODE_TYPES.SUB_EXPRESSION) {
+              processNode(pair.value, fields, prefix, context);
             }
           });
         }
@@ -304,14 +337,56 @@ async function extractTemplateFields(input) {
     // If input looks like a file path, try to read it
     if (input.includes('/') || input.includes('\\')) {
       try {
-        templateContent = await fs.readFile(input, ENCODING_CONFIG.encoding);
+        const content = await fs.readFile(input, ENCODING_CONFIG.encoding);
+        templateContent = String(content);
+        logger.debug('File read successfully', {
+          filename: 'extract-fields.js',
+          context: '[template]',
+          operation: 'read',
+          data: {
+            path: input,
+            contentLength: templateContent.length,
+          },
+        });
       } catch (error) {
         // If file read fails, assume input is a template string
         logger.debug('Input is not a file path, treating as template string', {
-          input,
-          error: error.message,
+          filename: 'extract-fields.js',
+          context: '[template]',
+          operation: 'read',
+          error: {
+            message: error.message,
+            code: error.code,
+          },
+          data: {
+            input,
+          },
         });
       }
+    }
+
+    // Ensure we have a string
+    if (typeof templateContent !== 'string') {
+      logger.error('Invalid template content type', {
+        filename: 'extract-fields.js',
+        context: '[template]',
+        operation: 'validate',
+        error: {
+          type: typeof templateContent,
+          value: templateContent,
+        },
+        data: {
+          input,
+        },
+      });
+      throw new AppError(
+        'Template content must be a string',
+        'TEMPLATE_ERROR',
+        {
+          type: typeof templateContent,
+          input,
+        }
+      );
     }
 
     // Parse template and extract fields
@@ -320,11 +395,58 @@ async function extractTemplateFields(input) {
     processNode(ast, fields);
 
     // Convert Set to sorted array
-    return Array.from(fields).sort();
+    const validFields = Array.from(fields).sort();
+
+    if (validFields.length === 0) {
+      logger.warn('No fields found in template', {
+        filename: 'extract-fields.js',
+        context: '[template]',
+        operation: 'extract',
+        data: {
+          input,
+          templateContent,
+        },
+      });
+      throw new AppError('No fields found in template', 'TEMPLATE_ERROR', {
+        input,
+        templateContent,
+      });
+    }
+
+    logger.debug('Fields extracted successfully', {
+      filename: 'extract-fields.js',
+      context: '[template]',
+      operation: 'extract',
+      data: {
+        input,
+        fieldCount: validFields.length,
+        fields: validFields,
+      },
+    });
+
+    return validFields;
   } catch (error) {
+    // If it's already a TEMPLATE_ERROR with "No fields found", just propagate it
+    if (
+      error instanceof AppError &&
+      error.message === 'No fields found in template'
+    ) {
+      throw error;
+    }
+
+    // Otherwise wrap it in a new error
     logger.error('Template field extraction failed', {
-      error,
-      input,
+      filename: 'extract-fields.js',
+      context: '[template]',
+      operation: 'extract',
+      error: {
+        message: error.message,
+        type: error.name,
+        stack: error.stack,
+      },
+      data: {
+        input,
+      },
     });
     throw new AppError('Failed to extract template fields', 'TEMPLATE_ERROR', {
       originalError: error,

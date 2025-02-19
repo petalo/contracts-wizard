@@ -112,14 +112,16 @@ describe('Field Extraction', () => {
   });
 
   test('should handle empty template', async () => {
-    const fields = await extractTemplateFields('');
-    expect(fields).toHaveLength(0);
+    await expect(extractTemplateFields('')).rejects.toThrow(
+      'No fields found in template'
+    );
   });
 
   test('should handle template without fields', async () => {
     const template = 'Hello World!';
-    const fields = await extractTemplateFields(template);
-    expect(fields).toHaveLength(0);
+    await expect(extractTemplateFields(template)).rejects.toThrow(
+      'No fields found in template'
+    );
   });
 
   test('should handle duplicate fields', async () => {
@@ -147,6 +149,55 @@ describe('Field Extraction', () => {
     expect(fields).toContain('userName');
     expect(fields).toContain('data.specialKey');
     expect(fields).toHaveLength(2);
+  });
+
+  test('should extract fields from helper expressions', async () => {
+    const template = `
+      {{formatDate contract.signing.date "FULL"}}
+      {{formatCurrency invoice.amount currency="EUR"}}
+      {{#if (eq user.type "admin")}}
+        {{user.permissions}}
+      {{/if}}
+      {{#with company.details}}
+        {{name}} ({{formatDate foundedOn "YYYY"}})
+      {{/with}}
+    `;
+    const fields = await extractTemplateFields(template);
+
+    expect(fields).toContain('contract.signing.date');
+    expect(fields).toContain('invoice.amount');
+    expect(fields).toContain('user.type');
+    expect(fields).toContain('user.permissions');
+    expect(fields).toContain('company.details');
+    expect(fields).toContain('company.details.name');
+    expect(fields).toContain('company.details.foundedOn');
+    expect(fields).toHaveLength(7);
+  });
+
+  test('should extract fields from nested helper expressions', async () => {
+    const template = `
+      {{#if (or (eq status.type "pending") (gt invoice.amount 1000))}}
+        {{formatDate payment.dueDate "FULL"}}
+      {{/if}}
+    `;
+    const fields = await extractTemplateFields(template);
+
+    expect(fields).toContain('status.type');
+    expect(fields).toContain('invoice.amount');
+    expect(fields).toContain('payment.dueDate');
+    expect(fields).toHaveLength(3);
+  });
+
+  test('should extract fields from helper hash arguments', async () => {
+    const template = `
+      {{formatNumber total precision=invoice.precision currency=user.preferences.currency}}
+    `;
+    const fields = await extractTemplateFields(template);
+
+    expect(fields).toContain('total');
+    expect(fields).toContain('invoice.precision');
+    expect(fields).toContain('user.preferences.currency');
+    expect(fields).toHaveLength(3);
   });
 
   describe('processNode', () => {

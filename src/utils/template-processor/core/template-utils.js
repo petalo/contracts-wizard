@@ -33,7 +33,6 @@
  * @requires @/utils/common/errors - Error handling
  * @requires @/config/encoding - File encoding configuration
  * @exports validateTemplate Template validator function
- * @exports extractFields Field extractor function
  * @exports formatValue Value formatter function
  *
  * @example
