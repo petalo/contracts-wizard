@@ -2,6 +2,8 @@
 
 A powerful document generation system that transforms Markdown templates and CSV data into professionally formatted contracts. Perfect for legal teams, freelancers, and businesses looking to streamline their document generation workflow.
 
+![Contracts Wizard Diagram](./documentation/images/contracts_wizard_diagram_0.png)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D%2014.0.0-brightgreen.svg)](https://nodejs.org/)
 [![ESLint](https://img.shields.io/badge/code_style-Shopify-5C6AC4)](https://github.com/Shopify/eslint-plugin-shopify)
@@ -11,16 +13,29 @@ A powerful document generation system that transforms Markdown templates and CSV
 ## Table of Contents <!-- omit in toc -->
 
 - [✨ Features](#-features)
+  - [Core Features](#core-features)
+  - [Advanced Features](#advanced-features)
 - [🚀 Quick Start](#-quick-start)
 - [📝 Example Files](#-example-files)
 - [📖 Installation](#-installation)
+  - [1. Global Installation (Recommended for users)](#1-global-installation-recommended-for-users)
+  - [2. Local Installation (For development)](#2-local-installation-for-development)
+  - [Prerequisites](#prerequisites)
+  - [System Requirements](#system-requirements)
 - [📖 Usage](#-usage)
-- [🛠 Configuration](#-configuration)
+  - [CLI Mode](#cli-mode)
+  - [Interactive Mode](#interactive-mode)
+  - [Command Line Options](#command-line-options)
+- [📚 Documentation](#-documentation)
 - [🔄 Program Flow](#-program-flow)
 - [🤝 Contributing](#-contributing)
 - [📜 License](#-license)
 - [🙏 Acknowledgments](#-acknowledgments)
 - [📦 Release Process](#-release-process)
+- [🔍 Troubleshooting](#-troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Debug Mode](#debug-mode)
+  - [File Naming](#file-naming)
 
 ## ✨ Features
 
@@ -243,450 +258,48 @@ Global options:
 | --version | Show version                               | --version |
 | --verbose | Enable verbose output (same as DEBUG=true) | --verbose |
 
-### Available Commands
-
-```bash
-# Interactive mode (default)
-contracts-wizard
-
-# Generate contract (with options)
-contracts-wizard generate -t template.md [-d data.csv] [-c style.css] [--suffix client]
-
-# List available resources
-contracts-wizard list templates  # List markdown templates
-contracts-wizard list data      # List CSV data files
-contracts-wizard list styles    # List CSS style files
-
-# Initialize new project
-contracts-wizard init my-project
-
-# Show help for specific commands
-contracts-wizard --help
-contracts-wizard generate --help
-contracts-wizard list --help
-contracts-wizard init --help
-```
-
-### Creating Templates
-
-Templates use Handlebars syntax with built-in helpers:
-
-```handlebars
-# {{title}}
-
-This agreement is made on {{formatDate now "DD/MM/YYYY"}}
-between {{client.name}} ("Client") and {{consultant.name}} ("Consultant").
-
-## 1. Services
-
-{{services}}
-
-## 2. Term
-
-From {{formatDate startDate "DD/MM/YYYY"}} to {{formatDate endDate "DD/MM/YYYY"}}
-
-## 3. Compensation
-
-{{currency compensation "EUR"}}
-
-## 4. Signatures
-
-{{#each signatures}}
-- {{name}}: _________________
-{{/each}}
-```
-
-### Data Input
-
-CSV structure with examples:
-
-```csv
-key,value,comment
-title,Consulting Agreement,Contract title
-client.name,Acme Corp,Client company name
-consultant.name,Jane Doe,Consultant full name
-services,"Web development services",Description of services
-startDate,2024-01-01,Contract start date
-endDate,2024-12-31,Contract end date
-compensation,10000,Monthly compensation
-signatures.0.name,Client Representative,
-signatures.1.name,Consultant,
-```
-
-### Handling Missing Data
-
-The wizard handles missing data with:
-
-1. Visual indicators with the name of the field inside double square brackets: `[[missing.field]]`
-2. CSS styling for missing values (see `config/highlight.css`)
-3. Validation warnings
-4. Detailed logging
-
-### Built-in Helpers
-
-The system includes several built-in Handlebars helpers to format and manipulate data:
-
-All helpers include:
-
-- Consistent error handling through configuration
-- Detailed debug logging with context
-- HTML safety with proper escaping
-- Type coercion where appropriate
-- Full Spanish locale support
-- Configurable styling and messages
-- Comprehensive error reporting
-
-#### Value Helpers
-
-Available helpers in this category:
-
-- `formatEmail`: Formats and validates email addresses with proper HTML links
-- `lookup`: Accesses nested object properties safely
-- `isEmpty`: Checks if a value is empty or undefined
-- `extractValue`: (Internal) Extracts values from different data types
-
-```handlebars
-{{! Format email addresses }}
-{{formatEmail user.email}}  {{! Formats and validates email addresses }}
-
-{{! Extract values from complex objects }}
-{{lookup object "deep.nested.property"}}
-
-{{! Handle empty values }}
-{{#if (isEmpty value)}}
-  Value is empty
-{{/if}}
-```
-
-#### Date Helpers
-
-Available helpers in this category:
-
-- `formatDate`: Formats dates with full Spanish locale support
-- `addYears`: Adds a specified number of years to a date
-- `now`: Returns the current date/time in the specified format
-
-```handlebars
-{{! Current date with Spanish locale and timezone support }}
-{{now "D [de] MMMM [de] YYYY"}}  {{! Returns: "31 de enero de 2024" }}
-{{now "YYYY-MM-DD HH:mm:ss Z"}}  {{! With timezone: "2024-01-31 15:30:00 +0100" }}
-
-{{! Format specific dates with locale support }}
-{{formatDate someDate "D [de] MMMM [de] YYYY"}}
-
-{{! Add years to a date }}
-{{addYears someDate 5}}
-
-{{! Chain operations }}
-{{formatDate (addYears now 1) "D [de] MMMM [de] YYYY"}}
-
-{{! Predefined formats }}
-{{formatDate date "DEFAULT"}}  {{! D [de] MMMM [de] YYYY }}
-{{formatDate date "ISO"}}      {{! YYYY-MM-DD }}
-{{formatDate date "FULL"}}     {{! D [de] MMMM [de] YYYY }}
-{{formatDate date "SHORT"}}    {{! DD/MM/YYYY }}
-{{formatDate date "TIME"}}     {{! HH:mm:ss }}
-```
-
-#### Number Formatting
-
-Available helpers in this category:
-
-- `formatNumber`: Formats numbers according to Spanish locale
-- `formatCurrency`: Formats monetary values with currency symbols
-- `currencySymbol`: Returns the symbol for a given currency code
-
-```handlebars
-{{! Basic number formatting - Spanish locale }}
-{{formatNumber 1234.56}}  {{! -> "1.234,56" }}
-
-{{! Currency formatting with symbol }}
-{{formatNumber value style="currency" currency="EUR"}}  {{! -> "1.234,56 €" }}
-{{currencySymbol "EUR"}}  {{! -> "€" }}
-
-{{! Percentage formatting }}
-{{formatNumber 0.1234 style="percent"}}  {{! -> "12,34 %" }}
-
-{{! Custom decimal places }}
-{{formatNumber value minimumFractionDigits=2 maximumFractionDigits=4}}
-
-{{! Grouping options }}
-{{formatNumber value useGrouping=true}}  {{! -> "1.234.567,89" }}
-{{formatNumber value useGrouping=false}} {{! -> "1234567,89" }}
-```
-
-#### Logic Helpers
-
-Available helpers in this category:
-
-- `eq`: Compares values with type coercion for equality
-- `and`: Performs logical AND operation on multiple values
-- `not`: Performs logical NOT operation on a value
-
-```handlebars
-{{! Equality comparison with type coercion }}
-{{#if (eq value1 value2)}}
-  Values are equal
-{{/if}}
-
-{{! Logical AND operation }}
-{{#if (and condition1 condition2)}}
-  Both conditions are true
-{{/if}}
-
-{{! Logical NOT operation }}
-{{#if (not condition)}}
-  Condition is false
-{{/if}}
-```
-
-#### Context Management
-
-Available helpers in this category:
-
-- `with`: Changes the context for a block of template
-- `each`: Iterates over arrays and objects
-- `log`: Outputs debug information to the console
-
-```handlebars
-{{! Using with for context changes }}
-{{#with user}}
-  Name: {{name}}
-  Email: {{email}}
-  {{#with address}}
-    Street: {{street}}
-    City: {{city}}
-  {{/with}}
-{{/with}}
-
-{{! Accessing parent context }}
-{{#with user}}
-  {{name}} works at {{../company.name}}
-{{/with}}
-```
-
-#### Error Handling
-
-All helpers include consistent error handling:
-
-```handlebars
-{{! Missing values }}
-{{formatDate invalid_date "SHORT"}}
-{{! -> <span class="missing-value" data-field="date">[[Invalid date]]</span> }}
-
-{{! Invalid operations }}
-{{formatNumber "not-a-number"}}
-{{! -> <span class="missing-value" data-field="number">[[Invalid number]]</span> }}
-
-{{! Empty values }}
-{{#if (eq undefined_value "test")}}
-  {{! -> <span class="missing-value" data-field="undefined_value">(Empty value)</span> }}
-{{/if}}
-```
-
-#### Helper Configuration
-
-All helpers can be configured through `HANDLEBARS_CONFIG`:
-
-```javascript
-const HANDLEBARS_CONFIG = {
-  emptyValue: {
-    class: 'missing-value',
-    importedClass: 'imported-value',
-    template: '<span class="{class}" data-field="{key}">{value}</span>'
-  },
-  errorMessages: {
-    invalidDate: '[[Invalid date]]',
-    invalidEmail: '[[Invalid email]]',
-    invalidNumber: '[[Invalid number]]',
-    missingValue: '(Empty value)',
-    processingError: '[Error processing {type}]'
-  },
-  dateFormats: {
-    DEFAULT: 'D [de] MMMM [de] YYYY',
-    ISO: 'YYYY-MM-DD',
-    FULL: 'D [de] MMMM [de] YYYY',
-    SHORT: 'DD/MM/YYYY',
-    TIME: 'HH:mm:ss'
-  },
-  locale: 'es-ES',
-  timezone: 'Europe/Madrid'
-};
-```
-
-## 🛠 Configuration
-
-### Project Structure
-
-```text
-contracts-wizard/
-├── bin/              # CLI executable
-├── src/              # Source code
-│   ├── cli/          # CLI implementation
-│   ├── config/       # Configuration files
-│   ├── core/         # Core processing logic
-│   └── utils/        # Utility functions
-├── templates/        # Working template files
-│   ├── markdown/     # Markdown templates
-│   └── css/          # CSS styles
-├── examples/         # Example files (reference only)
-│   ├── markdown/     # Example templates
-│   ├── css/          # Example styles
-│   └── csv/          # Example data files
-├── data-csv/         # Working CSV files
-├── output_files/     # Generated contracts
-├── logs/             # Application logs
-├── scripts/          # Helper scripts
-├── tests/            # Test files
-├── docs/             # Documentation
-└── package.json
-```
-
-### Environment Variables
-
-The application uses environment variables for configuration. Create a `.env` file based on `.env.example`.
-
-| Variable                 | Description                      | Default Value      | Options                     |
-| ------------------------ | -------------------------------- | ------------------ | --------------------------- |
-| NODE_ENV                 | Application environment          | development        | development/production/test |
-| DEBUG                    | Enable console output            | false              | true/false                  |
-| LOG_LEVEL                | File logging verbosity level     | info               | error/warn/info/debug       |
-| LOG_DIR                  | Directory for log files          | logs               |                             |
-| LOG_MAX_SIZE             | Maximum size before log rotation | 10MB               |                             |
-| LOG_MAX_FILES            | Number of log files to keep      | 7                  |                             |
-| TIMEZONE                 | Default timezone                 | UTC                |                             |
-| LANGUAGE                 | Default language                 | en-US              |                             |
-| DIR_OUTPUT               | Output directory for files       | output_files       |                             |
-| DIR_TEMPLATES            | Templates directory              | templates/markdown |                             |
-| DIR_CSS                  | CSS styles directory             | templates/css      |                             |
-| DIR_IMAGES               | Images directory                 | templates/images   |                             |
-| DIR_CSV                  | CSV data directory               | data-csv           |                             |
-| DIR_REPORTS              | Reports directory                | reports            |                             |
-| DIR_COVERAGE             | Test coverage directory          | coverage           |                             |
-| DIR_TEST_LOGS            | Test logs directory              | tests-logs         |                             |
-| DIR_TEST_OUTPUT          | Test output directory            | tests-output       |                             |
-| CACHE_ENABLED            | Enable/disable caching           | true               |                             |
-| CACHE_TTL                | Cache time-to-live (seconds)     | 1800               |                             |
-| MAX_CONCURRENT_PROCESSES | Max concurrent processes         | 2                  |                             |
-| RATE_LIMIT_WINDOW        | Rate limiting window (minutes)   | 15                 |                             |
-| RATE_LIMIT_MAX_REQUESTS  | Max requests per window          | 50                 |                             |
-| SESSION_TIMEOUT          | Session timeout (minutes)        | 15                 |                             |
-
-### Configuration Files
-
-All configuration files are located in `src/config/`. Here are the key files you can edit to customize the behavior:
-
-| File                | Description                        | Key Settings                          |
-| ------------------- | ---------------------------------- | ------------------------------------- |
-| `aliases.js`        | Module path aliases                | Import path shortcuts                 |
-| `appMetadata.js`    | Application information            | Version, author, repository           |
-| `assets.js`         | Static assets configuration        | Images, fonts, resource paths         |
-| `cheerioRules.js`   | HTML transformation rules          | List formatting, table responsiveness |
-| `encoding.js`       | Character encoding settings        | Input/output file encodings           |
-| `fileExtensions.js` | Allowed file extensions            | Template, data, and style extensions  |
-| `htmlOptions.js`    | HTML output configuration          | Document structure, meta tags         |
-| `locale.js`         | Localization settings              | Date formats, timezone, language      |
-| `paths.js`          | Directory structure and file paths | Output, templates, and data paths     |
-| `pdfOptions.js`     | PDF generation settings            | Page format, margins, headers         |
-| `version.js`        | Version information                | Application version number            |
-
-Example configurations:
-
-#### Locale Settings (`locale.js`)
-
-```javascript
-module.exports = {
-  defaultLocale: 'es-ES',
-  defaultTimezone: 'Europe/Madrid',
-  dateFormat: 'DD/MM/YYYY',
-  currencyFormat: '0,0.00'
-};
-```
-
-#### PDF Options (`pdfOptions.js`)
-
-```javascript
-module.exports = {
-  format: 'A4',
-  margin: { 
-    top: '1cm', 
-    right: '1cm', 
-    bottom: '1cm', 
-    left: '1cm' 
-  },
-  displayHeaderFooter: true,
-  headerTemplate: customHeader,
-  footerTemplate: customFooter,
-  printBackground: true,
-  preferCSSPageSize: true, // Respect CSS page size and margins
-  tagged: true,            // Enable PDF tagging for better accessibility
-  outline: true           // Generate document outline with internal links
-};
-```
-
-The PDF generation includes several features for internal navigation:
-
-- Table of contents entries are automatically converted to clickable links
-- Links navigate directly to their corresponding sections in the PDF
-- Document outline is generated for easy navigation
-- PDF tagging improves accessibility and document structure
-
-#### HTML Options (`htmlOptions.js`)
-
-```javascript
-module.exports = {
-  doctype: 'html',
-  language: 'en',
-  meta: {
-    charset: 'UTF-8',
-    viewport: 'width=device-width, initial-scale=1.0'
-  },
-  minify: process.env.NODE_ENV === 'production'
-};
-```
-
-#### File Extensions (`fileExtensions.js`)
-
-```javascript
-module.exports = {
-  types: {
-    markdown: 'markdown',
-    csv: 'csv',
-    css: 'css'
-  },
-  markdown: ['.md', '.markdown'],
-  csv: ['.csv'],
-  css: ['.css']
-};
-```
-
-For more detailed configuration options, check the corresponding files in `src/config/`.
+## 📚 Documentation
+
+The project includes several documentation files:
+
+- [HANDLEBARS.md](documentation/HANDLEBARS.md) - Comprehensive guide to all available Handlebars helpers
+- [CONTRACTS_GENERATION.md](documentation/CONTRACTS_GENERATION.md) - Best practices and tips for contract generation
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Guidelines for contributing to the project
+- [LICENSE](LICENSE) - MIT license details
+
+## 🔄 Program Flow
+
+1. **Template Processing**
+   - Load Markdown template
+   - Parse Handlebars syntax
+   - Apply data from CSV
+
+2. **Data Management**
+   - Load CSV data
+   - Validate required fields
+   - Handle missing values
+
+3. **Style Application**
+   - Apply CSS styling
+   - Handle responsive design
+   - Format tables and lists
+
+4. **Output Generation**
+   - Generate HTML output
+   - Create PDF version
+   - Save to output directory
 
 ## 🤝 Contributing
 
-We love your input! We want to make contributing to Contracts Wizard as easy and transparent as possible. Please see our [Development and Contributing Guide](CONTRIBUTING.md) for details on:
-
-- Development setup
-- Coding standards
-- Testing guidelines
-- Pull request process
-- Release process
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 📦 Release Process
 
-- [Handlebars](https://handlebarsjs.com/) for templating
-- [Commander.js](https://github.com/tj/commander.js/) for CLI
-- [Puppeteer](https://pptr.dev/) for PDF generation
-- [Inquirer.js](https://github.com/SBoudrias/Inquirer.js/) for interactive prompts
-- All contributors and users of this project for their support and feedback
-
----
-
-Made with ❤️ by the Contracts Wizard team
+See [CONTRIBUTING.md](CONTRIBUTING.md) for release process details.
 
 ## 🔍 Troubleshooting
 

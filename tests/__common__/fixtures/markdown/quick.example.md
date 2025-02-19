@@ -31,6 +31,7 @@ Demonstration of handling nested arrays with missing values at different levels
 <div class="explanation">Group {{@index}}: some children might be missing</div>
 
 {{#each child}}
+
 - Child {{@index}}: {{this}}
 {{/each}}
 

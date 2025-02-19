@@ -2,7 +2,11 @@
 
 <p class="confidential" id="confidential-header">PRIVATE AND CONFIDENTIAL</p>
 
-In {{contract.signing_city}}, on {{contract.signing_date}}
+In {{contract.signing_city}}, on {{#if contract.signing_date.text}} <!-- We check if there's a date defined in the "contract.signing_date.text" field of the CSV file -->
+  {{contract.signing_date.text}} <!-- If there's a date defined, we use it -->
+{{else}}
+  {{now 'FULL_EN'}} <!-- If there's no date defined, we use the current date -->
+{{/if}}
 
 Between:
 
@@ -108,6 +112,7 @@ All permanent improvements made by the LESSEE shall become the property of the L
 
 The LESSEE shall maintain:
 {{#each insurance.lessee_requirements}}
+
 - {{this}}
 {{/each}}
 
@@ -115,6 +120,7 @@ The LESSEE shall maintain:
 
 The LESSOR shall maintain:
 {{#each insurance.lessor_requirements}}
+
 - {{this}}
 {{/each}}
 

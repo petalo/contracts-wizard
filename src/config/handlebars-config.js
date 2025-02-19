@@ -68,6 +68,7 @@ const HANDLEBARS_CONFIG = {
     ISO: 'yyyy-LL-dd', // ISO format: year-month-day (e.g. 2024-03-01)
     ISO8601: 'yyyy-LL-dd HH:mm:ss', // ISO8601 format with time: year-month-day hours:minutes:seconds (e.g. 2024-03-01 13:45:30)
     FULL: "d 'de' LLLL 'de' yyyy", // Full text format in Spanish: day 'de' month 'de' year (e.g. 1 de marzo de 2024)
+    FULL_EN: "d 'of' MMMM 'of' yyyy", // Full text format in English: day 'of' month 'of' year (e.g. 1 of March of 2024)
     SHORT: 'dd/LL/yyyy', // Short format: same as DEFAULT - day/month/year with leading zeros (e.g. 01/03/2024)
     TIME: 'HH:mm:ss', // Time only format: 24h hours:minutes:seconds (e.g. 13:45:30)
   },
