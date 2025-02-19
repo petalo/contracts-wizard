@@ -197,7 +197,8 @@
 .debug-section-content .comparison {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);
-  gap: 0.5rem;
+  row-gap: 0.1rem;
+  column-gap: 0.5rem;
   align-items: start;
   margin: 0.25rem 0;
 }

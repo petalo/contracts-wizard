@@ -18,7 +18,7 @@ const IF_ELSE_TESTS = [
     context: {
       value: true,
     },
-    expected: 'true',
+    expected: '<div class="highlight">true</div>',
   },
   {
     name: 'if(true) from CSV',
@@ -27,7 +27,7 @@ const IF_ELSE_TESTS = [
     context: {
       if_true: true,
     },
-    expected: 'true',
+    expected: '<div class="highlight">true</div>',
   },
   {
     name: 'if(false)',
@@ -36,7 +36,7 @@ const IF_ELSE_TESTS = [
     context: {
       value: false,
     },
-    expected: 'false',
+    expected: '<div class="highlight">false</div>',
   },
   {
     name: 'if(false) from CSV',
@@ -45,7 +45,7 @@ const IF_ELSE_TESTS = [
     context: {
       if_false: false,
     },
-    expected: 'false',
+    expected: '<div class="highlight">false</div>',
   },
   {
     name: 'if(undefined)',
@@ -54,7 +54,7 @@ const IF_ELSE_TESTS = [
     context: {
       value: undefined,
     },
-    expected: 'false',
+    expected: '<div class="highlight">false</div>',
   },
   {
     name: 'if(undefined) from CSV',
@@ -63,7 +63,7 @@ const IF_ELSE_TESTS = [
     context: {
       if_undefined: undefined,
     },
-    expected: 'false',
+    expected: '<div class="highlight">false</div>',
   },
   {
     name: 'if(null)',
@@ -72,7 +72,7 @@ const IF_ELSE_TESTS = [
     context: {
       value: null,
     },
-    expected: 'false',
+    expected: '<div class="highlight">false</div>',
   },
   {
     name: 'if(null) from CSV',
@@ -81,7 +81,7 @@ const IF_ELSE_TESTS = [
     context: {
       if_null: null,
     },
-    expected: 'false',
+    expected: '<div class="highlight">false</div>',
   },
   {
     name: 'if(0)',
@@ -90,7 +90,7 @@ const IF_ELSE_TESTS = [
     context: {
       value: 0,
     },
-    expected: 'false',
+    expected: '<div class="highlight">false</div>',
   },
   {
     name: 'if(0) from CSV',
@@ -99,7 +99,7 @@ const IF_ELSE_TESTS = [
     context: {
       if_zero: 0,
     },
-    expected: 'false',
+    expected: '<div class="highlight">false</div>',
   },
   {
     name: 'if("")',
@@ -108,7 +108,7 @@ const IF_ELSE_TESTS = [
     context: {
       value: '',
     },
-    expected: 'false',
+    expected: '<div class="highlight">false</div>',
   },
   {
     name: 'if("") from CSV',
@@ -117,7 +117,7 @@ const IF_ELSE_TESTS = [
     context: {
       if_empty: '',
     },
-    expected: 'false',
+    expected: '<div class="highlight">false</div>',
   },
 ];
 

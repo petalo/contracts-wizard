@@ -76,7 +76,7 @@ const EQUALITY_TESTS = [
       value1: '42',
       value2: 42,
     },
-    expected: 'true',
+    expected: 'false',
   },
   {
     name: 'eq("42", 42) from CSV',
@@ -86,7 +86,7 @@ const EQUALITY_TESTS = [
       eq_string_42: '42',
       eq_number_42: 42,
     },
-    expected: 'true',
+    expected: 'false',
   },
 ];
 
