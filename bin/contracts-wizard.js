@@ -167,6 +167,8 @@ process.on('unhandledRejection', (error) => {
     logger.error(error.message, {
       code: error.code,
       details: error.details,
+      filename: 'contracts-wizard.js',
+      context: '[error]',
     });
     process.exit(1);
   }
@@ -637,7 +639,7 @@ async function generateContract({
     filename: 'contracts-wizard.js',
     context: '[cli]',
     correlationId,
-    params: `template=${path.basename(template)} • data=${data ? path.basename(data) : 'none'} • css=${css ? path.basename(css) : 'none'} • suffix=${suffix || 'none'}`,
+    params: `template=${path.basename(template)} • data=${data ? path.basename(data) : 'none'} • css=${css ? (Array.isArray(css) ? css.map(c => path.basename(c)).join(',') : path.basename(css)) : 'none'} • suffix=${suffix || 'none'}`,
   });
 
   try {
@@ -650,11 +652,16 @@ async function generateContract({
         ? data
         : path.join(process.cwd(), data)
       : null;
+    
+    // Handle CSS paths - can be array or single string
     const cssPath = css
-      ? path.isAbsolute(css)
-        ? css
-        : path.join(process.cwd(), css)
+      ? Array.isArray(css)
+        ? css.map(c => path.isAbsolute(c) ? c : path.join(process.cwd(), c))
+        : path.isAbsolute(css)
+          ? css
+          : path.join(process.cwd(), css)
       : null;
+    
     const outputDir = output
       ? path.isAbsolute(output)
         ? output
@@ -665,7 +672,7 @@ async function generateContract({
       filename: 'contracts-wizard.js',
       context: '[cli]',
       correlationId,
-      params: `template=${templatePath} • data=${dataPath || 'none'} • css=${cssPath || 'none'} • output=${outputDir}`,
+      params: `template=${templatePath} • data=${dataPath || 'none'} • css=${cssPath ? (Array.isArray(cssPath) ? cssPath.join(',') : cssPath) : 'none'} • output=${outputDir}`,
     });
 
     // Validate files exist and are accessible
@@ -718,7 +725,7 @@ async function generateContract({
       filename: 'contracts-wizard.js',
       context: '[cli]',
       correlationId,
-      params: `template=${path.basename(templatePath)} • data=${dataPath ? path.basename(dataPath) : 'none'} • css=${cssPath ? path.basename(cssPath) : 'none'} • output=${path.basename(outputDir)} • suffix=${suffix || 'none'}`,
+      params: `template=${path.basename(templatePath)} • data=${dataPath ? path.basename(dataPath) : 'none'} • css=${cssPath ? (Array.isArray(cssPath) ? cssPath.join(',') : cssPath) : 'none'} • output=${path.basename(outputDir)} • suffix=${suffix || 'none'}`,
     });
 
     // Start workflow with context
@@ -1037,7 +1044,7 @@ program
   .description('Generate contract documents from template and data')
   .requiredOption('-t, --template <path>', 'Path to markdown template file')
   .option('-d, --data <path>', 'Path to CSV data file')
-  .option('-c, --css <path>', 'Path to CSS style file')
+  .option('-c, --css <paths...>', 'Path(s) to CSS style file(s)')
   .option('-o, --output <dir>', 'Output directory for generated files')
   .option('--suffix <string>', 'Add a suffix to the generated filenames')
   .option('--highlight', 'Enable highlighting styles in the output')
@@ -1046,7 +1053,9 @@ program
       // If highlight is enabled, add the highlight CSS to the options
       let cssFiles = [];
       if (options.css) {
-        cssFiles.push(options.css);
+        cssFiles.push(
+          ...(Array.isArray(options.css) ? options.css : [options.css])
+        );
       }
       if (options.highlight) {
         const highlightCssPath = path.join(
@@ -1070,7 +1079,7 @@ program
       await generateContract({
         template: options.template,
         data: options.data,
-        css: cssFiles.length > 0 ? cssFiles.join(',') : undefined,
+        css: cssFiles,
         output: options.output,
         suffix: finalSuffix || undefined,
       });
@@ -1262,9 +1271,15 @@ async function validateInputs(templatePath, dataPath, cssPath) {
       await validateFile(dataPath, 'Data');
     }
 
-    // Validate CSS file if provided
+    // Validate CSS file(s) if provided
     if (cssPath) {
-      await validateFile(cssPath, 'CSS');
+      // Handle both single string and array of CSS paths
+      const cssPaths = Array.isArray(cssPath) ? cssPath : [cssPath];
+
+      // Validate each CSS file
+      for (const css of cssPaths) {
+        await validateFile(css, 'CSS');
+      }
     }
   } catch (error) {
     if (error instanceof ValidationError) {

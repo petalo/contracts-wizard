@@ -384,16 +384,35 @@ async function wrapWithHtmlStructure(content, options = {}) {
   let cssContent = '';
   if (options.cssPath) {
     try {
-      await fs.mkdir(path.dirname(options.cssPath), { recursive: true });
-      cssContent = await fs.readFile(options.cssPath, ENCODING_CONFIG.default);
-      logger.debug('Successfully read CSS file', {
+      // Handle both single string and array of CSS paths
+      const cssPaths = Array.isArray(options.cssPath)
+        ? options.cssPath
+        : [options.cssPath];
+
+      // Read and concatenate all CSS files
+      const cssContents = await Promise.all(
+        cssPaths.map(async (cssPath) => {
+          await fs.mkdir(path.dirname(cssPath), { recursive: true });
+          const content = await fs.readFile(cssPath, ENCODING_CONFIG.default);
+          logger.debug('Successfully read CSS file', {
+            filename: 'html.js',
+            context: '[template]',
+            cssPath,
+            cssLength: content.length,
+          });
+          return content;
+        })
+      );
+
+      // Combine all CSS contents
+      cssContent = cssContents.join('\n');
+      logger.debug('Combined CSS content', {
         filename: 'html.js',
         context: '[template]',
-        cssPath: options.cssPath,
         cssLength: cssContent.length,
       });
     } catch (error) {
-      logger.warn('Failed to read CSS file, continuing without CSS', {
+      logger.warn('Failed to read CSS file(s), continuing without CSS', {
         filename: 'html.js',
         context: '[template]',
         error,
@@ -695,18 +714,37 @@ async function generateHtml(content, options = {}) {
     let cssContent = '';
     if (options.cssPath) {
       try {
-        cssContent = await fs.readFile(
-          options.cssPath,
-          ENCODING_CONFIG.encoding
+        // Handle both single string and array of CSS paths
+        const cssPaths = Array.isArray(options.cssPath)
+          ? options.cssPath
+          : [options.cssPath];
+
+        // Read and concatenate all CSS files
+        const cssContents = await Promise.all(
+          cssPaths.map(async (cssPath) => {
+            const content = await fs.readFile(
+              cssPath,
+              ENCODING_CONFIG.encoding
+            );
+            logger.debug('Successfully read CSS file', {
+              filename: 'html.js',
+              context: '[template]',
+              cssPath,
+              cssLength: content.length,
+            });
+            return content;
+          })
         );
-        logger.debug('Successfully read CSS file', {
+
+        // Combine all CSS contents
+        cssContent = cssContents.join('\n');
+        logger.debug('Combined CSS content', {
           filename: 'html.js',
           context: '[template]',
-          cssPath: options.cssPath,
           cssLength: cssContent.length,
         });
       } catch (error) {
-        logger.warn('Failed to read CSS file', {
+        logger.warn('Failed to read CSS file(s)', {
           filename: 'html.js',
           context: '[template]',
           error,

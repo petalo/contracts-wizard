@@ -215,6 +215,8 @@ async function cleanupResources(cleanupTasks) {
 
   logger.debug('Starting resource cleanup', {
     taskCount: cleanupTasks.length,
+    filename: 'workflow.js',
+    context: '[cleanup]',
   });
 
   await Promise.all(
@@ -285,10 +287,11 @@ async function startWorkflow(context) {
     const {
       templatePath,
       dataPath,
-      cssPath,
       outputDir,
       options = {},
     } = context;
+
+    let { cssPath } = context;
 
     // Get PATHS after context is loaded to ensure DIR_OUTPUT is set
     const { PATHS } = require('@/config/paths');
@@ -304,8 +307,21 @@ async function startWorkflow(context) {
       PATHS_output: PATHS.output,
       isTemplateAbsolute: path.isAbsolute(templatePath),
       isDataAbsolute: dataPath ? path.isAbsolute(dataPath) : null,
-      isCssAbsolute: cssPath ? path.isAbsolute(cssPath) : null,
+      isCssAbsolute: cssPath
+        ? Array.isArray(cssPath)
+          ? cssPath.map((p) => path.isAbsolute(p))
+          : path.isAbsolute(cssPath)
+        : null,
     });
+
+    // Convert cssPath to absolute paths if it's an array
+    if (cssPath && Array.isArray(cssPath)) {
+      cssPath = cssPath.map((p) =>
+        path.isAbsolute(p) ? p : path.join(process.cwd(), p)
+      );
+    } else if (cssPath && !path.isAbsolute(cssPath)) {
+      cssPath = path.join(process.cwd(), cssPath);
+    }
 
     // Validate input files with retries
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {

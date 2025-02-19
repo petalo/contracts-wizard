@@ -165,10 +165,11 @@ handlebars.registerHelper('helperMissing', function (/* dynamic arguments */) {
     path,
     originalName: options.name,
     pathParts,
-    context: options.data,
     parentContexts: pathParts,
     args: args,
     type: 'undefined',
+    context: 'helpers',
+    filename: 'process-template.js',
   });
 
   return createMissingValueSpan(path);
@@ -701,7 +702,7 @@ async function processDataFile(dataPath, templateFields) {
  *
  * @param {string} templatePath - Path to template file
  * @param {string} [dataPath] - Optional path to data file
- * @param {string} [cssPath] - Optional path to CSS file
+ * @param {string|string[]} [cssPath] - Optional path to CSS file(s)
  * @returns {Promise<void>}
  * @throws {AppError} When files are missing or inaccessible
  * @example
@@ -755,20 +756,26 @@ async function validateInputs(templatePath, dataPath, cssPath) {
       logger.debug('No data file provided, skipping validation');
     }
 
-    // Validate CSS file if provided
+    // Validate CSS file(s) if provided
     if (cssPath) {
-      const resolvedCssPath = path.resolve(cssPath);
-      try {
-        await fs.access(resolvedCssPath);
-        logger.debug('CSS file validated', {
-          originalPath: cssPath,
-          resolvedPath: resolvedCssPath,
-        });
-      } catch (error) {
-        throw new AppError(
-          `CSS file not found or not accessible: ${resolvedCssPath}`,
-          'INPUT_VALIDATION_ERROR'
-        );
+      // Handle both single string and array of CSS paths
+      const cssPaths = Array.isArray(cssPath) ? cssPath : [cssPath];
+
+      // Validate each CSS file
+      for (const css of cssPaths) {
+        const resolvedCssPath = path.resolve(css);
+        try {
+          await fs.access(resolvedCssPath);
+          logger.debug('CSS file validated', {
+            originalPath: css,
+            resolvedPath: resolvedCssPath,
+          });
+        } catch (error) {
+          throw new AppError(
+            `CSS file not found or not accessible: ${resolvedCssPath}`,
+            'INPUT_VALIDATION_ERROR'
+          );
+        }
       }
     } else {
       logger.debug('No CSS file provided, skipping validation');
