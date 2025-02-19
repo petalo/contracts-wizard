@@ -107,9 +107,63 @@ if (process.argv.includes('--verbose')) {
   configureVerboseMode(logger);
 }
 
-// Add global verbose option
+// Add global verbose option and program description
 program
+  .name('contracts-wizard')
+  .description(
+    `
+contracts-wizard helps you to generate contracts from markdown templates and CSV data.
+
+It supports both interactive and command-line modes.
+
+Commands:
+
+(none)                     Interactive mode - Guides you through the contract generation process
+
+generate [options]
+  -t, --template <path>    Path to markdown template file
+  -d, --data <path>        Path to CSV data file
+  -c, --css <paths...>     Path(s) to CSS style file(s)
+  -o, --output <dir>       Output directory for generated files
+  --suffix <string>        Add a suffix to the generated filenames
+  --highlight              Enable highlighting styles in the output
+
+list [options]
+  -t, --templates          Show only template files
+  -d, --data               Show only data files
+  -c, --css                Show only CSS files
+
+init [options] [project-name]
+  -f, --force              Overwrite existing files
+  -m, --minimal            Create minimal project structure
+
+Options:
+  -V, --version            Output the version number
+  --verbose                Enable verbose output (same as DEBUG=true)
+  -h, --help               Display help for command
+
+Usage:
+
+contracts-wizard [command] [command options] [global options]
+
+For more detailed documentation, visit: https://github.com/petalo/contracts-wizard
+`
+  )
+  .version('1.0.0')
   .option('--verbose', 'Enable verbose output (same as DEBUG=true)')
+  .helpOption('-h, --help', 'Display help for command')
+  .configureHelp({
+    sortSubcommands: true,
+    sortOptions: true,
+    showGlobalOptions: false,
+    helpWidth: 120,
+    formatHelp: (cmd) => {
+      // It will only show the description of the command
+      return `${cmd.description()}`;
+    },
+  })
+  .showHelpAfterError(false)
+  .showSuggestionAfterError(true)
   .hook('preAction', (thisCommand) => {
     // Enable debug mode if --verbose is used
     if (thisCommand.opts().verbose) {
@@ -181,10 +235,17 @@ process.on('uncaughtException', (error) => {
     logger.error(error.message, {
       code: error.code,
       details: error.details,
+      filename: 'contracts-wizard.js',
+      context: '[error]',
     });
     process.exit(1);
   }
-  logger.error('Uncaught exception:', error);
+  logger.error('Uncaught exception:', {
+    code: error.code,
+    details: error.details,
+    filename: 'contracts-wizard.js',
+    context: '[error]',
+  });
   process.exit(1);
 });
 
@@ -794,7 +855,7 @@ async function generateContract({
  * @throws {FileSystemError} When file operations fail
  * @throws {ProcessingError} When contract generation fails
  */
-program.description('Generate contracts interactively').action(async () => {
+program.action(async () => {
   try {
     logger.debug('=== INTERACTIVE MODE STARTED ===', {
       filename: 'contracts-wizard.js',
@@ -1041,13 +1102,27 @@ async function cleanupAndExit(code) {
  */
 program
   .command('generate')
-  .description('Generate contract documents from template and data')
+  .description('Generate contract documents from template and data files')
   .requiredOption('-t, --template <path>', 'Path to markdown template file')
   .option('-d, --data <path>', 'Path to CSV data file')
   .option('-c, --css <paths...>', 'Path(s) to CSS style file(s)')
   .option('-o, --output <dir>', 'Output directory for generated files')
   .option('--suffix <string>', 'Add a suffix to the generated filenames')
   .option('--highlight', 'Enable highlighting styles in the output')
+  .addHelpText(
+    'after',
+    `
+Examples:
+  # Generate with all options
+  $ contracts-wizard generate -t template.md -d data.csv -c style.css -o output --highlight
+
+  # Generate with multiple CSS files
+  $ contracts-wizard generate -t template.md -c style1.css -c style2.css
+
+  # Generate with custom suffix
+  $ contracts-wizard generate -t template.md --suffix DRAFT
+`
+  )
   .action(async (options) => {
     try {
       // If highlight is enabled, add the highlight CSS to the options
@@ -1131,10 +1206,24 @@ program
  */
 program
   .command('list')
-  .description('List available templates and data files')
+  .description('List available templates, data files, and CSS files')
   .option('-t, --templates', 'Show only template files')
   .option('-d, --data', 'Show only data files')
   .option('-c, --css', 'Show only CSS files')
+  .addHelpText(
+    'after',
+    `
+Examples:
+  # List all files
+  $ contracts-wizard list
+
+  # List only templates
+  $ contracts-wizard list --templates
+
+  # List only CSS files
+  $ contracts-wizard list --css
+`
+  )
   .action(async (options) => {
     try {
       if (options.templates) {
@@ -1189,10 +1278,26 @@ program
  */
 program
   .command('init')
-  .description('Initialize a new contracts project')
+  .description(
+    'Initialize a new contracts project with example files and configuration'
+  )
   .argument('[project-name]', 'Name of the project directory')
   .option('-f, --force', 'Overwrite existing files')
   .option('-m, --minimal', 'Create minimal project structure')
+  .addHelpText(
+    'after',
+    `
+Examples:
+  # Create new project
+  $ contracts-wizard init my-contracts
+
+  # Force create project (overwrite existing)
+  $ contracts-wizard init my-contracts --force
+
+  # Create minimal project
+  $ contracts-wizard init my-contracts --minimal
+`
+  )
   .action(async (projectName, options) => {
     try {
       await initProject(projectName, options);
