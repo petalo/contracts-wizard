@@ -377,7 +377,9 @@ handlebars.registerHelper('if', function (value, options) {
 
   // Arrays (even empty ones) are considered truthy
   if (Array.isArray(extracted)) {
-    return options.fn(this);
+    return new handlebars.SafeString(
+      `<div class="highlight">${options.fn(this)}</div>`
+    );
   }
 
   logger.debug('if helper - evaluation:', {
@@ -385,7 +387,13 @@ handlebars.registerHelper('if', function (value, options) {
     willExecute: !isFalsy,
   });
 
-  return isFalsy ? options.inverse(this) : options.fn(this);
+  /* eslint-disable */
+  return isFalsy
+    ? options.inverse(this)
+    : new handlebars.SafeString(
+        `<div class="highlight">${options.fn(this)}</div>`
+      );
+  /* eslint-enable */
 });
 
 // Register core helpers first
