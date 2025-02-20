@@ -378,28 +378,32 @@ handlebars.registerHelper('if', function (value, options) {
   // Arrays (even empty ones) are considered truthy
   if (Array.isArray(extracted)) {
     return new handlebars.SafeString(
-      `<div class="highlight">${options.fn(this)}</div>`
+      `<span class="highlight">${options.fn(this)}</span>`
     );
   }
 
   logger.debug('if helper - evaluation:', {
     isFalsy,
     willExecute: !isFalsy,
+    context: '[helper]',
+    filename: 'helpers/index.js',
+    operation: 'if-helper',
+    technical: {
+      isFalsy,
+      willExecute: !isFalsy,
+    },
   });
 
-  /* eslint-disable */
-  return isFalsy
-    ? options.inverse(this)
-    : new handlebars.SafeString(
-        `<div class="highlight">${options.fn(this)}</div>`
-      );
-  /* eslint-enable */
+  // Execute the appropriate block and always wrap in highlight
+  return new handlebars.SafeString(
+    `<span class="highlight">${isFalsy ? options.inverse(this) : options.fn(this)}</span>`
+  );
 });
 
 // Register core helpers first
 logger.debug('Starting core helpers registration:', {
   filename: 'helpers/index.js',
-  context: '[system]',
+  context: '[helper]',
   operation: 'init',
   technical: {
     phase: 'core-registration',

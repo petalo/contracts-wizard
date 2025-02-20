@@ -81,10 +81,19 @@
 .highlight {
   border: 1px solid #ffc107;
   border-radius: 2px;
-  padding: 1px 3px;
+  padding: 3px 3px;
   background-color: #f9f3df;
   color: #856404;
   display: inline;
   vertical-align: baseline;
   white-space: normal;
+  margin: 1px 0;
+}
+
+/* Ajustamos el espaciado cuando contiene otros elementos con clase */
+.highlight .imported-value,
+.highlight .missing-value {
+  margin: 0; /* Quitamos el margen interno */
+  padding: 0 3px;
+  border-radius: 1px; /* Reducimos el border-radius para que se vea más integrado */
 }
