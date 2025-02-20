@@ -187,14 +187,17 @@ const HTML_CONFIG = {
 
   // Markdown-it configuration
   markdownit: {
-    html: true,
-    breaks: true,
-    linkify: true,
-    typographer: true,
-    xhtml: true,
-    quotes: '""\'\'',
-    langPrefix: 'language-',
-    highlight: null,
+    html: true, // Enable HTML tags in source
+    breaks: true, // Convert '\n' to <br>
+    linkify: true, // Auto-convert URLs to links
+    typographer: true, // Enable smartquotes and other typographic replacements
+    xhtml: true, // Use '/' to close single tags (<br />)
+    quotes: '""\'\'', // Smart quotes characters
+    langPrefix: 'language-', // CSS prefix for code blocks
+    highlight: null, // Custom syntax highlighting function
+    loose: true, // Parse lists without paragraph breaks
+    parseInline: true, // Parse inline HTML
+    html_blocks: true, // Parse HTML block-level elements
   },
 
   // Empty value configuration

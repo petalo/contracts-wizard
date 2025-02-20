@@ -101,7 +101,22 @@ if (!DateTime.local().setZone(defaultTimezone).isValid) {
 }
 
 // Initialize markdown-it with options from HTML_CONFIG
-const md = new MarkdownIt(HTML_CONFIG.markdownit);
+const md = new MarkdownIt({
+  ...HTML_CONFIG.markdownit,
+  typographer: true, // Enable smart quotes, dashes, ellipses etc
+  maxNesting: 20, // Limit nesting to prevent stack overflow
+  quotes: ['«\xA0', '\xA0»', '‹\xA0', '\xA0›'], // Correct formatfor quotes
+});
+
+// Add custom renderer for HTML inline to prevent recursion
+md.renderer.rules.html_inline = (tokens, idx) => {
+  return tokens[idx].content;
+};
+
+// Add custom renderer for HTML block to prevent recursion
+md.renderer.rules.html_block = (tokens, idx) => {
+  return tokens[idx].content;
+};
 
 // Assign custom renderer rules
 Object.assign(md.renderer.rules, customRules);
