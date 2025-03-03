@@ -8,6 +8,7 @@
  * - Input validation and error handling
  *
  * Functions:
+ * - createHierarchicalChoices: Hierarchical file choice display
  * - selectMarkdownTemplate: Template file selection
  * - selectInputMethod: Data input method choice
  * - selectDataFile: CSV data file selection
@@ -68,6 +69,107 @@ const {
 } = require('@/utils/file-management/get-relative-path');
 
 /**
+ * Creates hierarchical choices for file selection
+ *
+ * Organizes files into directory groups for better visualization:
+ * 1. Groups files by directory
+ * 2. Adds visual separators for directories
+ * 3. Sorts files within each group
+ *
+ * @param {string[]} files - List of file paths (relative)
+ * @param {object} [options] - Configuration options
+ * @param {boolean} [options.showIcons=true] - Whether to show directory icons
+ * @param {boolean} [options.sortByPath=true] - Whether to sort by directory path first
+ * @param {boolean} [options.rootDirLabel=true] - Whether to show root directory label
+ * @returns {Array} Formatted choices for inquirer
+ */
+function createHierarchicalChoices(files, options = {}) {
+  // prettier-ignore
+  const {
+    showIcons = true,
+    sortByPath = true,
+    rootDirLabel = true
+  } = options;
+
+  // Optionally pre-sort files
+  if (sortByPath) {
+    files.sort((a, b) => {
+      const pathA = path.dirname(a);
+      const pathB = path.dirname(b);
+      if (pathA === pathB) {
+        return a.localeCompare(b);
+      }
+      return pathA.localeCompare(pathB);
+    });
+  }
+
+  // Sort files by directory
+  const filesByDirectory = {};
+  files.forEach((file) => {
+    const dirName = path.dirname(file);
+    const baseName = path.basename(file);
+
+    if (!filesByDirectory[dirName]) {
+      filesByDirectory[dirName] = [];
+    }
+
+    filesByDirectory[dirName].push({
+      name: baseName,
+      value: file,
+    });
+  });
+
+  // Create hierarchical choices array
+  const choices = [];
+
+  // First add files in the root directory (with group separator if requested)
+  if (filesByDirectory['.']) {
+    // Add separator for root directory if rootDirLabel is enabled
+    if (rootDirLabel) {
+      const dirIcon = showIcons ? '📂 ' : '';
+      choices.push(new inquirer.Separator(`\n${dirIcon}./`));
+
+      // Add files with indentation
+      const filesInRoot = filesByDirectory['.']
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((file) => ({
+          name: `   ${file.name}`,
+          value: file.value,
+        }));
+
+      choices.push(...filesInRoot);
+    } else {
+      // Original behavior if no root label is wanted
+      filesByDirectory['.'].sort((a, b) => a.name.localeCompare(b.name));
+      choices.push(...filesByDirectory['.']);
+    }
+
+    delete filesByDirectory['.'];
+  }
+
+  // Then add each directory as a group
+  Object.keys(filesByDirectory)
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((dir) => {
+      // Add a separator for the directory name
+      const dirIcon = showIcons ? '📂 ' : '';
+      choices.push(new inquirer.Separator(`\n${dirIcon}${dir}`));
+
+      // Add the directory's files with indentation
+      const filesInDir = filesByDirectory[dir]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((file) => ({
+          name: `   ${file.name}`,
+          value: file.value,
+        }));
+
+      choices.push(...filesInDir);
+    });
+
+  return choices;
+}
+
+/**
  * Prompts for markdown template selection
  *
  * Presents an interactive list of available markdown templates:
@@ -95,27 +197,18 @@ async function selectMarkdownTemplate() {
     templatesDir: PATHS.templates,
     isTemplatesDirAbsolute: path.isAbsolute(PATHS.templates),
     baseDir: process.cwd(),
+    context: 'templates',
+    filename: 'prompts.js',
   });
 
-  // Sort templates by path and then by name
-  templates.sort((a, b) => {
-    const pathA = path.dirname(a);
-    const pathB = path.dirname(b);
-    if (pathA === pathB) {
-      return a.localeCompare(b);
-    }
-    return pathA.localeCompare(pathB);
-  });
+  const choices = createHierarchicalChoices(templates);
 
   const { template } = await inquirer.prompt([
     {
       type: 'list',
       name: 'template',
       message: 'Select a template:',
-      choices: templates.map((file) => ({
-        name: path.basename(file),
-        value: file,
-      })),
+      choices: choices,
       pageSize: 15,
     },
   ]);
@@ -134,6 +227,8 @@ async function selectMarkdownTemplate() {
     isAbsolute: path.isAbsolute(fullPath),
     isTemplateAbsolute: path.isAbsolute(template),
     isTemplatesDirAbsolute: path.isAbsolute(PATHS.templates),
+    context: 'templates',
+    filename: 'prompts.js',
   });
 
   return fullPath;
@@ -218,12 +313,16 @@ async function selectDataFile(templatePath) {
     templatePath,
     templateName,
     extractedFrom: path.basename(templatePath, '.md'),
+    context: 'csv',
+    filename: 'prompts.js',
   });
 
   const files = await listFiles('csv');
   logger.debug('Found CSV files', {
     allFiles: files,
     count: files.length,
+    context: 'csv',
+    filename: 'prompts.js',
   });
 
   // Filter CSV files that match the template name
@@ -235,6 +334,8 @@ async function selectDataFile(templatePath) {
       csvName,
       templateName,
       matches,
+      context: 'csv',
+      filename: 'prompts.js',
     });
     return matches;
   });
@@ -255,27 +356,32 @@ async function selectDataFile(templatePath) {
     `Found ${dataFiles.length} CSV file(s) for template "${templateName}"`
   );
 
+  const choices = createHierarchicalChoices(dataFiles);
+
   const { file } = await inquirer.prompt([
     {
       type: 'list',
       name: 'file',
       message: 'Select a CSV file:',
-      choices: dataFiles.map((file) => ({
-        name: path.basename(file),
-        value: path.join(PATHS.csv, file),
-      })),
+      choices: choices,
       pageSize: 15,
     },
   ]);
 
+  // Ensure absolute path
+  const fullPath = path.isAbsolute(file) ? file : path.join(PATHS.csv, file);
+
   logger.debug('Selected CSV file', {
     selected: file,
-    displayPath: getRelativePath(file),
-    exists: require('fs').existsSync(file),
+    fullPath,
+    displayPath: getRelativePath(fullPath),
+    exists: require('fs').existsSync(fullPath),
     basePath: PATHS.csv,
+    context: 'csv',
+    filename: 'prompts.js',
   });
 
-  return file;
+  return fullPath;
 }
 
 /**
@@ -306,37 +412,50 @@ async function selectCssFile() {
   logger.debug('Available CSS files', {
     styles,
     cssDir: PATHS.css,
+    context: 'css',
+    filename: 'prompts.js',
   });
 
   display.blank();
+
+  const choices = createHierarchicalChoices(styles);
+
+  // Add "Skip CSS" option
+  choices.push(new inquirer.Separator()); // Add a separator line
+  choices.push({
+    name: 'Skip CSS',
+    value: '',
+  });
 
   const { style } = await inquirer.prompt([
     {
       type: 'list',
       name: 'style',
       message: 'Select a CSS file:',
-      choices: [
-        ...styles.map((file) => ({
-          name: path.basename(file),
-          value: path.join(PATHS.css, file),
-        })),
-        {
-          name: 'Skip CSS',
-          value: '',
-        },
-      ],
+      choices: choices,
       pageSize: 15,
     },
   ]);
 
+  // If empty string was selected, return it
+  if (!style) {
+    return '';
+  }
+
+  // Ensure absolute path
+  const fullPath = path.isAbsolute(style) ? style : path.join(PATHS.css, style);
+
   logger.debug('Selected CSS file', {
     selected: style,
-    displayPath: style ? getRelativePath(style) : '',
-    exists: style ? require('fs').existsSync(style) : false,
+    fullPath,
+    displayPath: getRelativePath(fullPath),
+    exists: require('fs').existsSync(fullPath),
     basePath: PATHS.css,
+    context: 'css',
+    filename: 'prompts.js',
   });
 
-  return style;
+  return fullPath;
 }
 
 module.exports = {

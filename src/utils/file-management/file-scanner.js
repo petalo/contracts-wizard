@@ -8,19 +8,15 @@
  * - File metadata collection
  *
  * Functions:
- * - scanDirectory: Scans directory for matching files
- * - filterFiles: Filters files by pattern or criteria
- * - validatePath: Validates file path existence
- *
- * Constants:
- * - DEFAULT_PATTERNS: Default file patterns
- * - IGNORE_PATTERNS: Patterns to ignore
+ * - listFilesInPath: Lists files in a directory with extension filtering
+ * - listFiles: Lists files by configured type and location
+ * - scanFiles: Recursively scans directories with pattern matching
  *
  * Flow:
  * 1. Validate input directory
  * 2. Traverse directory structure
  * 3. Apply file filters
- * 4. Collect file metadata
+ * 4. Collect file paths
  * 5. Return filtered results
  *
  * Error Handling:
@@ -30,19 +26,21 @@
  * - File access failures
  *
  * @module @/utils/file-management/file-scanner
- * @requires fs - File system operations
+ * @requires fs.promises - File system operations (promises API)
  * @requires path - Path manipulation
- * @requires glob - Pattern matching
+ * @requires @/utils/common/logger - Structured logging
+ * @requires @/config/file-extensions - Supported file extensions
  * @requires @/utils/common/errors - Error handling
- * @exports scanDirectory - Directory scanning function
- * @exports filterFiles - File filtering function
- * @exports validatePath - Path validation function
+ * @requires @/config/paths - File type path mapping
+ * @exports listFilesInPath - Directory scanning with extension filtering
+ * @exports listFiles - Type-based file listing function
+ * @exports scanFiles - Recursive directory scanning
  *
  * @example
- * // Scan directory for markdown files
- * const { scanDirectory } = require('@/utils/file-management/file-scanner');
+ * // List all markdown files in the templates directory
+ * const { listFiles } = require('@/utils/file-management/file-scanner');
  *
- * const files = await scanDirectory('templates', '*.md');
+ * const files = await listFiles('markdown');
  * console.log('Found files:', files);
  */
 
@@ -112,6 +110,8 @@ async function listFilesInPath(dirPath, extensions = [], recursive = true) {
       dirPath,
       extensions,
       recursive,
+      context: 'file-mngmt',
+      filename: 'file-scanner.js',
     });
 
     // Make sure the path is absolute
@@ -124,6 +124,8 @@ async function listFilesInPath(dirPath, extensions = [], recursive = true) {
         dirPath: absoluteDirPath,
         matchCount: results.length,
         paths: results,
+        context: 'file-mngmt',
+        filename: 'file-scanner.js',
       });
       return results;
     }
@@ -143,6 +145,8 @@ async function listFilesInPath(dirPath, extensions = [], recursive = true) {
       extensions,
       recursive,
       paths: matchingFiles,
+      context: 'file-mngmt',
+      filename: 'file-scanner.js',
     });
 
     return matchingFiles;
@@ -206,7 +210,7 @@ async function listFiles(type, recursive = true) {
     const extensions = FILE_EXTENSIONS[type] || [];
     logger.debug('Listing files', {
       filename: 'file-scanner.js',
-      context: '[file-management]',
+      context: 'file-mngmt',
       operation: 'list-files',
       technical: {
         type,
@@ -220,9 +224,10 @@ async function listFiles(type, recursive = true) {
     const files = await listFilesInPath(targetPath, extensions, recursive);
 
     // Convert absolute paths to relative paths from the target directory
+    // While preserving directory structure
     const cleanedFiles = files.map((file) => {
       const relativePath = path.relative(targetPath, file);
-      return relativePath;
+      return relativePath; // Already includes subdirectory structure
     });
 
     logger.debug('File listing complete', {
@@ -232,6 +237,8 @@ async function listFiles(type, recursive = true) {
       recursive,
       originalPaths: files,
       cleanedPaths: cleanedFiles,
+      context: 'file-mngmt',
+      filename: 'file-scanner.js',
     });
 
     return cleanedFiles;
@@ -325,6 +332,8 @@ async function scanFiles(dirPath, pattern, recursive = true) {
       matchCount: results.length,
       recursive,
       paths: results,
+      context: 'file-mngmt',
+      filename: 'file-scanner.js',
     });
 
     return results;
