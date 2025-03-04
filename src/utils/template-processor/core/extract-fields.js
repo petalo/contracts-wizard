@@ -144,6 +144,7 @@ function processNode(node, fields, prefix = '', context = {}) {
       'formatCurrency',
       'now',
       'addYears',
+      'formatString',
     ];
 
     // Handle different node types

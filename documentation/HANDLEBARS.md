@@ -22,6 +22,7 @@ This document provides a comprehensive guide to the Handlebars helpers available
   - [each](#each)
 - [Value Helpers](#value-helpers)
   - [formatEmail](#formatemail)
+  - [formatString](#formatstring)
 - [Debug Helpers](#debug-helpers)
   - [log](#log)
   - [lookup](#lookup)
@@ -389,6 +390,54 @@ Formats an email address with proper HTML markup.
 ```handlebars
 {{formatEmail "user@example.com"}}
 <!-- Output: <span class="imported-value" data-field="email">user@example.com</span> -->
+```
+
+### formatString
+
+Formats a string with various text transformations such as capitalization, case conversion, and whitespace handling.
+
+```handlebars {{formatString value options}} ```
+
+Parameters:
+
+- `value`: The string to format
+- `options`:
+  - `capitalize`: Capitalize first letter of the string
+  - `upper`: Convert string to uppercase
+  - `lower`: Convert string to lowercase
+  - `trim`: Trim whitespace from start and end
+  - `field`: Custom data field name for the output
+
+Examples:
+
+```handlebars
+{{formatString "hello world" capitalize=true}}
+<!-- Output: <span class="imported-value" data-field="string">Hello world</span> -->
+
+{{formatString "hello world" upper=true}}
+<!-- Output: <span class="imported-value" data-field="string">HELLO WORLD</span> -->
+
+{{formatString "HELLO WORLD" lower=true}}
+<!-- Output: <span class="imported-value" data-field="string">hello world</span> -->
+
+{{formatString " hello world " trim=true}}
+<!-- Output: <span class="imported-value" data-field="string">hello world</span> -->
+
+{{formatString "hello world" capitalize=true upper=true}}
+<!-- Output: <span class="imported-value" data-field="string">HELLO WORLD</span> -->
+
+{{formatString pagos.fase_pre_compra.texto capitalize=true}}
+<!-- Output: <span class="imported-value" data-field="string">Cinco mil</span> -->
+```
+
+**Error Handling:**
+
+```handlebars
+{{formatString undefined}}
+<!-- Output: <span class="missing-value" data-field="string">[[formatString]]</span> -->
+
+{{formatString null}}
+<!-- Output: <span class="missing-value" data-field="string">[[formatString]]</span> -->
 ```
 
 ## Debug Helpers

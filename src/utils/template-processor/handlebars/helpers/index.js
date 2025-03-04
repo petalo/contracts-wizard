@@ -47,6 +47,7 @@ const { formatEmail } = require('./value/format-email');
 const { and } = require('./logic/and');
 const { not } = require('./logic/not');
 const { formatNumber } = require('./numbers');
+const { formatString } = require('./string/format-string');
 
 logger.debug('Loading date helpers:', {
   filename: 'helpers/index.js',
@@ -714,6 +715,7 @@ handlebars.registerHelper('and', and);
 handlebars.registerHelper('not', not);
 handlebars.registerHelper('formatNumber', formatNumber);
 handlebars.registerHelper('formatCurrency', formatCurrency);
+handlebars.registerHelper('formatString', formatString);
 
 // Export all helpers for testing and direct use
 module.exports = {
@@ -739,4 +741,5 @@ module.exports = {
     locale: HANDLEBARS_CONFIG.locale,
     timezone: HANDLEBARS_CONFIG.timezone,
   },
+  formatString,
 };
